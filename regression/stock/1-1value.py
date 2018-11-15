@@ -1,34 +1,56 @@
+# -*- coding:UTF-8 -*-
+
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 import tensorflow as tf
 from tensorflow import keras
-
+from compiler.ast import flatten
 import numpy as np
 print(tf.__version__)
 
-boston_housing=keras.datasets.boston_housing
-(train_data, train_labels), (test_data, test_labels) = boston_housing.load_data()
+print("\nLoad...")
+load_data=np.loadtxt('./data/000001-.txt')
+print("load_data: {}".format(load_data.shape))
 
-#Shuffle the training set
-order=np.argsort(np.random.random(train_labels.shape))
-train_data=train_data[order]
-train_lables=train_labels[order]
+#0-倒数第二天的所有特征，数量是load_data行数-1
+feature_data=load_data[0:-1]
+print("feature_data: {}".format(feature_data.shape))
 
-print("Training set: {}".format(train_data.shape))  # 404 examples, 13 features
-print("Testing set:  {}".format(test_data.shape))   # 102 examples, 13 features
+#1-倒数第一天的价格，数量是load_data行数-1
+label_data=load_data[1:,0:1]
+label_data.shape=len(label_data)
+print("label_data: {}".format(label_data.shape))
 
-print("\ntrain_data[0]:")
-print(train_data[0])
+#feature和label按照相同的随机序列重新排列
+print("\nReorder...")
+order=np.argsort(np.random.random(label_data.shape))
+feature_data=feature_data[order]
+label_data=label_data[order]
+print("feature_data: {}".format(feature_data.shape))
+print("label_data: {}".format(label_data.shape))
 
+#将feature和label划分为训练集和测试集
+print("\nCreate train data and test data ...")
+train_data_num=int(len(label_data)*0.85)
+train_data=feature_data[:train_data_num]
+train_labels=label_data[:train_data_num]
+test_data=feature_data[train_data_num:]
+test_labels=label_data[train_data_num:]
+print("Training set: {}".format(train_data.shape))
+print("Testing set:  {}".format(test_data.shape)) 
+print("Training labels: {}".format(train_labels.shape))
+print("Testing labels:  {}".format(test_labels.shape)) 
+
+#显示数据
+print("Show data ...")
 import pandas as pd
-column_names = ['CRIM', 'ZN', 'INDUS', 'CHAS', 'NOX', 'RM', 'AGE', 'DIS', 'RAD', 'TAX', 'PTRATIO', 'B', 'LSTAT']
+column_names = ['开盘', '最高', '最低', '收盘', '涨跌', '涨幅', '振幅', '总手', '金额']
 df = pd.DataFrame(train_data, columns=column_names)
 df.head()
 print("\ntrain_labels[0:10]:")
 print(train_labels[0:10])
 
 #Test data is *not* used when calculating the mean and std.
-
 mean = train_data.mean(axis=0)
 std = train_data.std(axis=0)
 train_data = (train_data - mean) / std
@@ -62,7 +84,7 @@ class PrintDot(keras.callbacks.Callback):
     #print('.', end='')
     #print('.')
 
-EPOCHS = 5000
+EPOCHS = 50
 
 # The patience parameter is the amount of epochs to check for improvement.
 early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=200)
@@ -94,7 +116,3 @@ plot_history(history)
 test_predictions = model.predict(test_data).flatten()
 print("\ntest_predictions")
 print(test_predictions)
-
-
-
-
