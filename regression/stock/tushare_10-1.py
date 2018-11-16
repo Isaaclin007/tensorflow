@@ -87,9 +87,15 @@ print(feature_data[0])
 
 print("label_data: {}".format(label_data.shape))
 
+#feature和label按照相同的随机序列重新排列
+print("\nReorder...")
+order=np.argsort(np.random.random(label_data.shape))
+feature_data=feature_data[order]
+label_data=label_data[order]
+
 #将feature和label划分为训练集和测试集
 print("\nCreate train data and test data ...")
-train_data_num=len(label_data)-5
+train_data_num=len(label_data)*9/10
 train_data=feature_data[:train_data_num]
 train_labels=label_data[:train_data_num]
 test_data=feature_data[train_data_num:]
@@ -99,11 +105,7 @@ print("Testing set:  {}".format(test_data.shape))
 print("Training labels: {}".format(train_labels.shape))
 print("Testing labels:  {}".format(test_labels.shape)) 
 
-#feature和label按照相同的随机序列重新排列
-print("\nReorder...")
-order=np.argsort(np.random.random(train_labels.shape))
-train_data=train_data[order]
-train_labels=train_labels[order]
+
 
 #显示数据
 """ print("Show data ...")
@@ -138,45 +140,63 @@ def build_model():
                 metrics=['mae'])
   return model
 
-model = build_model()
-model.summary()
+model_file="model.h5"
+if os.path.exists(model_file):
+  model=keras.models.load_model(model_file)
+else:
+  model = build_model()
+  model.summary()
 
-# Display training progress by printing a single dot for each completed epoch.
-class PrintDot(keras.callbacks.Callback):
-  def on_epoch_end(self,epoch,logs):
-    if epoch % 100 == 0: print('.')
-    #print('.', end='')
-    #print('.')
+  # Display training progress by printing a single dot for each completed epoch.
+  class PrintDot(keras.callbacks.Callback):
+    def on_epoch_end(self,epoch,logs):
+      if epoch % 100 == 0: print('.')
+      #print('.', end='')
+      #print('.')
 
-EPOCHS = 80
+  EPOCHS = 10
 
-# The patience parameter is the amount of epochs to check for improvement.
-early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=200)
+  # The patience parameter is the amount of epochs to check for improvement.
+  early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=200)
 
-history = model.fit(train_data, train_labels, epochs=EPOCHS,
-                    validation_split=0.2, verbose=0,
-                    #callbacks=[early_stop, PrintDot()])
-                    callbacks=[PrintDot()])
+  history = model.fit(train_data, train_labels, epochs=EPOCHS,
+                      validation_split=0.2, verbose=0,
+                      #callbacks=[early_stop, PrintDot()])
+                      callbacks=[PrintDot()])
+  model.save("model.h5")
 
 
 
-import matplotlib.pyplot as plt
-def plot_history(history):
-  plt.figure()
-  plt.xlabel('Epoch')
-  plt.ylabel('Mean Abs Error [1000$]')
-  plt.plot(history.epoch, np.array(history.history['mean_absolute_error']), 
-           label='Train Loss')
-  plt.plot(history.epoch, np.array(history.history['val_mean_absolute_error']),
-           label = 'Val loss')
-  plt.legend()
-  #plt.ylim([0,5])
-  plt.show()
+# import matplotlib.pyplot as plt
+# def plot_history(history):
+#   plt.figure()
+#   plt.xlabel('Epoch')
+#   plt.ylabel('Mean Abs Error [1000$]')
+#   plt.plot(history.epoch, np.array(history.history['mean_absolute_error']), 
+#            label='Train Loss')
+#   plt.plot(history.epoch, np.array(history.history['val_mean_absolute_error']),
+#            label = 'Val loss')
+#   plt.legend()
+#   #plt.ylim([0,5])
+#   plt.show()
 
-print("\nplot_history")
-plot_history(history)
+# print("\nplot_history")
+# plot_history(history)
 
 
 test_predictions = model.predict(test_data).flatten()
-print("\ntest_predictions")
-print(test_predictions)
+#print("\ntest_predictions")
+#print(test_predictions)
+test_num=len(test_labels)
+trade_num=0
+trade_increase_sum=0.0
+print("test_num:%u" % test_num)
+for iloop in range(0, test_num):
+  if test_predictions[iloop]>2.0:
+    trade_num=trade_num+1
+    trade_increase_sum=trade_increase_sum+test_labels[iloop]
+    print("prediction/label:%f/%f" % (test_predictions[iloop],test_labels[iloop]))
+mean_trade_increase=trade_increase_sum/trade_num
+print("trade_num:%u" % trade_num)
+print("mean_trade_increase:%f" % mean_trade_increase)
+
