@@ -12,9 +12,19 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
 feature_days=10
+predict_day_count=5 #预测未来几日的数据
+test_day_count=30
 
 #pd.set_option('display.width', 150)  # 设置字符显示宽度
 #pd.set_option('display.max_rows', None)  # 设置显示最大行
+
+def CurrentDate():
+    current_date=time.strftime('%Y%m%d',time.localtime(time.time()))
+    #current_date='20181118'
+    return current_date
+
+def TrainDate():
+    return '20181118'
 
 def StockCodes():
     print(ts.__version__)
@@ -62,7 +72,8 @@ def DownloadStocksTrainData():
     ts.set_token('230c446ae448ec95357d0f7e804ddeebc7a51ff340b4e6e0913ea2fa')
     pro = ts.pro_api()
 
-    current_date=time.strftime('%Y%m%d',time.localtime(time.time()))
+    #current_date=CurrentDate()
+    current_date=TrainDate()
     code_list=StockCodes()
     for code_index in range(0, len(code_list)):
         stock_code=code_list[code_index]
@@ -79,24 +90,56 @@ def DownloadStocksPredictData():
 
     temp_date_time=datetime.datetime.now()
     current_date=temp_date_time.strftime("%Y%m%d")
-    #current_date='20181118'
     temp_date_time=temp_date_time-datetime.timedelta(days=60)
     start_date_str=temp_date_time.strftime("%Y%m%d")
     code_list=StockCodes()
     for code_index in range(0, len(code_list)):
         stock_code=code_list[code_index]
         file_name1='./data/'+stock_code+'_'+current_date+'.csv'
-        file_name2='./data/'+stock_code+'_'+start_date_str+"-"+current_date+'.csv'
+        file_name2='./data/'+stock_code+'_'+current_date+'_60.csv'
         if (not os.path.exists(file_name1)) and (not os.path.exists(file_name2)):
             load_df=pro.daily_basic(ts_code=stock_code, start_date=start_date_str, end_date=current_date)
             load_df.to_csv(file_name2)
             time.sleep(1)
         print("%-4d : %s 100%%" % (code_index, stock_code))
 
-def StocksData2TrainData():
-    current_date=time.strftime('%Y%m%d',time.localtime(time.time()))
-    code_list=StockCodes()
+# def StocksData2TrainData():
+#     current_date=CurrentDate()
+#     code_list=StockCodes()
+#     train_data_list=[]
+#     for code_index in range(0, len(code_list)):
+#         stock_code=code_list[code_index]
+#         file_name='./data/'+stock_code+'_'+current_date+'.csv'
+#         if os.path.exists(file_name):
+#             load_df=pd.read_csv(file_name)
+#             src_df=load_df[['trade_date', 'close', 'turnover_rate']].copy()
+#             src_df['increase']=0.0
+#             for iloop in range(0, len(src_df)-1):
+#                 src_df.iloc[iloop,3]=(100*src_df['close'][iloop]/src_df['close'][iloop+1])-100.0
+#             for day_loop in range(0, len(src_df)-feature_days-1):
+#                 data_unit=[]
+#                 for iloop in range(0, feature_days):
+#                     data_unit.append(src_df['increase'][day_loop+iloop+1])
+#                     data_unit.append(src_df['turnover_rate'][day_loop+iloop+1])
+#                 data_unit.append(src_df['increase'][day_loop])
+#                 train_data_list.append(data_unit)
+#         print("%-4d : %s 100%%" % (code_index, stock_code))
+#     train_data=np.array(train_data_list)
+#     order=np.argsort(np.random.random(len(train_data)))
+#     train_data=train_data[order]
+#     print("train_data: {}".format(train_data.shape))
+#     np.save('train_data.npy', train_data)
+
+def StocksData2TrainTestData():
+    current_date=CurrentDate()
+    #code_list=StockCodes()
+    current_date=TrainDate()
+    code_list=['600872.SH', '000403.SZ']
     train_data_list=[]
+    test_data_list=[]
+    for iloop in range(0, test_day_count):
+        day_test_data_list=[]
+        test_data_list.append(day_test_data_list)
     for code_index in range(0, len(code_list)):
         stock_code=code_list[code_index]
         file_name='./data/'+stock_code+'_'+current_date+'.csv'
@@ -106,26 +149,29 @@ def StocksData2TrainData():
             src_df['increase']=0.0
             for iloop in range(0, len(src_df)-1):
                 src_df.iloc[iloop,3]=(100*src_df['close'][iloop]/src_df['close'][iloop+1])-100.0
-            for day_loop in range(0, len(src_df)-feature_days-1):
+            for day_loop in range(0, len(src_df)-feature_days-predict_day_count):
                 data_unit=[]
                 for iloop in range(0, feature_days):
-                    data_unit.append(src_df['increase'][day_loop+iloop+1])
-                    data_unit.append(src_df['turnover_rate'][day_loop+iloop+1])
+                    temp_day_index=day_loop+iloop+predict_day_count
+                    data_unit.append(src_df['increase'][temp_day_index])
+                    data_unit.append(src_df['turnover_rate'][temp_day_index])
+                #data_unit.append(src_df['increase'][day_loop+1])
                 data_unit.append(src_df['increase'][day_loop])
-                train_data_list.append(data_unit)
+                if(day_loop<test_day_count):
+                    test_data_list[day_loop].append(data_unit)
+                else:
+                    train_data_list.append(data_unit)
         print("%-4d : %s 100%%" % (code_index, stock_code))
     train_data=np.array(train_data_list)
-    order=np.argsort(np.random.random(len(train_data)))
-    train_data=train_data[order]
     print("train_data: {}".format(train_data.shape))
     np.save('train_data.npy', train_data)
+    test_data=np.array(test_data_list)
+    print("test_data: {}".format(test_data.shape))
+    np.save('test_data.npy', test_data)
 
 def StocksData2PredictData():
     temp_date_time=datetime.datetime.now()
-    #current_date=temp_date_time.strftime("%Y%m%d")
-    current_date='20181118'
-    temp_date_time=temp_date_time-datetime.timedelta(days=60)
-    start_date_str=temp_date_time.strftime("%Y%m%d")
+    current_date=CurrentDate()
 
     code_list=StockCodes()
     predict_data_list=[]
@@ -133,7 +179,7 @@ def StocksData2PredictData():
     for code_index in range(0, len(code_list)):
         stock_code=code_list[code_index]
         file_name1='./data/'+stock_code+'_'+current_date+'.csv'
-        file_name2='./data/'+stock_code+'_'+start_date_str+"-"+current_date+'.csv'
+        file_name2='./data/'+stock_code+'_'+current_date+'_60.csv'
         if os.path.exists(file_name1) or os.path.exists(file_name2):
             if os.path.exists(file_name1):
                 load_df=pd.read_csv(file_name1)
@@ -157,6 +203,38 @@ def StocksData2PredictData():
     print("predict_data: {}".format(predict_data.shape))
     np.save('predict_data.npy', predict_data)
     np.save('predict_stock_code.npy', predict_stock_code)
+
+def StocksData2DayTestData():
+    current_date=CurrentDate()
+    code_list=StockCodes()
+    test_data_list=[]
+    for code_index in range(0, len(code_list)):
+        stock_code=code_list[code_index]
+        file_name1='./data/'+stock_code+'_'+current_date+'.csv'
+        file_name2='./data/'+stock_code+'_'+current_date+'_60.csv'
+        if os.path.exists(file_name1) or os.path.exists(file_name2):
+            if os.path.exists(file_name1):
+                load_df=pd.read_csv(file_name1)
+            else:
+                load_df=pd.read_csv(file_name2)
+            if(len(load_df)>(feature_days+1)):
+                src_df=load_df[['trade_date', 'close', 'turnover_rate']].copy()
+                src_df['increase']=0.0
+                for iloop in range(0, feature_days):
+                    src_df.iloc[iloop,3]=(100*src_df['close'][iloop]/src_df['close'][iloop+1])-100.0
+                day_loop=0
+                data_unit=[]
+                for iloop in range(0, feature_days):
+                    temp_day_index=day_loop+iloop+predict_day_count
+                    data_unit.append(src_df['increase'][temp_day_index])
+                    data_unit.append(src_df['turnover_rate'][temp_day_index])
+                data_unit.append(src_df['increase'][day_loop+1])
+                data_unit.append(src_df['increase'][day_loop])
+                test_data_list.append(data_unit)
+        print("%-4d : %s 100%%" % (code_index, stock_code))
+    test_data=np.array(test_data_list)
+    print("test_data: {}".format(test_data.shape))
+    np.save('day_test_data.npy', test_data)
 
 if __name__ == "__main__":
     temp_stock_codes=StockCodes()

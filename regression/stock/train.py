@@ -23,9 +23,11 @@ print("train_data: {}".format(train_data.shape))
 print("reorder...")
 order=np.argsort(np.random.random(len(train_data)))
 train_data=train_data[order]
+train_data=train_data[:300000]
 
 col_num=train_data.shape[1]
-train_features=train_data[:,0:col_num-1]
+train_features=train_data[:,0:col_num-2]
+#train_labels=train_data[:,col_num-2:col_num-1]
 train_labels=train_data[:,col_num-1:]
 print("train_features: {}".format(train_features.shape))
 print("train_labels: {}".format(train_labels.shape))
@@ -57,11 +59,11 @@ model.summary()
 # Display training progress by printing a single dot for each completed epoch.
 class PrintDot(keras.callbacks.Callback):
     def on_epoch_end(self,epoch,logs):
-        if epoch % 100 == 0: print('.')
+        if epoch % 1 == 0: print('.')
         #print('.', end='')
         #print('.')
 
-EPOCHS = 50
+EPOCHS = 300
 
 # The patience parameter is the amount of epochs to check for improvement.
 early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=200)
