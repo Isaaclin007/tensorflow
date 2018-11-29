@@ -13,18 +13,14 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
-model=keras.models.load_model("model.h5")
-# optimizer = tf.train.RMSPropOptimizer(0.001)
-# model.compile(loss='mse',
-#                 optimizer=optimizer,
-#                 metrics=['mae'])
-mean=np.load('mean.npy')
-std=np.load('std.npy')
+model=keras.models.load_model("./model/model.h5")
+mean=np.load('./model/mean.npy')
+std=np.load('./model/std.npy')
 
 print("load...")
-predict_data=np.load("predict_data.npy")
+predict_data=np.load("./temp_data/predict_data.npy")
 predict_data = (predict_data - mean) / std
-predict_stock_code=np.load("predict_stock_code.npy")
+predict_stock_code=np.load("./temp_data/predict_stock_code.npy")
 predictions = model.predict(predict_data).flatten()
 
 predict_stock_code.shape=(len(predict_stock_code),1)
