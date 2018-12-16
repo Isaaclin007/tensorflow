@@ -62,31 +62,65 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 #     if iloop%100000 == 0 :
 #         print("%u" %(iloop))
 
-def GetTrainData():
-    train_data=np.load("./temp_data/train_data.npy")
-    print("train_data: {}".format(train_data.shape))
-    # raw_input("Enter ...")
+# def GetTrainData():
+#     train_data=np.load("./temp_data/train_data.npy")
+#     print("train_data: {}".format(train_data.shape))
+#     # raw_input("Enter ...")
 
-    print("reorder...")
-    order=np.argsort(np.random.random(len(train_data)))
-    train_data=train_data[order]
-    # raw_input("Enter ...")
+#     print("reorder...")
+#     order=np.argsort(np.random.random(len(train_data)))
+#     train_data=train_data[order]
+#     # raw_input("Enter ...")
 
-    print("get feature and label...")
-    feature_size=tushare_data.FeatureSize()
-    label_index=tushare_data.LabelColIndex()
-    print("get feature ...")
-    train_features=train_data[:,0:feature_size].copy()
-    # raw_input("Enter ...")
+#     print("get feature and label...")
+#     feature_size=tushare_data.FeatureSize()
+#     label_index=tushare_data.LabelColIndex()
+#     print("get feature ...")
+#     train_features=train_data[:,0:feature_size].copy()
+#     # raw_input("Enter ...")
 
-    print("get label...")
-    train_labels=train_data[:,label_index:label_index+1].copy()
-    # raw_input("Enter ...")
-    print("train_features: {}".format(train_features.shape))
-    print("train_labels: {}".format(train_labels.shape))
+#     print("get label...")
+#     train_labels=train_data[:,label_index:label_index+1].copy()
+#     # raw_input("Enter ...")
+#     print("train_features: {}".format(train_features.shape))
+#     print("train_labels: {}".format(train_labels.shape))
 
-    return train_features, train_labels
+#     return train_features, train_labels
 
 
-f,l=GetTrainData()
-raw_input("Enter ...")
+# f,l=GetTrainData()
+# raw_input("Enter ...")
+
+# pro = ts.pro_api()
+# df = pro.daily(trade_date='20180810')
+# print(df)
+
+# print("\n\n")
+# df_basic=pro.daily_basic(trade_date='20180810')
+# print(df_basic)
+
+# print("\n\n")
+# df=pro.trade_cal(exchange='', start_date='20180101', end_date='20181130')
+# print(df)
+# print("\n\n")
+
+# tushare_data.DownloadStocksPredictData()
+
+# train_features, train_labels = tushare_data.GetTrainData()
+# print("train_features:")
+# print(train_features)
+
+# train_data=np.load("./temp_data/train_data.npy")
+# print("train_data: {}".format(train_data.shape))
+# print(train_data[10])
+
+# load_data=np.load("./temp_data/test_data.npy")
+# print("load_data: {}".format(load_data.shape))
+# print(load_data[10][6])
+
+# tushare_data.GetTestData()
+
+temp_str = "837465.SZ"
+print(float(temp_str[0:6]))
+
+

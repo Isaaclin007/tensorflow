@@ -27,10 +27,10 @@ import tushare_data
 # tushare_data.DownloadStocksPredictData()
 # print("\n\n\n")
 
-tushare_data.DownloadStocksPredictData()
+tushare_data.DownloadDateData()
 print("\n\n\n")
 
-tushare_data.StocksData2DayTestData()
+tushare_data.UpdateTestData()
 print("\n\n\n")
 
 # train_data=np.load("train_data.npy")

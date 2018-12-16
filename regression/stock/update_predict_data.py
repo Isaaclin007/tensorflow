@@ -30,7 +30,9 @@ import tushare_data
 # tushare_data.DownloadStocksPredictData()
 # print("\n\n\n")
 
-tushare_data.StocksData2PredictData()
+tushare_data.DownloadDateData()
+tushare_data.TradeDateData2PredictData()
+# tushare_data.StocksData2PredictData()
 print("\n\n\n")
 
 # train_data=np.load("train_data.npy")
