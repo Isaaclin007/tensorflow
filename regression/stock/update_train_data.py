@@ -15,6 +15,6 @@ import tushare_data
 # tushare_data.DownloadStocksTrainData()
 # print("\n\n\n")
 
-tushare_data.StocksData2TrainTestData()
+tushare_data.UpdateTrainData()
 print("\n\n\n")
 

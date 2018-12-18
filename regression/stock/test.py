@@ -21,19 +21,6 @@ mean=np.load('./model/mean.npy')
 std=np.load('./model/std.npy')
 
 print("load...")
-# features              offset = 0
-# + T1_close_increse    offset = 85
-# + T2_close_increase   
-# + ... 
-# + T_predict_day_increase 
-# + T1_open_increse     offset = 90
-# + T1_low_increase     offset = 91
-# + T1_open             offset = 92
-# + T1_low              offset = 93
-# + T5_close            offset = 94
-# + stock_code          offset = 95
-# + T1_trade_date       offset = 96
-# = 97维
 load_data = tushare_data.GetTestData()
 increase_sum=0.0
 trade_count=0
@@ -52,7 +39,21 @@ print("%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s" %(
     "t5_close", \
     "act_inc"))
 print("-------------------------------------------------------------------------------")
-for day_loop in range(0, load_data.shape[0]):
+for day_loop in range(0, 30):
+# features              offset = 0
+#     features[5]: pre close
+#     features[6]: pre close 5 avg
+# + T1_close_5_avg_increse    offset = 87
+# + T2_close_5_avg_increase   
+# + ... 
+# + T_predict_day_close 5_avg_increase 
+# + T1_open_increse     offset = 92
+# + T1_low_increase     offset = 93
+# + T1_open             offset = 94
+# + T1_low              offset = 95
+# + T5_close            offset = 96
+# + stock_code          offset = 97
+# + T1_trade_date       offset = 99
     test_data=load_data[day_loop]
     test_features=test_data[:,0:feature_size]
     test_features=(test_features - mean) / std
@@ -60,7 +61,12 @@ for day_loop in range(0, load_data.shape[0]):
     predictions.shape=(len(predictions),1)
     predictions_df=pd.DataFrame(predictions, columns=['predictions'])
 
-    acture_data=test_data[:,90:]
+    current_data=test_data[:,5:7]
+    current_data_df=pd.DataFrame(current_data, columns=[ \
+        'pre_close', \
+        'pre_close_5_avg'])
+
+    acture_data=test_data[:,92:]
     acture_data_df=pd.DataFrame(acture_data, columns=[ \
         'T1_open_increse', \
         'T1_low_increase', \
@@ -70,56 +76,39 @@ for day_loop in range(0, load_data.shape[0]):
         'stock_code', \
         'T1_trade_date'])
 
-    # label_data=test_data[:,label_index:label_index+1]
-    # code_index_data = test_data[:,code_index_index:code_index_index+1]
-    # code_list = []
-    # for code_loop in range(0, len(code_index_data)):
-    #     temp_code_index = int(code_index_data[code_loop])
-    #     code_list.append(test_stock_code[temp_code_index])
-    # stock_code_np = np.array(code_list)
-    # date_data = test_data[:,date_index:date_index+1]
-
-    # stock_code_df = pd.DataFrame(stock_code_np, columns=['code'])
-    # date_df = pd.DataFrame(date_data, columns=['date'])
-    
-    # label_df=pd.DataFrame(label_data, columns=['label'])
-    # acture_data_df=pd.DataFrame(acture_data, columns=['t+1_inc', 't+2_inc', 't+3_inc', 't+4_inc', 't+5_inc', 't+1_open', 't+1_low'])
-    result=pd.merge(predictions_df, acture_data_df, left_index=True, right_index=True)
-    result=result.sort_values(by="predictions", ascending=False)
-    # result.to_csv('result_sort.csv')
-    # print("\n\n%2u day result:" % day_loop)
-    result=result[:20]
-    # print("--------------------------\n")
-    # print(result)
-    # print("\n\n\n")
-
+    result = predictions_df
+    result = pd.merge(result, current_data_df, left_index=True, right_index=True)
+    result = pd.merge(result, acture_data_df, left_index=True, right_index=True)
+    result = result.sort_values(by="predictions", ascending=False)
+    result = result[:20]
 
     day_increase_sum=0.0
     day_trade_count=0
     day_avg_increase=0.0
-    # print("\n\n%2u day trade:" % day_loop)
 
-    predict_trade_threshold = 8.0
+    predict_trade_threshold = 15.0
     for iloop in range(0, len(result)):
         if day_trade_count < 10 :
             trade_date = result.iloc[iloop]['T1_trade_date']
             stock_code = result.iloc[iloop]['stock_code']
             pred = result.iloc[iloop]['predictions']
-            buying_threshold = pred - 5.0
-            if buying_threshold > 9.0 :
-                buying_threshold = 9.0
+            pre_close = result.iloc[iloop]['pre_close']
+            pre_close_5_avg = result.iloc[iloop]['pre_close_5_avg']
             t1_open_increase = result.iloc[iloop]['T1_open_increse']
             t1_low_increase = result.iloc[iloop]['T1_low_increase']
             t1_open = result.iloc[iloop]['T1_open']
             t1_low = result.iloc[iloop]['T1_low']
             t5_close = result.iloc[iloop]['T5_close']
+            pred_price = pre_close_5_avg * ((pred / 100.0) + 1.0)
+            pred_increase_to_pre_close = ((pred_price / pre_close) - 1.0) * 100.0
+            buying_threshold = pred_increase_to_pre_close - 5.0
+            if buying_threshold > 9.0 :
+                buying_threshold = 9.0
             if pred > predict_trade_threshold :
                 if (t1_open_increase < buying_threshold) or (t1_low_increase < buying_threshold) :
                     if (t1_open_increase < buying_threshold) :
                         buying_price = t1_open
                     else:
-                        # t1_open = pre_close * ((t1_open_increase / 100.0) + 1.0)
-                        pre_close = t1_open / ((t1_open_increase / 100.0) + 1.0)
                         buying_price = pre_close * ((buying_threshold / 100.0) + 1.0)
                     
                     temp_increase = ((t5_close / buying_price) - 1.0) *100.0

@@ -12,7 +12,7 @@ import sys
 import tushare_data
 
 
-tushare_data.DownloadStocksTrainData()
+tushare_data.DownloadTrainData()
 print("\n\n\n")
 
 

@@ -47,8 +47,8 @@ train_features = (train_features - mean) / std
 #Create the model
 def build_model():
     model = keras.Sequential([
-        keras.layers.Dense(32, activation=tf.nn.relu, input_shape=(train_features.shape[1],)),
-        keras.layers.Dense(32, activation=tf.nn.relu),
+        keras.layers.Dense(1024, activation=tf.nn.relu, input_shape=(train_features.shape[1],)),
+        keras.layers.Dense(1024, activation=tf.nn.relu),
         keras.layers.Dense(1)
     ])
 
@@ -69,7 +69,7 @@ class PrintDot(keras.callbacks.Callback):
         #print('.', end='')
         #print('.')
 
-EPOCHS = 100
+EPOCHS = 10
 
 # The patience parameter is the amount of epochs to check for improvement.
 early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=200)
