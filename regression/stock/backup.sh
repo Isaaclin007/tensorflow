@@ -6,6 +6,7 @@ mkdir ${ls_date}
 cd ${ls_date}
 cp ../../*.py ./
 cp ../../*.sh ./
+cp ../../*.txt ./
 
 cd ..
 rm -f ${ls_date}.tar

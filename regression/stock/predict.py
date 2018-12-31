@@ -55,9 +55,10 @@ for iloop in range(0, len(result)):
     pred = result.iloc[iloop]['predictions']
     pre_close = result.iloc[iloop]['pre_close']
     pre_close_5_avg = result.iloc[iloop]['pre_close_5_avg']
-    pred_price = pre_close_5_avg * ((pred / 100.0) + 1.0)
-    pred_increase_to_pre_close = ((pred_price / pre_close) - 1.0) * 100.0
-    buying_threshold_increase = pred_increase_to_pre_close - 5.0
+    # pred_price = pre_close_5_avg * ((pred / 100.0) + 1.0)
+    # pred_increase_to_pre_close = ((pred_price / pre_close) - 1.0) * 100.0
+    # buying_threshold_increase = pred_increase_to_pre_close - 5.0
+    buying_threshold_increase = pred - 5.0
     if buying_threshold_increase > 9.0 :
         buying_threshold_increase = 9.0
     buying_threshold = pre_close * ((buying_threshold_increase / 100.0) + 1.0)

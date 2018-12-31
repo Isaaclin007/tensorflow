@@ -120,7 +120,20 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # tushare_data.GetTestData()
 
-temp_str = "837465.SZ"
-print(float(temp_str[0:6]))
+# temp_str = "837465.SZ"
+# print(float(temp_str[0:6]))
+
+a = 0
+b = 0
+c = 100
+for iloop in reversed(range(0, 10)):
+
+    b+=10
+    c /= 2
+    print(b)
+    print(c)
+    caption = 'prediction_%d' % iloop
+    print(caption)
+
 
 
