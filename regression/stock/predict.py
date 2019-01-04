@@ -8,6 +8,7 @@ import pandas as pd
 import os
 import time
 import sys
+import tushare_data
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -26,20 +27,20 @@ predictions = model.predict(feature_data).flatten()
 predictions.shape=(len(predictions),1)
 predictions_df=pd.DataFrame(predictions, columns=['predictions'])
 
-stock_info = predict_data[:,feature_size:feature_size+1]
-stock_info_df=pd.DataFrame(stock_info, columns=['stock_code'])
+temp_index = feature_size
+acture_data = predict_data[:, temp_index:]
+acture_data_df = pd.DataFrame(acture_data, columns=[ \
+        'pre_open_increse', \
+        'pre_low_increase', \
+        'pre_open', \
+        'pre_low', \
+        'pre_close', \
+        'stock_code', \
+        'pre_trade_date'])
 
-current_data=predict_data[:,5:7]
-current_data_df=pd.DataFrame(current_data, columns=[ \
-    'pre_close', \
-    'pre_close_5_avg'])
-
-result = stock_info_df
-result = pd.merge(result, predictions_df, left_index=True, right_index=True)
-result = pd.merge(result, current_data_df, left_index=True, right_index=True)
-result.to_csv('result.csv')
+result = pd.merge(predictions_df, acture_data_df, left_index=True, right_index=True)
 result=result.sort_values(by="predictions", ascending=False)
-result.to_csv('result_sort.csv')
+result.to_csv('predict_sort.csv')
 result=result[:20]
 
 print("%10s%10s%10s%10s%16s%10s" %(
@@ -47,14 +48,14 @@ print("%10s%10s%10s%10s%16s%10s" %(
     "code", \
     "predict", \
     "pre_close", \
-    "pre_close_5_avg", \
-    "buy_thred")
+    "pre_trade_date", \
+    "buy_thred"))
 print("-------------------------------------------------------------------------------")
 for iloop in range(0, len(result)):
     stock_code = result.iloc[iloop]['stock_code']
     pred = result.iloc[iloop]['predictions']
     pre_close = result.iloc[iloop]['pre_close']
-    pre_close_5_avg = result.iloc[iloop]['pre_close_5_avg']
+    pre_trade_date = result.iloc[iloop]['pre_trade_date']
     # pred_price = pre_close_5_avg * ((pred / 100.0) + 1.0)
     # pred_increase_to_pre_close = ((pred_price / pre_close) - 1.0) * 100.0
     # buying_threshold_increase = pred_increase_to_pre_close - 5.0
@@ -62,12 +63,12 @@ for iloop in range(0, len(result)):
     if buying_threshold_increase > 9.0 :
         buying_threshold_increase = 9.0
     buying_threshold = pre_close * ((buying_threshold_increase / 100.0) + 1.0)
-    print("%10u    %06u%10.2f%10.2f%16.2f%10.2f" %( \
+    print("%10u    %06u%10.2f%10.2f%16s%10.2f" %( \
         iloop, \
         int(stock_code), \
         pred, \
         pre_close, \
-        pre_close_5_avg, \
+        '%06u' % int(pre_trade_date), \
         buying_threshold))
 
 # print(result)

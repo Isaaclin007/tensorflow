@@ -19,12 +19,10 @@
     在tushare_data.py中增加 referfence_feature_count ，用于设置决策预测数量
 2. 测试逻辑，增加买入后的监控处理，修改卖出条件，买入后每天对其预测，当predict值小于一定门限时卖出。减少损失
     a. 修改测试数据格式，改为predict_day_count数量的feature+每天的 open, close, 修改后：
-        stock_code
-        T1 trade date
-        pridcit day feature， acture_data
-        T1 feature, acture_data
-        T2 feature, acture_data
+        pridcit day feature， acture_data， code, date
+        T1 feature, acture_data， code, date
+        T2 feature, acture_data， code, date
         ...
-        Td feature, acture_data
+        Td feature, acture_data， code, date
             acture_data: open_increase, low_increase, open, low, close, 
     b. 修改预测逻辑，根据pridcit day feature 及 T1 acture_data 决定是否买入，根据T1～Td的prediction决定是否中途卖出，如果有中途卖出则次日开盘卖出，卖出价为次日open，如果没有中途卖出则卖出价为Td_close

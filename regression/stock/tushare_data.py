@@ -12,8 +12,9 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
 feature_days=10
-predict_day_count=10 #预测未来几日的数据
-test_day_count=100
+predict_day_count = 10 #预测未来几日的数据
+test_day_count = 100
+test_day_sample = 1  # test_day_count采样比例
 referfence_feature_count = 1
 
 ts.set_token('230c446ae448ec95357d0f7e804ddeebc7a51ff340b4e6e0913ea2fa')
@@ -24,7 +25,7 @@ pd.set_option('display.max_rows', 100)  # 设置显示最大行
 
 def CurrentDate():
     # current_date=time.strftime('%Y%m%d',time.localtime(time.time()))
-    current_date='20181216'
+    current_date='20190103'
     return current_date
 
 def TrainDate():
@@ -37,7 +38,7 @@ def TradeDateList():
     df_trade_cal=pro.trade_cal(exchange='SSE', start_date='20100101', end_date=CurrentDate())
     df_trade_cal=df_trade_cal.sort_index(ascending=False)
     df_trade_cal=df_trade_cal[df_trade_cal['is_open']==1]
-    df_trade_cal=df_trade_cal[:feature_days + predict_day_count + test_day_count + 30]
+    df_trade_cal=df_trade_cal[:feature_days + predict_day_count + test_day_count + referfence_feature_count + 30]
     print(df_trade_cal)
     date_list=df_trade_cal['cal_date'].values
     return date_list
@@ -246,6 +247,9 @@ def StockDataPreProcess( stock_data_df ):
 
 def FeatureSize():
     return 87
+    
+def ActureSize():
+    return 7
 
 def PredictDay():
     return predict_day_count
@@ -279,65 +283,76 @@ def TestActureDataIndex():
 # + Td_close            offset = feature_size + predict_day_count + 4
 # + stock_code          offset = feature_size + predict_day_count + 5
 # + T1_trade_date       offset = feature_size + predict_day_count + 6
-
-def GetAFeature( src_df, day_index, train, feature_day_count=1 ):
-    data_unit=[]
-    feature_day_pointer=day_index
-    if train :
-        feature_day_pointer=feature_day_pointer+predict_day_count
-    for feature_day_loop in reversed(range(0, feature_day_count)):
-        temp_index = feature_day_pointer + feature_day_loop
-        data_unit.append(src_df['total_share'][temp_index])
-        data_unit.append(src_df['float_share'][temp_index])
-        data_unit.append(src_df['free_share'][temp_index])
-        data_unit.append(src_df['total_mv'][temp_index])
-        data_unit.append(src_df['circ_mv'][temp_index])
-        data_unit.append(src_df['close'][temp_index])
-        data_unit.append(src_df['close_5_avg'][temp_index])
-        for iloop in range(0, feature_days):
-            # if day_index == 101:
-                # print('close[%d]: %f' % (iloop, src_df['close'][temp_index]))
-                # print('close_5_avg[%d]: %f' % (iloop, src_df['close_5_avg'][temp_index]))
-                # print('close_10_avg[%d]: %f' % (iloop, src_df['close_10_avg'][temp_index]))
-                # print('close_30_avg[%d]: %f' % (iloop, src_df['close_30_avg'][temp_index]))
-                # print('close_increase_to_5_avg[%d]: %f' % (iloop, src_df['close_increase_to_5_avg'][temp_index]))
-                # print('close_increase_to_10_avg[%d]: %f' % (iloop, src_df['close_increase_to_10_avg'][temp_index]))
-                # print('close_increase_to_30_avg[%d]: %f' % (iloop, src_df['close_increase_to_30_avg'][temp_index]))
-                
-            temp_index=feature_day_pointer+iloop
-            data_unit.append(src_df['open_increase'][temp_index])
-            data_unit.append(src_df['close_increase'][temp_index])
-            data_unit.append(src_df['high_increase'][temp_index])
-            data_unit.append(src_df['low_increase'][temp_index])
-            data_unit.append(src_df['close_increase_to_5_avg'][temp_index])
-            data_unit.append(src_df['close_increase_to_10_avg'][temp_index])
-            data_unit.append(src_df['close_increase_to_30_avg'][temp_index])
-            data_unit.append(src_df['turnover_rate_f'][temp_index])
-
-    if train :
-        feature_last_close = src_df['close'][feature_day_pointer]
-        # feature_last_close_5_avg = src_df['close_5_avg'][feature_day_pointer]
-        for iloop in reversed(range(0, predict_day_count)):
-            temp_index = day_index + iloop
-            temp_increase_per = ((src_df['close'][temp_index] / feature_last_close) - 1.0) * 100.0
-            # temp_increase_per = ((src_df['close_5_avg'][temp_index] / feature_last_close_5_avg) - 1.0) * 100.0
-            data_unit.append(temp_increase_per)
-
-        temp_index=day_index+(predict_day_count-1)
+def AppendFeature( src_df, feature_day_pointer, data_unit):
+    temp_index = feature_day_pointer
+    data_unit.append(src_df['total_share'][temp_index])
+    data_unit.append(src_df['float_share'][temp_index])
+    data_unit.append(src_df['free_share'][temp_index])
+    data_unit.append(src_df['total_mv'][temp_index])
+    data_unit.append(src_df['circ_mv'][temp_index])
+    data_unit.append(src_df['close'][temp_index])
+    data_unit.append(src_df['close_5_avg'][temp_index])
+    for iloop in range(0, feature_days):                
+        temp_index=feature_day_pointer+iloop
         data_unit.append(src_df['open_increase'][temp_index])
+        data_unit.append(src_df['close_increase'][temp_index])
+        data_unit.append(src_df['high_increase'][temp_index])
         data_unit.append(src_df['low_increase'][temp_index])
-        data_unit.append(src_df['open'][temp_index])
-        data_unit.append(src_df['low'][temp_index])
-        data_unit.append(src_df['close'][day_index])
-        temp_str = src_df['ts_code'][temp_index]
-        data_unit.append(float(temp_str[0:6]))
-        temp_str = src_df['trade_date'][temp_index]
-        data_unit.append(float(temp_str))
-    else :
-        temp_index = feature_day_pointer
-        temp_str = src_df['ts_code'][temp_index]
-        data_unit.append(float(temp_str[0:6]))
+        data_unit.append(src_df['close_increase_to_5_avg'][temp_index])
+        data_unit.append(src_df['close_increase_to_10_avg'][temp_index])
+        data_unit.append(src_df['close_increase_to_30_avg'][temp_index])
+        data_unit.append(src_df['turnover_rate_f'][temp_index])
         
+def AppendLabel( src_df, day_index, data_unit):
+    feature_day_pointer = day_index + predict_day_count
+    feature_last_close = src_df['close'][feature_day_pointer]
+    for iloop in reversed(range(0, predict_day_count)):
+        temp_index = day_index + iloop
+        temp_increase_per = ((src_df['close'][temp_index] / feature_last_close) - 1.0) * 100.0
+        data_unit.append(temp_increase_per)
+
+ACTURE_DATA_INDEX_OPEN_INCREASE = 0
+ACTURE_DATA_INDEX_LOW_INCREASE = 1
+ACTURE_DATA_INDEX_OPEN = 2
+ACTURE_DATA_INDEX_LOW = 3
+ACTURE_DATA_INDEX_CLOSE = 4
+ACTURE_DATA_INDEX_TSCODE = 5
+ACTURE_DATA_INDEX_DATE = 6
+def AppendActureData( src_df, day_index, data_unit):
+    temp_index = day_index
+    data_unit.append(src_df['open_increase'][temp_index])
+    data_unit.append(src_df['low_increase'][temp_index])
+    data_unit.append(src_df['open'][temp_index])
+    data_unit.append(src_df['low'][temp_index])
+    data_unit.append(src_df['close'][temp_index])
+    temp_str = src_df['ts_code'][temp_index]
+    data_unit.append(float(temp_str[0:6]))
+    temp_str = src_df['trade_date'][temp_index]
+    data_unit.append(float(temp_str))
+        
+FEATURE_TYPE_TRAIN = 0
+FEATURE_TYPE_PREDICT = 1
+FEATURE_TYPE_TEST = 2
+def GetAFeature( src_df, day_index, feature_type):
+    data_unit=[]
+    if feature_type == FEATURE_TYPE_TRAIN:
+        AppendFeature(src_df, day_index + predict_day_count, data_unit)
+        AppendLabel(src_df, day_index, data_unit)
+
+    elif feature_type == FEATURE_TYPE_PREDICT:
+        AppendFeature(src_df, day_index, data_unit)
+        AppendActureData(src_df, day_index, data_unit)
+        
+    elif feature_type == FEATURE_TYPE_TEST:
+        for iloop in reversed(range(0, referfence_feature_count)):
+            predict_day_pointer = day_index + predict_day_count + iloop
+            AppendFeature(src_df, predict_day_pointer, data_unit)
+            AppendActureData(src_df, predict_day_pointer, data_unit)
+        for iloop in reversed(range(0, predict_day_count)):
+            monitor_day_index = day_index + iloop
+            AppendFeature(src_df, monitor_day_index, data_unit)
+            AppendActureData(src_df, monitor_day_index, data_unit)
+
     # if day_index == 101:
         # print('\n\n\n')
         # for iloop in range(0, len(data_unit)):
@@ -360,7 +375,7 @@ def UpdateTrainData():
                 # src_df.to_csv(temp_file_name)
                 for day_loop in range(0, len(src_df)-feature_days-predict_day_count):
                     if(day_loop >= test_day_count):
-                        data_unit=GetAFeature(src_df, day_loop, True)
+                        data_unit=GetAFeature(src_df, day_loop, FEATURE_TYPE_TRAIN)
                         train_data_list.append(data_unit)
                 temp_train_data=np.array(train_data_list)
                 if init_flag:
@@ -382,7 +397,7 @@ def GetTrainData():
     print("reorder...")
     order=np.argsort(np.random.random(len(train_data)))
     train_data=train_data[order]
-    train_data=train_data[:2000000]
+    train_data=train_data[:1000000]
     # raw_input("Enter ...")
 
     feature_size=FeatureSize()
@@ -419,7 +434,7 @@ def UpdatePredictData():
         stock_df=merge_df[merge_df['ts_code']==stock_code]
         processed_df=StockDataPreProcess(stock_df)
         if(len(processed_df)>=(feature_days)):
-            data_unit=GetAFeature(processed_df, 0, False)
+            data_unit=GetAFeature(processed_df, 0, FEATURE_TYPE_PREDICT)
             predict_data_list.append(data_unit)
         else:
             print("------%s:%u" % (stock_code, len(processed_df)))
@@ -448,21 +463,20 @@ def UpdateTestData():
     # print(merge_df)
     code_list=StockCodes()
     test_data_list=[]
-    for iloop in range(0, test_day_count):
+    for iloop in range(0, test_day_count/test_day_sample):
         day_test_data_list=[]
         test_data_list.append(day_test_data_list)
-    test_stock_code_list=[]
     for code_index in range(0, len(code_list)):
         stock_code=code_list[code_index]
         stock_df=merge_df[merge_df['ts_code']==stock_code]
         processed_df=StockDataPreProcess(stock_df)
-        if (len(processed_df)-feature_days-predict_day_count) >= test_day_count :
+        if (len(processed_df) - feature_days - predict_day_count - referfence_feature_count) >= test_day_count :
             for day_loop in range(0, test_day_count) :
-                data_unit=GetAFeature(processed_df, day_loop, True, referfence_feature_count)
-                test_data_list[day_loop].append(data_unit)
+                if (day_loop % test_day_sample) == 0:
+                    data_unit=GetAFeature(processed_df, day_loop, FEATURE_TYPE_TEST)
+                    test_data_list[day_loop/test_day_sample].append(data_unit)
         print("%-4d : %s 100%%" % (code_index, stock_code))
     test_data=np.array(test_data_list)
-    test_stock_code=np.array(code_list)
     print("test_data: {}".format(test_data.shape))
     np.save('./temp_data/test_data_trade_date.npy', test_data)
 
