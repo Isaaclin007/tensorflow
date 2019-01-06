@@ -26,3 +26,6 @@
         Td feature, acture_data， code, date
             acture_data: open_increase, low_increase, open, low, close, 
     b. 修改预测逻辑，根据pridcit day feature 及 T1 acture_data 决定是否买入，根据T1～Td的prediction决定是否中途卖出，如果有中途卖出则次日开盘卖出，卖出价为次日open，如果没有中途卖出则卖出价为Td_close
+
+2019-01-06
+修改训练数据生成逻辑对每个stock的数据，支持任意上市日期的个股。

@@ -30,7 +30,7 @@ import tushare_data
 # tushare_data.DownloadStocksPredictData()
 # print("\n\n\n")
 
-tushare_data.DownloadDateData()
+tushare_data.DownloadPredictData()
 tushare_data.UpdatePredictData()
 # tushare_data.StocksData2PredictData()
 print("\n\n\n")

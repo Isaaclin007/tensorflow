@@ -27,7 +27,7 @@ import tushare_data
 # tushare_data.DownloadStocksPredictData()
 # print("\n\n\n")
 
-tushare_data.DownloadDateData()
+tushare_data.DownloadTestData()
 print("\n\n\n")
 
 tushare_data.UpdateTestData()

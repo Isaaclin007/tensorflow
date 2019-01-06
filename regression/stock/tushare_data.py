@@ -16,6 +16,7 @@ predict_day_count = 10 #预测未来几日的数据
 test_day_count = 100
 test_day_sample = 1  # test_day_count采样比例
 referfence_feature_count = 1
+test_acture_data_with_feature = False
 
 ts.set_token('230c446ae448ec95357d0f7e804ddeebc7a51ff340b4e6e0913ea2fa')
 
@@ -23,19 +24,31 @@ pd.set_option('display.width', 150)  # 设置字符显示宽度
 pd.set_option('display.max_rows', 100)  # 设置显示最大行
 
 
-def CurrentDate():
+def PredictDate():
     # current_date=time.strftime('%Y%m%d',time.localtime(time.time()))
-    current_date='20190103'
+    current_date='20190104'
     return current_date
 
 def TrainDate():
     return '20181124'
 
+def TestDate():
+    return '20190104'
 
-def TradeDateList():
+def PredictStockCodeListDate():
+    return 20180101
+
+def TestStockCodeListDate():
+    return 20180101
+    # return 20090101
+
+def TrainStockCodeListDate():
+    return 20090101  
+
+def TradeDateList(input_end_data):
     pro = ts.pro_api()
 
-    df_trade_cal=pro.trade_cal(exchange='SSE', start_date='20100101', end_date=CurrentDate())
+    df_trade_cal=pro.trade_cal(exchange = 'SSE', start_date = '20100101', end_date = input_end_data)
     df_trade_cal=df_trade_cal.sort_index(ascending=False)
     df_trade_cal=df_trade_cal[df_trade_cal['is_open']==1]
     df_trade_cal=df_trade_cal[:feature_days + predict_day_count + test_day_count + referfence_feature_count + 30]
@@ -43,7 +56,7 @@ def TradeDateList():
     date_list=df_trade_cal['cal_date'].values
     return date_list
 
-def StockCodes():
+def StockCodes(input_list_date):
     print(ts.__version__)
     pro = ts.pro_api()
 
@@ -55,31 +68,10 @@ def StockCodes():
         load_df = pro.stock_basic(exchange='', list_status='L', fields='ts_code,symbol,name,area,industry,list_date')
         load_df.to_csv(file_name)
 
-    # print("load_df.dtypes:")
-    # print(load_df.dtypes)
-    # print("\n\n\n")
-
-    # print(load_df)
-    # print("\n\n\n")
-
-    #load_df=load_df[load_df['list_date']<=20000101]
-    load_df=load_df[load_df['list_date']<=20090101]
+    load_df=load_df[load_df['list_date'] <= input_list_date]
     # load_df=load_df[load_df['industry']=='软件服务']
-    print(load_df)
-    print("\n\n\n")
 
     code_list=load_df['ts_code'].values
-
-    # code_list=['600872.SH']
-    # print("len(load_df):%d" % len(load_df))
-    # for iloop in range(0,len(load_df)):
-    #     #code_list.append(load_df['ts_code'][iloop])
-    #     print("iloop:%d" % iloop)
-    #     temp=load_df['list_date'][iloop]
-    #     #print(load_df['list_date'][iloop])
-    # print('code_list\n')
-    # print(code_list)
-    # print("\n\n\n")
     return code_list
 
 def DownloadAStocksData( ts_code, end_data, train ):
@@ -141,15 +133,22 @@ def LoadATradeDayData( trade_date ):
 def DownloadTrainData():
     pro = ts.pro_api()
 
-    code_list=StockCodes()
+    code_list = StockCodes(TrainStockCodeListDate())
     for code_index in range(0, len(code_list)):
         stock_code=code_list[code_index]
         DownloadAStocksData(stock_code, TrainDate(), True)
         print("%-4d : %s 100%%" % (code_index, stock_code))
 
 
-def DownloadDateData():
-    date_list=TradeDateList()
+def DownloadPredictData():
+    date_list=TradeDateList(PredictDate())
+    for date_index in range(0, len(date_list)):
+        temp_date=date_list[date_index]
+        DownloadATradeDayData(temp_date)
+        print("%-4d : %s 100%%" % (date_index, temp_date))
+
+def DownloadTestData():
+    date_list=TradeDateList(TestDate())
     for date_index in range(0, len(date_list)):
         temp_date=date_list[date_index]
         DownloadATradeDayData(temp_date)
@@ -257,8 +256,6 @@ def PredictDay():
 def LabelColIndex():
     return (FeatureSize() + PredictDay() -1)
 
-def TestActureDataIndex():
-    return (FeatureSize()*referfence_feature_count + PredictDay())
 
 
 
@@ -318,6 +315,34 @@ ACTURE_DATA_INDEX_LOW = 3
 ACTURE_DATA_INDEX_CLOSE = 4
 ACTURE_DATA_INDEX_TSCODE = 5
 ACTURE_DATA_INDEX_DATE = 6
+
+def TestDataPredictFeatureOffset(referfence_day_index):
+    return (FeatureSize() + ActureSize()) * referfence_day_index
+
+def TestDataLastPredictFeatureOffset():
+    return TestDataPredictFeatureOffset(referfence_feature_count - 1)
+
+def TestDataLastPredictActureOffset():
+    return TestDataLastPredictFeatureOffset() + FeatureSize()
+
+def TestDataMonitorDataOffset():
+    return (FeatureSize() + ActureSize()) * referfence_feature_count
+
+def TestDataMonitorFeatureOffset(day_index):
+    if test_acture_data_with_feature:
+        return TestDataMonitorDataOffset() + (FeatureSize() + ActureSize()) * day_index
+    else:
+        return 0
+
+def TestDataMonitorActureOffset(day_index):
+    if test_acture_data_with_feature:
+        return TestDataMonitorDataOffset() + (FeatureSize() + ActureSize()) * day_index + FeatureSize()
+    else:
+        return TestDataMonitorDataOffset() + ActureSize() * day_index
+
+def TestDataLastMonitorActureOffset():
+    return TestDataMonitorActureOffset(predict_day_count - 1)
+
 def AppendActureData( src_df, day_index, data_unit):
     temp_index = day_index
     data_unit.append(src_df['open_increase'][temp_index])
@@ -350,7 +375,8 @@ def GetAFeature( src_df, day_index, feature_type):
             AppendActureData(src_df, predict_day_pointer, data_unit)
         for iloop in reversed(range(0, predict_day_count)):
             monitor_day_index = day_index + iloop
-            AppendFeature(src_df, monitor_day_index, data_unit)
+            if test_acture_data_with_feature:
+                AppendFeature(src_df, monitor_day_index, data_unit)
             AppendActureData(src_df, monitor_day_index, data_unit)
 
     # if day_index == 101:
@@ -361,7 +387,7 @@ def GetAFeature( src_df, day_index, feature_type):
 
 def UpdateTrainData():
     train_date=TrainDate()
-    code_list=StockCodes()
+    code_list=StockCodes(TrainStockCodeListDate())
     init_flag=True
     for code_index in range(0, len(code_list)):
         stock_code=code_list[code_index]
@@ -415,7 +441,7 @@ def GetTrainData():
     return train_features, train_labels
 
 def UpdatePredictData():
-    date_list=TradeDateList()
+    date_list=TradeDateList(PredictDate())
     start_flag=True
     for date_index in range(0, feature_days+30):
         temp_date=date_list[date_index]
@@ -427,7 +453,7 @@ def UpdatePredictData():
             merge_df=merge_df.append(load_df)
         print("%-4d : %s 100%%" % (date_index, temp_date))
     # print(merge_df)
-    code_list=StockCodes()
+    code_list=StockCodes(PredictStockCodeListDate())
     predict_data_list=[]
     for code_index in range(0, len(code_list)):
         stock_code=code_list[code_index]
@@ -448,8 +474,18 @@ def GetPredictData():
     print("predict_data: {}".format(predict_data.shape))
     return predict_data
 
+def TestDataFileName():
+    file_name = './temp_data/test_data_%s_%s_%u_%u_%u_%d.npy' \
+        % (TestStockCodeListDate(), \
+        TestDate(), \
+        test_day_count, \
+        test_day_sample, \
+        referfence_feature_count, \
+        int(test_acture_data_with_feature))
+    return file_name
+
 def UpdateTestData():
-    date_list=TradeDateList()
+    date_list=TradeDateList(TestDate())
     start_flag=True
     for date_index in range(0, len(date_list)):
         temp_date=date_list[date_index]
@@ -461,15 +497,21 @@ def UpdateTestData():
             merge_df=merge_df.append(load_df)
         print("%-4d : %s 100%%" % (date_index, temp_date))
     # print(merge_df)
-    code_list=StockCodes()
+    code_list=StockCodes(TestStockCodeListDate())
     test_data_list=[]
     for iloop in range(0, test_day_count/test_day_sample):
         day_test_data_list=[]
         test_data_list.append(day_test_data_list)
     for code_index in range(0, len(code_list)):
         stock_code=code_list[code_index]
-        stock_df=merge_df[merge_df['ts_code']==stock_code]
-        processed_df=StockDataPreProcess(stock_df)
+        temp_file_name='./temp_data/test_preprocess_data_%s_%s.csv' % (stock_code, TestDate())
+        if os.path.exists(temp_file_name):
+            processed_df = pd.read_csv(temp_file_name)
+        else:
+            
+            stock_df = merge_df[merge_df['ts_code'] == stock_code]
+            processed_df = StockDataPreProcess(stock_df)
+            processed_df.to_csv(temp_file_name)
         if (len(processed_df) - feature_days - predict_day_count - referfence_feature_count) >= test_day_count :
             for day_loop in range(0, test_day_count) :
                 if (day_loop % test_day_sample) == 0:
@@ -478,10 +520,10 @@ def UpdateTestData():
         print("%-4d : %s 100%%" % (code_index, stock_code))
     test_data=np.array(test_data_list)
     print("test_data: {}".format(test_data.shape))
-    np.save('./temp_data/test_data_trade_date.npy', test_data)
+    np.save(TestDataFileName(), test_data)
 
 def GetTestData():
-    test_data=np.load("./temp_data/test_data_trade_date.npy")
+    test_data=np.load(TestDataFileName())
     print("test_data: {}".format(test_data.shape))
     # print(test_data)
     print("\n\n\n")
