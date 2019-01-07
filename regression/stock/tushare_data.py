@@ -17,6 +17,10 @@ test_day_count = 100
 test_day_sample = 1  # test_day_count采样比例
 referfence_feature_count = 1
 test_acture_data_with_feature = False
+# train_a_stock_min_data_num = 100
+# train_a_stock_max_data_num = 400
+train_a_stock_min_data_num = 1000
+train_a_stock_max_data_num = 1000000
 
 ts.set_token('230c446ae448ec95357d0f7e804ddeebc7a51ff340b4e6e0913ea2fa')
 
@@ -39,11 +43,17 @@ def PredictStockCodeListDate():
     return 20180101
 
 def TestStockCodeListDate():
-    return 20180101
-    # return 20090101
+    # return 20180101
+    return 20090101
 
 def TrainStockCodeListDate():
-    return 20090101  
+    # return 20180101
+    # return 20160101
+    return 20090101
+
+def TrainStockStartDate():
+    return '20100101'
+    # return '20160601'
 
 def TradeDateList(input_end_data):
     pro = ts.pro_api()
@@ -74,14 +84,10 @@ def StockCodes(input_list_date):
     code_list=load_df['ts_code'].values
     return code_list
 
-def DownloadAStocksData( ts_code, end_data, train ):
+def DownloadAStocksData( ts_code, end_data):
     pro = ts.pro_api()
-    if train :
-        start_date='20100101'
-        file_name='./data/'+ts_code+'_'+end_data+'_train.csv'
-    else:
-        start_date='20180901'
-        file_name='./data/'+ts_code+'_'+end_data+'_predict.csv'
+    start_date = TrainStockStartDate()
+    file_name = './data/' + ts_code + '_' + end_data + '_train.csv'
     if not os.path.exists(file_name):
         df_basic=pro.daily_basic(ts_code=ts_code, start_date=start_date, end_date=end_data)
         df = pro.daily(ts_code=ts_code, start_date=start_date, end_date=end_data)
@@ -109,7 +115,7 @@ def DownloadATradeDayData( input_trade_date ):
         df_basic = pro.daily_basic(trade_date=input_trade_date)
         df = pro.daily(trade_date=input_trade_date)
         if len(df_basic) != len(df) :
-            print("DownloadAStocksData.error.1")
+            print("DownloadATradeDayData.error.1")
             return
         # print("\n\ndf_basic:")
         # print(df_basic.dtypes)
@@ -136,7 +142,7 @@ def DownloadTrainData():
     code_list = StockCodes(TrainStockCodeListDate())
     for code_index in range(0, len(code_list)):
         stock_code=code_list[code_index]
-        DownloadAStocksData(stock_code, TrainDate(), True)
+        DownloadAStocksData(stock_code, TrainDate())
         print("%-4d : %s 100%%" % (code_index, stock_code))
 
 
@@ -385,38 +391,63 @@ def GetAFeature( src_df, day_index, feature_type):
             # print('data_unit[%d]:%f' % (iloop, data_unit[iloop]))
     return data_unit
 
+def TrainDataFileName():
+    file_name = './temp_data/train_data_%s_%s_%s_%u_%u.npy' \
+        % (TrainStockCodeListDate(), \
+        TrainStockStartDate(), \
+        TrainDate(), \
+        train_a_stock_min_data_num, \
+        train_a_stock_max_data_num)
+    return file_name
+
+def TrainStockDataExist(stock_code):
+    file_name = './data/' + stock_code + '_' + TrainDate() + '_train.csv'
+    return os.path.exists(file_name)
+
+def GetAStockData(stock_code):
+    file_name = './data/' + stock_code + '_' + TrainDate() + '_train.csv'
+    load_df = pd.read_csv(file_name)
+    load_df = load_df[load_df['trade_date'] >= int(TrainStockStartDate())]
+    return load_df
+
 def UpdateTrainData():
-    train_date=TrainDate()
     code_list=StockCodes(TrainStockCodeListDate())
     init_flag=True
     for code_index in range(0, len(code_list)):
-        stock_code=code_list[code_index]
-        file_name='./data/'+stock_code+'_'+train_date+'_train.csv'
-        if os.path.exists(file_name):
-            load_df=pd.read_csv(file_name)
-            if len(load_df)>1000:
-                train_data_list=[]
-                src_df=StockDataPreProcess(load_df)
-                # temp_file_name='./data/'+stock_code+'_'+train_date+'_train_preprocess.csv'
-                # src_df.to_csv(temp_file_name)
-                for day_loop in range(0, len(src_df)-feature_days-predict_day_count):
+        stock_code = code_list[code_index]
+        if TrainStockDataExist(stock_code):
+            train_data_list=[]
+            temp_file_name = './preprocessed_data/train_preprocess_data_%s_%s.csv' % (stock_code, TrainDate())
+            if os.path.exists(temp_file_name):
+                src_df = pd.read_csv(temp_file_name)
+            else:
+                load_df = GetAStockData(stock_code)
+                src_df = StockDataPreProcess(load_df)
+                src_df.to_csv(temp_file_name)
+            valid_data_num = len(src_df) - feature_days-predict_day_count
+            if valid_data_num >= (train_a_stock_min_data_num + test_day_count):
+                for day_loop in range(0, valid_data_num):
                     if(day_loop >= test_day_count):
-                        data_unit=GetAFeature(src_df, day_loop, FEATURE_TYPE_TRAIN)
+                        data_unit = GetAFeature(src_df, day_loop, FEATURE_TYPE_TRAIN)
                         train_data_list.append(data_unit)
-                temp_train_data=np.array(train_data_list)
+                temp_train_data = np.array(train_data_list)
+                if len(temp_train_data) > train_a_stock_max_data_num:
+                    order = np.argsort(np.random.random(len(temp_train_data)))
+                    temp_train_data = temp_train_data[order]
+                    temp_train_data = temp_train_data[:train_a_stock_max_data_num]
                 if init_flag:
-                    train_data=temp_train_data
-                    init_flag=False
+                    train_data = temp_train_data
+                    init_flag = False
                 else:
-                    train_data=np.vstack((train_data, temp_train_data))
+                    train_data = np.vstack((train_data, temp_train_data))
                 print("%-4d : %s 100%%" % (code_index, stock_code))
                 # print("train_data: {}".format(train_data.shape))
                 # print(train_data)
     print("train_data: {}".format(train_data.shape))
-    np.save('./temp_data/train_data.npy', train_data)
+    np.save(TrainDataFileName(), train_data)
 
 def GetTrainData():
-    train_data=np.load("./temp_data/train_data.npy")
+    train_data=np.load(TrainDataFileName())
     print("train_data: {}".format(train_data.shape))
     # raw_input("Enter ...")
 
@@ -504,11 +535,10 @@ def UpdateTestData():
         test_data_list.append(day_test_data_list)
     for code_index in range(0, len(code_list)):
         stock_code=code_list[code_index]
-        temp_file_name='./temp_data/test_preprocess_data_%s_%s.csv' % (stock_code, TestDate())
+        temp_file_name='./preprocessed_data/test_preprocess_data_%s_%s.csv' % (stock_code, TestDate())
         if os.path.exists(temp_file_name):
             processed_df = pd.read_csv(temp_file_name)
         else:
-            
             stock_df = merge_df[merge_df['ts_code'] == stock_code]
             processed_df = StockDataPreProcess(stock_df)
             processed_df.to_csv(temp_file_name)

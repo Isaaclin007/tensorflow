@@ -118,7 +118,7 @@ for day_loop in range(0, (tushare_data.test_day_count / tushare_data.test_day_sa
     day_trade_count=0
     day_avg_increase=0.0
 
-    predict_trade_threshold = 12.5
+    predict_trade_threshold = 9.0
     for iloop in range(0, len(result)):
         if day_trade_count < 10 :
             in_trade_date = result.iloc[iloop]['T0_trade_date']
