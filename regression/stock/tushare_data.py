@@ -535,7 +535,7 @@ def UpdateTestData():
         test_data_list.append(day_test_data_list)
     for code_index in range(0, len(code_list)):
         stock_code=code_list[code_index]
-        temp_file_name='./preprocessed_data/test_preprocess_data_%s_%s.csv' % (stock_code, TestDate())
+        temp_file_name='./preprocessed_data/test_preprocess_data_%s_%s_%u.csv' % (stock_code, TestDate(), test_day_count)
         if os.path.exists(temp_file_name):
             processed_df = pd.read_csv(temp_file_name)
         else:
