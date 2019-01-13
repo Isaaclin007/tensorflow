@@ -47,7 +47,8 @@ train_features = (train_features - mean) / std
 #Create the model
 def build_model():
     model = keras.Sequential([
-        keras.layers.Dense(4, activation=tf.nn.relu, input_shape=(train_features.shape[1],)),
+        keras.layers.Dense(32, activation=tf.nn.relu, input_shape=(train_features.shape[1],)),
+        keras.layers.Dense(32, activation=tf.nn.relu),
         # keras.layers.Dense(64, activation=tf.nn.relu),
         # keras.layers.Dense(32, activation=tf.nn.relu),
         # keras.layers.Dense(16, activation=tf.nn.relu),
@@ -93,20 +94,20 @@ print("\n\n")
 #     print("%8u%8.2f%8.2f" %(iloop, train_err, val_err))
 
 # 显示 <<<<<<<<<<
-# import matplotlib.pyplot as plt
-# def plot_history(history):
-#     plt.figure()
-#     plt.xlabel('Epoch')
-#     plt.ylabel('Mean Abs Error [1000$]')
-#     plt.plot(history.epoch, np.array(history.history['mean_absolute_error']), 
-#             label='Train Loss')
-#     plt.plot(history.epoch, np.array(history.history['val_mean_absolute_error']),
-#             label = 'Val loss')
-#     plt.legend()
-#     #plt.ylim([0,5])
-#     plt.show()
-# print("\nplot_history")
-# plot_history(history)
+import matplotlib.pyplot as plt
+def plot_history(history):
+    plt.figure()
+    plt.xlabel('Epoch')
+    plt.ylabel('Mean Abs Error [1000$]')
+    plt.plot(history.epoch, np.array(history.history['mean_absolute_error']), 
+            label='Train Loss')
+    plt.plot(history.epoch, np.array(history.history['val_mean_absolute_error']),
+            label = 'Val loss')
+    plt.legend()
+    #plt.ylim([0,5])
+    plt.show()
+print("\nplot_history")
+plot_history(history)
 # 显示 >>>>>>>>>>>>
 
 model.save("./model/model.h5")

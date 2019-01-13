@@ -19,7 +19,7 @@ mean=np.load('./model/mean.npy')
 std=np.load('./model/std.npy')
 
 print("load...")
-feature_size = tushare_data.FeatureSize()
+feature_size = tushare_data.feature_size
 predict_data = tushare_data.GetPredictData()
 feature_data = predict_data[:,0:feature_size]
 feature_data = (feature_data - mean) / std
@@ -59,10 +59,13 @@ for iloop in range(0, len(result)):
     # pred_price = pre_close_5_avg * ((pred / 100.0) + 1.0)
     # pred_increase_to_pre_close = ((pred_price / pre_close) - 1.0) * 100.0
     # buying_threshold_increase = pred_increase_to_pre_close - 5.0
-    buying_threshold_increase = pred - 5.0
-    if buying_threshold_increase > 9.0 :
-        buying_threshold_increase = 9.0
-    buying_threshold = pre_close * ((buying_threshold_increase / 100.0) + 1.0)
+    if tushare_data.label_type == tushare_data.LABEL_PRE_CLOSE_2_TD_CLOSE:
+        buying_threshold_increase = pred - 5.0
+        if buying_threshold_increase > 9.0 :
+            buying_threshold_increase = 9.0
+        buying_threshold = pre_close * ((buying_threshold_increase / 100.0) + 1.0)
+    else:
+        buying_threshold = 0.0
     print("%10u    %06u%10.2f%10.2f%16s%10.2f" %( \
         iloop, \
         int(stock_code), \

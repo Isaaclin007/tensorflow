@@ -29,3 +29,35 @@
 
 2019-01-06
 修改训练数据生成逻辑对每个stock的数据，支持任意上市日期的个股。
+
+2019-01-12
+stock_data, preprocessd_data 不再区分 train 和 test
+所有 stock_data 的下载数据起始时间都从2010-01-01开始，preprocessd_data 从所有下载数据转换
+训练数据、测试数据、预测数据 不指定天数，只指定以下内容，所有date设置为字符串全局变量。
+1. stocks_list_end_date - 上市日期门限
+2. train_data_start_date, train_data_end_date
+3. test_data_start_date, test_data_end_date
+4. predict_date
+5. train_test_date
+
+V1.0.0
+2019-01-12
+train 和 test 数据一次生成，处理过程：
+preprocessd 简写为 pp
+1. 分别计算 train 和 test 数据在 pp_data 中的 
+   train_pp_start_date, 
+   train_pp_end_date, 
+   test_pp_start_date, 
+   test_pp_end_date
+2. 对个股的 pp_data，提取 train_pp_data 和 test_pp_data，
+   分别生成个股的 stock_train_data 和 stock_test_data, 合并到全局train_data 和 test_data
+   每条记录的date以 TD 为准
+
+test过程:
+1. 从 tushare_data 获取测试日期列表 test_date_list
+2. 逐个日期trade_date in reversed(test_date_list)，取TD date为trade_date的所有数据 day_test_data
+3. 处理 day_test_data
+
+trade_date_data用于生成predict数据，predict不保存processed数据，只保存最终数据
+
+

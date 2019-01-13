@@ -135,5 +135,15 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 #     caption = 'prediction_%d' % iloop
 #     print(caption)
 
-print(int(1.9))
+# print(int(1.9))
+
+# temp_list = tushare_data.PredictTradeDateList()
+# print(temp_list)
+
+arr = np.array([[1.,2.,20190101.],[4.,5.,20190101.],[7.,8.,20190102.],[9.,10.,20190103.]])
+print((arr[:, 2] > float('20190101')) & (arr[:, 2] < float('20190103')))
+print(arr[(arr[:, 2] > float('20190101')) & (arr[:, 2] < float('20190103'))])
+arr = arr[arr[:, 2] == float('20190101')]
+print(arr)
+
 
