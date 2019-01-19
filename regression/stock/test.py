@@ -23,7 +23,7 @@ std=np.load('./model/std.npy')
 print("load...")
 feature_size = tushare_data.feature_size
 acture_size = tushare_data.acture_size
-load_data = tushare_data.GetTestData()
+test_data = tushare_data.GetTestData()
 test_date_list = tushare_data.TestTradeDateList()
 # test_date_list = test_date_list[0:100]
 # print("len(test_date_list):")
@@ -31,10 +31,65 @@ test_date_list = tushare_data.TestTradeDateList()
 # load_data = np.load('./temp_data/test_data_20090101_20190104_100_1_1_0.npy')
 
 temp_index = tushare_data.TestDataLastPredictFeatureOffset()
-predict_features = load_data[:, temp_index: temp_index + feature_size]
+predict_features = test_data[:, temp_index: temp_index + feature_size]
 predict_features = (predict_features - mean) / std
-load_data_predictions = model.predict(predict_features)
+predictions = model.predict(predict_features)
+predictions_df = pd.DataFrame(predictions, columns=['pred'])
+if tushare_data.test_acture_data_with_feature:
+    for iloop in range(0, tushare_data.predict_day_count):
+        temp_index = tushare_data.TestDataMonitorFeatureOffset(iloop)
+        monitor_features = test_data[:, temp_index: temp_index + feature_size]
+        monitor_features = (monitor_features - mean) / std
+        monitor_predictions = model.predict(monitor_features).flatten()
+        monitor_predictions.shape = (len(monitor_predictions), 1)
+        temp_caption = 'mpred_%d' % iloop
+        monitor_predictions_df = pd.DataFrame(monitor_predictions, columns=[temp_caption])
+        predictions_df = pd.merge(predictions_df, monitor_predictions_df, left_index=True, right_index=True)
 
+temp_index = tushare_data.TestDataLastPredictActureOffset() + tushare_data.ACTURE_DATA_INDEX_CLOSE
+current_data = test_data[:, temp_index: temp_index+1]
+current_data_df = pd.DataFrame(current_data, columns=['pre_close'])
+
+temp_index = tushare_data.TestDataMonitorActureOffset(0)
+t0_acture_data = test_data[:, temp_index: temp_index+acture_size]
+acture_data_df = pd.DataFrame(t0_acture_data, columns=[ \
+    'T0_open_increse', \
+    'T0_low_increase', \
+    'T0_open', \
+    'T0_low', \
+    'T0_close', \
+    'stock_code', \
+    'T0_trade_date'])
+
+for iloop in range(1, tushare_data.predict_day_count):
+    temp_acture_index = tushare_data.TestDataMonitorActureOffset(iloop)
+    temp_index = temp_acture_index + tushare_data.ACTURE_DATA_INDEX_OPEN
+    tn_acture_data = test_data[:, temp_index:temp_index+1]
+    temp_caption = 'T%d_open' % (iloop)
+    temp_df = pd.DataFrame(tn_acture_data, columns=[temp_caption])
+    acture_data_df = pd.merge(acture_data_df, temp_df, left_index=True, right_index=True)
+
+    temp_index = temp_acture_index + tushare_data.ACTURE_DATA_INDEX_CLOSE
+    tn_acture_data = test_data[:, temp_index:temp_index+1]
+    temp_caption = 'T%d_close' % (iloop)
+    temp_df = pd.DataFrame(tn_acture_data, columns=[temp_caption])
+    acture_data_df = pd.merge(acture_data_df, temp_df, left_index=True, right_index=True)
+    
+temp_index = tushare_data.TestDataLastMonitorActureOffset()
+td_acture_data = test_data[:, temp_index: temp_index+acture_size]
+temp_df=pd.DataFrame(td_acture_data, columns=[ \
+    'Td_open_increse', \
+    'Td_low_increase', \
+    'Td_open', \
+    'Td_low', \
+    'Td_close', \
+    'Td_stock_code', \
+    'Td_trade_date'])
+acture_data_df = pd.merge(acture_data_df, temp_df, left_index=True, right_index=True)
+
+result_all = predictions_df
+result_all = pd.merge(result_all, current_data_df, left_index=True, right_index=True)
+result_all = pd.merge(result_all, acture_data_df, left_index=True, right_index=True)
 
 def TestEntry(predict_trade_threshold, max_trade_count_1_day, print_msg):
     trade_count = 0
@@ -58,75 +113,9 @@ def TestEntry(predict_trade_threshold, max_trade_count_1_day, print_msg):
             "td_close", \
             "act_inc"))
         print("-------------------------------------------------------------------------------")
-    td_date_offset = tushare_data.TestDataLastMonitorActureOffset() + tushare_data.ACTURE_DATA_INDEX_DATE
     for trade_date in reversed(test_date_list):
-        test_data = load_data[load_data[:, td_date_offset] == float(trade_date)]
-        predictions = load_data_predictions[load_data[:, td_date_offset] == float(trade_date)]
-    # for day_loop in range(0, 100):
-    #     test_data = load_data[day_loop]
-        if len(test_data) > 0:
-            # temp_index = tushare_data.TestDataLastPredictFeatureOffset()
-            # predict_features = test_data[:, temp_index: temp_index + feature_size]
-            # predict_features = (predict_features - mean) / std
-            # predictions = model.predict(predict_features).flatten()
-            # predictions.shape = (len(predictions),1)
-            predictions_df = pd.DataFrame(predictions, columns=['pred'])
-            
-            if tushare_data.test_acture_data_with_feature:
-                for iloop in range(0, tushare_data.predict_day_count):
-                    temp_index = tushare_data.TestDataMonitorFeatureOffset(iloop)
-                    monitor_features = test_data[:, temp_index: temp_index + feature_size]
-                    monitor_features = (monitor_features - mean) / std
-                    monitor_predictions = model.predict(monitor_features).flatten()
-                    monitor_predictions.shape = (len(monitor_predictions), 1)
-                    temp_caption = 'mpred_%d' % iloop
-                    monitor_predictions_df = pd.DataFrame(monitor_predictions, columns=[temp_caption])
-                    predictions_df = pd.merge(predictions_df, monitor_predictions_df, left_index=True, right_index=True)
-
-            temp_index = tushare_data.TestDataLastPredictActureOffset() + tushare_data.ACTURE_DATA_INDEX_CLOSE
-            current_data=test_data[:, temp_index: temp_index+1]
-            current_data_df=pd.DataFrame(current_data, columns=['pre_close'])
-
-            temp_index = tushare_data.TestDataMonitorActureOffset(0)
-            t0_acture_data = test_data[:, temp_index: temp_index+acture_size]
-            acture_data_df = pd.DataFrame(t0_acture_data, columns=[ \
-                'T0_open_increse', \
-                'T0_low_increase', \
-                'T0_open', \
-                'T0_low', \
-                'T0_close', \
-                'stock_code', \
-                'T0_trade_date'])
-            
-            for iloop in range(1, tushare_data.predict_day_count):
-                temp_acture_index = tushare_data.TestDataMonitorActureOffset(iloop)
-                temp_index = temp_acture_index + tushare_data.ACTURE_DATA_INDEX_OPEN
-                tn_acture_data = test_data[:, temp_index:temp_index+1]
-                temp_caption = 'T%d_open' % (iloop)
-                temp_df = pd.DataFrame(tn_acture_data, columns=[temp_caption])
-                acture_data_df = pd.merge(acture_data_df, temp_df, left_index=True, right_index=True)
-
-                temp_index = temp_acture_index + tushare_data.ACTURE_DATA_INDEX_CLOSE
-                tn_acture_data = test_data[:, temp_index:temp_index+1]
-                temp_caption = 'T%d_close' % (iloop)
-                temp_df = pd.DataFrame(tn_acture_data, columns=[temp_caption])
-                acture_data_df = pd.merge(acture_data_df, temp_df, left_index=True, right_index=True)
-                
-            temp_index = tushare_data.TestDataLastMonitorActureOffset()
-            td_acture_data = test_data[:, temp_index: temp_index+acture_size]
-            temp_df=pd.DataFrame(td_acture_data, columns=[ \
-                'Td_open_increse', \
-                'Td_low_increase', \
-                'Td_open', \
-                'Td_low', \
-                'Td_close', \
-                'Td_stock_code', \
-                'Td_trade_date'])
-            acture_data_df = pd.merge(acture_data_df, temp_df, left_index=True, right_index=True)
-
-            result = predictions_df
-            result = pd.merge(result, current_data_df, left_index=True, right_index=True)
-            result = pd.merge(result, acture_data_df, left_index=True, right_index=True)
+        result = result_all[result_all['Td_trade_date'] == float(trade_date)]
+        if len(result) > 0:
             result = result.sort_values(by = 'pred', ascending=False)
             # result.to_csv(('./result_%d_sort.csv' % day_loop))
             result = result[:20]

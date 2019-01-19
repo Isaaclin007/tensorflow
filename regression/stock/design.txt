@@ -60,4 +60,7 @@ test过程:
 
 trade_date_data用于生成predict数据，predict不保存processed数据，只保存最终数据
 
+V1.0.1
+2019-01-19
+修改 test.py result数据改为一次生成（result_all），每天的 result 直接从 result_all 中按 Td_trade_date 字段选择。
 
