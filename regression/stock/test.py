@@ -141,8 +141,11 @@ def TestEntry(predict_trade_threshold, max_trade_count_1_day, print_msg):
                     t0_open = result.iloc[iloop]['T0_open']
                     t0_low = result.iloc[iloop]['T0_low']
                     td_close = result.iloc[iloop]['Td_close']
-                    buying_threshold = pred - 5.0
-                    if buying_threshold > 9.0 :
+                    if tushare_data.label_type == tushare_data.LABEL_PRE_CLOSE_2_TD_CLOSE:
+                        buying_threshold = pred - 5.0
+                        if buying_threshold > 9.0 :
+                            buying_threshold = 9.0
+                    elif tushare_data.label_type == tushare_data.LABEL_T1_OPEN_2_TD_CLOSE:
                         buying_threshold = 9.0
                     if pred > predict_trade_threshold :
                         if (t0_open_increase < buying_threshold) or (t0_low_increase < buying_threshold) :
@@ -244,7 +247,7 @@ print("%16s%16s%16s%16s%16s" %(
             "ave_increase", \
             "capital_increase"))
 print("-------------------------------------------------------------------------------")
-for threshold in range(5, 15):
+for threshold in range(0, 15):
     for temp_count in range(1, 5):
         temp_capital_increase = TestEntry(threshold, temp_count, False)
         if temp_capital_increase > max_capital_increase:

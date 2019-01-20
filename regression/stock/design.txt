@@ -64,3 +64,9 @@ V1.0.1
 2019-01-19
 修改 test.py result数据改为一次生成（result_all），每天的 result 直接从 result_all 中按 Td_trade_date 字段选择。
 
+V1.0.2
+2019-01-20
+test.py 支持label_type 支持T1_open to Td_close
+支持 predict_day_count 和 max_predict_day_count
+支持按行业类别生成训练数据和测试数据
+mission complete! congratulation!

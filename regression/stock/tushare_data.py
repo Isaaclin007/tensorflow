@@ -38,21 +38,23 @@ train_a_stock_max_data_num = 1000000
 # predict_date = '20190111'
 
 stocks_list_end_date = '20090101'
-train_data_start_date = '20100102'
+train_data_start_date = '20100101'
 train_data_end_date = '20170101'
-test_data_start_date = '20170102'
+test_data_start_date = '20170101'
 test_data_end_date = '20190111'
 train_test_date = '20190111'
 predict_date = '20190111'
+
+industry_filter = ''
+# industry_filter = '软件服务'
 
 feature_size = 87
 acture_size = 7
 label_col_index = feature_size + predict_day_count - 1
 
-
 LABEL_PRE_CLOSE_2_TD_CLOSE = 0
 LABEL_T1_OPEN_2_TD_CLOSE = 1
-label_type = LABEL_PRE_CLOSE_2_TD_CLOSE
+label_type = LABEL_T1_OPEN_2_TD_CLOSE
 
 ts.set_token('230c446ae448ec95357d0f7e804ddeebc7a51ff340b4e6e0913ea2fa')
 
@@ -92,9 +94,10 @@ def StockCodes():
         load_df.to_csv(file_name)
 
     load_df = load_df[load_df['list_date'] <= int(stocks_list_end_date)]
-    load_df = load_df[load_df['industry'] == '软件服务']
-    print('StockCodes():')
+    if industry_filter != '':
+        load_df = load_df[load_df['industry'] == industry_filter]
     print(load_df)
+    print('StockCodes(%s)[%u]' % (industry_filter, len(load_df)))
     code_list = load_df['ts_code'].values
     return code_list
 
@@ -387,15 +390,16 @@ def GetAFeature( src_df, day_index, feature_type):
 # 训练数据截至日期、
 # 个股训练数据最小和最大数据量
 def FileNameTrainData():
-    file_name = './temp_data/train_data_%u_%u_%u_%s_%s_%s_%u_%u.npy' % ( \
+    file_name = './temp_data/train_data_%u_%u_%u_%s_%s_%s_%u_%u_%s.npy' % ( \
         feature_size, \
         label_type, \
-        predict_day_count, \
+        max_predict_day_count, \
         stocks_list_end_date, \
         train_data_start_date, \
         train_data_end_date, \
         train_a_stock_min_data_num, \
-        train_a_stock_max_data_num)
+        train_a_stock_max_data_num, \
+        industry_filter)
     return file_name
 
 # 对于整体测试数据，关注
@@ -410,16 +414,17 @@ def FileNameTrainData():
 # 参考特征天数、
 # 测试acture是否包含feature
 def FileNameTestData():
-    file_name = './temp_data/test_data_%u_%u_%u_%u_%s_%s_%s_%u_%d.npy' % ( \
+    file_name = './temp_data/test_data_%u_%u_%u_%u_%s_%s_%s_%u_%d_%s.npy' % ( \
         feature_size, \
         label_type, \
-        predict_day_count, \
+        max_predict_day_count, \
         acture_size, \
         stocks_list_end_date, \
         test_data_start_date, \
         test_data_end_date, \
         referfence_feature_count, \
-        int(test_acture_data_with_feature))
+        int(test_acture_data_with_feature), \
+        industry_filter)
     return file_name
 
 # 对于PP data，只关注stock code、结束时间
