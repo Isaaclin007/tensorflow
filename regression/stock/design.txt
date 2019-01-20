@@ -72,3 +72,6 @@ test.py 支持label_type 支持T1_open to Td_close
 
 V1.0.3
 Fix bug: Test feature day index error.
+
+V1.0.4
+添加行业分类描述
