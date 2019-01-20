@@ -247,14 +247,15 @@ print("%16s%16s%16s%16s%16s" %(
             "ave_increase", \
             "capital_increase"))
 print("-------------------------------------------------------------------------------")
-for threshold in range(0, 15):
-    for temp_count in range(1, 5):
-        temp_capital_increase = TestEntry(threshold, temp_count, False)
-        if temp_capital_increase > max_capital_increase:
-            max_capital_increase = temp_capital_increase
-            max_capital_increase_threshold = threshold
-            max_capital_increase_max_trade_count_1_day = temp_count
-print("max:")
-TestEntry(max_capital_increase_threshold, max_capital_increase_max_trade_count_1_day, True)
+# for threshold in range(0, 15):
+#     for temp_count in range(1, 5):
+#         temp_capital_increase = TestEntry(threshold, temp_count, False)
+#         if temp_capital_increase > max_capital_increase:
+#             max_capital_increase = temp_capital_increase
+#             max_capital_increase_threshold = threshold
+#             max_capital_increase_max_trade_count_1_day = temp_count
+# print("max:")
+# TestEntry(max_capital_increase_threshold, max_capital_increase_max_trade_count_1_day, True)
+TestEntry(0, 1, True)
 
 

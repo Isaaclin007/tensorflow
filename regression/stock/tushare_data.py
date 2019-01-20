@@ -43,7 +43,7 @@ train_data_end_date = '20170101'
 test_data_start_date = '20170101'
 test_data_end_date = '20190111'
 train_test_date = '20190111'
-predict_date = '20190111'
+predict_date = '20181225'
 
 industry_filter = ''
 # industry_filter = '软件服务'
@@ -366,7 +366,7 @@ def GetAFeature( src_df, day_index, feature_type):
         
     elif feature_type == FEATURE_TYPE_TEST:
         for iloop in reversed(range(0, referfence_feature_count)):
-            predict_day_pointer = day_index + predict_day_count + iloop
+            predict_day_pointer = day_index + max_predict_day_count + iloop
             AppendFeature(src_df, predict_day_pointer, data_unit)
             AppendActureData(src_df, predict_day_pointer, data_unit)
         for iloop in reversed(range(0, max_predict_day_count)):
@@ -580,6 +580,30 @@ def GetTestData():
     print("\n\n\n")
 
     return test_data
+
+def GetAStockFeatures(ts_code, input_date):
+    pro = ts.pro_api()
+    temp_file_name = './download_data/' + ts_code + '_' + input_date + '.csv'
+    if os.path.exists(temp_file_name):
+        df_merge = pd.read_csv(temp_file_name)
+    else:
+        start_date = '19000101'
+        df_basic=pro.daily_basic(ts_code = ts_code, start_date = start_date, end_date = input_date)
+        df = pro.daily(ts_code = ts_code, start_date = start_date, end_date = input_date)
+        if len(df_basic) != len(df) :
+            print("DownloadAStocksData.error.1")
+            return
+        df.drop(['close','ts_code'],axis=1,inplace=True)
+        df_merge = pd.merge(df_basic, df, left_on='trade_date', right_on='trade_date')
+        df_merge.to_csv(temp_file_name)
+
+    pp_data = StockDataPreProcess(df_merge)
+    test_data_list = []
+    for day_loop in range(0, 20):
+        data_unit = GetAFeature(pp_data, day_loop, FEATURE_TYPE_PREDICT)
+        test_data_list.append(data_unit)
+    np_data = np.array(test_data_list)
+    return np_data
 
 if __name__ == "__main__":
     temp_stock_codes=StockCodes()

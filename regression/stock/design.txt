@@ -69,4 +69,6 @@ V1.0.2
 test.py 支持label_type 支持T1_open to Td_close
 支持 predict_day_count 和 max_predict_day_count
 支持按行业类别生成训练数据和测试数据
-mission complete! congratulation!
+
+V1.0.3
+Fix bug: Test feature day index error.
