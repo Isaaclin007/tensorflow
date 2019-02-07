@@ -75,3 +75,19 @@ Fix bug: Test feature day index error.
 
 V1.0.4
 添加行业分类描述
+
+V1.0.5
+2019-01-07
+1. 修复bug：LABEL_T1_OPEN_2_TD_CLOSE lable模式，T1_OPEN 数据指针错误
+
+2. 增加连续上涨分数 label，训练数据计算未来1天-max_predict_day_count天的累计上涨分数最大值，
+预测值大于0即可买入。
+计算方法：
+每天的上涨分数 = close_increase_ratio - 9.0 (%10 -> 1, %0 -> -9)
+累计上涨分数 = 对每天的上涨分数求和
+x天累计上涨分数最大值 = 1 ～ x 天 累计上涨分数中的最大值（x个）
+累计上涨分数最大值 label 的目标是筛选数从 T1 天开始大幅连续上涨的数据
+
+3. 支持行业分别列表
+
+

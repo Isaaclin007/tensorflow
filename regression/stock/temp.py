@@ -141,7 +141,13 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # print(temp_list)
 
 # arr = np.array([[1.,2.,20190101.],[4.,5.,20190101.],[7.,8.,20190102.],[9.,10.,20190103.]])
+# date_list = [20190102., 20190103.]
 # print((arr[:, 2] > float('20190101')) & (arr[:, 2] < float('20190103')))
+# print((arr[:, 2] > float('20190101')) | (arr[:, 2] == float('20190103')))
+# for i in arr:
+#     if i[2] in date_list:
+#         print(i)
+# # print(list(set(arr[:, 2]).intersection(set(date_list))))
 # print(arr[(arr[:, 2] > float('20190101')) & (arr[:, 2] < float('20190103'))])
 # arr = arr[arr[:, 2] == float('20190101')]
 # print(arr)
@@ -157,19 +163,31 @@ def StockCodes(filter_industry):
         load_df = pro.stock_basic(exchange = '', list_status = 'L', fields = 'ts_code,symbol,name,area,industry,list_date')
         load_df.to_csv(file_name)
 
-    load_df = load_df[load_df['list_date'] <= 20160101]
+    load_df = load_df[load_df['list_date'] <= 20090101]
+    load_df = load_df.copy()
+    load_df = load_df.reset_index(drop=True)
+    
     if filter_industry != '':
-        load_df = load_df[load_df['industry'] == filter_industry]
-    # print(load_df)
-    print('StockCodes(%s)[%u]' % (filter_industry, len(load_df)))
+        industry_list = filter_industry.split(',')
+        code_valid_list = []
+        for iloop in range(0, len(load_df)):
+            if load_df['industry'][iloop] in industry_list:
+                code_valid_list.append(True)
+            else:
+                code_valid_list.append(False)
+        load_df = load_df[code_valid_list]
     code_list = load_df['ts_code'].values
+    print(load_df)
+    print('StockCodes(%s)[%u]' % (filter_industry, len(code_list)))
     return code_list
 
-code_list = StockCodes('')
-code_list = StockCodes('银行')
-code_list = StockCodes('全国地产')
+# code_list = StockCodes('')
+# code_list = StockCodes('银行')
+# code_list = StockCodes('全国地产')
 code_list = StockCodes('软件服务')
-code_list = StockCodes('保险')
-code_list = StockCodes('证券')
+# code_list = StockCodes('保险')
+# code_list = StockCodes('证券')
+code_list = StockCodes('软件服务,证券')
+print(code_list)
 
 

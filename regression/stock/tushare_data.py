@@ -16,11 +16,12 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 feature_days = 10
 max_predict_day_count = 10  # 决定train_data 和 test_data 的predict_day_count
-predict_day_count = 10  # 预测未来几日的数据
+predict_day_count = 1  # 预测未来几日的数据
 referfence_feature_count = 1
 test_acture_data_with_feature = False
 train_a_stock_min_data_num = 400
 train_a_stock_max_data_num = 1000000
+
 # stocks_list_end_date = '20130601'
 # train_data_start_date = '20140101'
 # train_data_end_date = '20180101'
@@ -93,6 +94,7 @@ label_col_index = feature_size + predict_day_count - 1
 
 LABEL_PRE_CLOSE_2_TD_CLOSE = 0
 LABEL_T1_OPEN_2_TD_CLOSE = 1
+LABEL_CONSECUTIVE_RISE_SCORE = 2
 label_type = LABEL_T1_OPEN_2_TD_CLOSE
 
 ts.set_token('230c446ae448ec95357d0f7e804ddeebc7a51ff340b4e6e0913ea2fa')
@@ -133,8 +135,17 @@ def StockCodes():
         load_df.to_csv(file_name)
 
     load_df = load_df[load_df['list_date'] <= int(stocks_list_end_date)]
+    load_df = load_df.copy()
+    load_df = load_df.reset_index(drop=True)
     if industry_filter != '':
-        load_df = load_df[load_df['industry'] == industry_filter]
+        industry_list = industry_filter.split(',')
+        code_valid_list = []
+        for iloop in range(0, len(load_df)):
+            if load_df['industry'][iloop] in industry_list:
+                code_valid_list.append(True)
+            else:
+                code_valid_list.append(False)
+        load_df = load_df[code_valid_list]
     print(load_df)
     print('StockCodes(%s)[%u]' % (industry_filter, len(load_df)))
     code_list = load_df['ts_code'].values
@@ -336,12 +347,32 @@ def AppendLabel( src_df, day_index, data_unit):
     feature_day_pointer = day_index + max_predict_day_count
     if label_type == LABEL_PRE_CLOSE_2_TD_CLOSE:
         feature_last_price = src_df['close'][feature_day_pointer]
+        for iloop in reversed(range(0, max_predict_day_count)):
+            temp_index = day_index + iloop
+            temp_increase_per = ((src_df['close'][temp_index] / feature_last_price) - 1.0) * 100.0
+            data_unit.append(temp_increase_per)
     elif label_type == LABEL_T1_OPEN_2_TD_CLOSE:
-        feature_last_price = src_df['open'][feature_day_pointer + 1]
-    for iloop in reversed(range(0, max_predict_day_count)):
-        temp_index = day_index + iloop
-        temp_increase_per = ((src_df['close'][temp_index] / feature_last_price) - 1.0) * 100.0
-        data_unit.append(temp_increase_per)
+        feature_last_price = src_df['open'][feature_day_pointer - 1]
+        for iloop in reversed(range(0, max_predict_day_count)):
+            temp_index = day_index + iloop
+            temp_increase_per = ((src_df['close'][temp_index] / feature_last_price) - 1.0) * 100.0
+            data_unit.append(temp_increase_per)
+    elif label_type == LABEL_CONSECUTIVE_RISE_SCORE:
+        max_sum_score = -1.0
+        sum_score = 0.0
+        day_score = 0.0
+        for iloop in reversed(range(0, max_predict_day_count)):
+            temp_index = day_index + iloop
+            # day_score = src_df['close_increase'][temp_index] - 5.0
+            if src_df['close_increase'][temp_index] > 0.0:
+                day_score = src_df['close_increase'][temp_index]
+            else:
+                day_score = src_df['close_increase'][temp_index] * 2
+            sum_score += day_score
+            if sum_score > max_sum_score:
+                max_sum_score = sum_score
+            data_unit.append(max_sum_score)
+    
 
 ACTURE_DATA_INDEX_OPEN_INCREASE = 0
 ACTURE_DATA_INDEX_LOW_INCREASE = 1

@@ -98,20 +98,18 @@ def TestEntry(predict_trade_threshold, max_trade_count_1_day, print_msg):
     increase_sum = 0.0
     init_flag = True
     if print_msg:
-        print("%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s%10s" %(
+        print("%6s%10s%10s%8s%6s%16s%16s%8s%8s%8s%8s" %(
             "index", \
             "indate", \
             "outdate", \
             "code", \
             "pred", \
-            "t0_open_i", \
-            "t0_low_i", \
             "t0_open", \
             "t0_low", \
             "buy", \
             "out", \
-            "td_close", \
-            "act_inc"))
+            "act_inc", \
+            "capital"))
         print("-------------------------------------------------------------------------------")
     for trade_date in reversed(test_date_list):
         result = result_all[result_all['Td_trade_date'] == float(trade_date)]
@@ -147,6 +145,8 @@ def TestEntry(predict_trade_threshold, max_trade_count_1_day, print_msg):
                             buying_threshold = 9.0
                     elif tushare_data.label_type == tushare_data.LABEL_T1_OPEN_2_TD_CLOSE:
                         buying_threshold = 9.0
+                    elif tushare_data.label_type == tushare_data.LABEL_CONSECUTIVE_RISE_SCORE:
+                        buying_threshold = 9.0
                     if pred > predict_trade_threshold :
                         if (t0_open_increase < buying_threshold) or (t0_low_increase < buying_threshold) :
                             if (t0_open_increase < buying_threshold) :
@@ -176,22 +176,6 @@ def TestEntry(predict_trade_threshold, max_trade_count_1_day, print_msg):
 
                             temp_increase = ((out_price / buying_price) - 1.0) *100.0
                             increase_sum += temp_increase
-                        
-                            if print_msg:
-                                print("%10u%10u%10u    %06u%10.2f%10.2f%10.2f%10.2f%10.2f%10.2f%10.2f%10.2f%10.2f" %( \
-                                    trade_count, \
-                                    int(in_trade_date), \
-                                    int(out_trade_date), \
-                                    int(stock_code), \
-                                    pred, \
-                                    t0_open_increase, \
-                                    t0_low_increase, \
-                                    t0_open, \
-                                    t0_low, \
-                                    buying_price, \
-                                    out_price, \
-                                    td_close, \
-                                    temp_increase))
 
                             day_trade_count += 1
                             trade_count += 1
@@ -200,6 +184,20 @@ def TestEntry(predict_trade_threshold, max_trade_count_1_day, print_msg):
 
                             if capital_value > 1.0:
                                 capital_ratio = int(capital_value)  # 每增加1倍更新一次
+
+                            if print_msg:
+                                print("%6u%10u%10u  %06u%6.2f%16s%16s%8.2f%8.2f%8.2f%8.4f" %( \
+                                    trade_count, \
+                                    int(in_trade_date), \
+                                    int(out_trade_date), \
+                                    int(stock_code), \
+                                    pred, \
+                                    "%5.2f|%5.2f" % (t0_open, t0_open_increase), \
+                                    "%5.2f|%5.2f" % (t0_low, t0_low_increase), \
+                                    buying_price, \
+                                    out_price, \
+                                    temp_increase, \
+                                    capital_value))
 
 
 
@@ -247,8 +245,8 @@ print("%16s%16s%16s%16s%16s" %(
             "ave_increase", \
             "capital_increase"))
 print("-------------------------------------------------------------------------------")
-# for threshold in range(0, 15):
-#     for temp_count in range(1, 5):
+# for threshold in range(0, 5):
+#     for temp_count in range(1, 2):
 #         temp_capital_increase = TestEntry(threshold, temp_count, False)
 #         if temp_capital_increase > max_capital_increase:
 #             max_capital_increase = temp_capital_increase
