@@ -38,14 +38,33 @@ train_a_stock_max_data_num = 1000000
 # train_test_date = '20190111'
 # predict_date = '20190111'
 
-stocks_list_end_date = '20090101'
-train_data_start_date = '20100101'
-train_data_end_date = '20170101'
-test_data_start_date = '20170101'
+# stocks_list_end_date = '20090101'
+# train_data_start_date = '20100101'
+# train_data_end_date = '20170101'
+# test_data_start_date = '20170101'
+# test_data_end_date = '20190111'
+# train_test_date = '20190111'
+# predict_date = '20181225'
+
+stocks_list_end_date = '20140101'
+train_data_start_date = '20140301'
+train_data_end_date = '20180101'
+test_data_start_date = '20180101'
 test_data_end_date = '20190111'
 train_test_date = '20190111'
-predict_date = '20181225'
+predict_date = '20190127'
 
+# stocks_list_end_date = '20140101'
+# train_data_start_date = '20140301'
+# train_data_end_date = '20180101'
+# test_data_start_date = '20190101'
+# test_data_end_date = '20190201'
+# train_test_date = '20190201'
+# predict_date = '20190127'
+
+code_filter = ''
+# industry_filter = '软件服务,互联网,半导体,电脑设备'
+# industry_filter = '半导体,电脑设备'
 # industry_filter = ''
 industry_filter = '软件服务'
 # industry_filter = '百货'
@@ -89,12 +108,14 @@ industry_filter = '软件服务'
 # industry_filter = '全国地产'
 
 feature_size = 87
+# feature_size = 22
 acture_size = 7
 label_col_index = feature_size + predict_day_count - 1
 
 LABEL_PRE_CLOSE_2_TD_CLOSE = 0
 LABEL_T1_OPEN_2_TD_CLOSE = 1
 LABEL_CONSECUTIVE_RISE_SCORE = 2
+LABEL_T1_OPEN_2_TD_OPEN =3
 label_type = LABEL_T1_OPEN_2_TD_CLOSE
 
 ts.set_token('230c446ae448ec95357d0f7e804ddeebc7a51ff340b4e6e0913ea2fa')
@@ -123,6 +144,12 @@ def TradeDateListRange(input_start_date, input_end_date):
     date_list = df_trade_cal['cal_date'].values
     return date_list
 
+def StockCodeFilter(ts_code, code_filter_list):
+    for it in code_filter_list:
+        if ts_code[0:len(it)] == it:
+            return True
+    return False
+
 def StockCodes():
     pro = ts.pro_api()
 
@@ -137,15 +164,27 @@ def StockCodes():
     load_df = load_df[load_df['list_date'] <= int(stocks_list_end_date)]
     load_df = load_df.copy()
     load_df = load_df.reset_index(drop=True)
+
+    industry_filter_en = False
+    code_filter_en = False
     if industry_filter != '':
         industry_list = industry_filter.split(',')
-        code_valid_list = []
-        for iloop in range(0, len(load_df)):
-            if load_df['industry'][iloop] in industry_list:
-                code_valid_list.append(True)
-            else:
-                code_valid_list.append(False)
-        load_df = load_df[code_valid_list]
+        industry_filter_en = True
+    if code_filter != '':
+        code_filter_list = code_filter.split(',')
+        code_filter_en = True
+
+    code_valid_list = []
+    for iloop in range(0, len(load_df)):
+        temp_code_valid = True
+        if industry_filter_en:
+            if not load_df['industry'][iloop] in industry_list:
+                temp_code_valid = False
+        if code_filter_en:
+            if not StockCodeFilter(load_df['ts_code'][iloop], code_filter_list):
+                temp_code_valid = False
+        code_valid_list.append(temp_code_valid)
+    load_df = load_df[code_valid_list]
     print(load_df)
     print('StockCodes(%s)[%u]' % (industry_filter, len(load_df)))
     code_list = load_df['ts_code'].values
@@ -324,24 +363,33 @@ def StockDataPreProcess(stock_data_df):
     return src_df[:len(src_df)-30]
 
 def AppendFeature( src_df, feature_day_pointer, data_unit):
-    temp_index = feature_day_pointer
-    data_unit.append(src_df['total_share'][temp_index])
-    data_unit.append(src_df['float_share'][temp_index])
-    data_unit.append(src_df['free_share'][temp_index])
-    data_unit.append(src_df['total_mv'][temp_index])
-    data_unit.append(src_df['circ_mv'][temp_index])
-    data_unit.append(src_df['close'][temp_index])
-    data_unit.append(src_df['close_5_avg'][temp_index])
-    for iloop in range(0, feature_days):                
-        temp_index=feature_day_pointer+iloop
-        data_unit.append(src_df['open_increase'][temp_index])
-        data_unit.append(src_df['close_increase'][temp_index])
-        data_unit.append(src_df['high_increase'][temp_index])
-        data_unit.append(src_df['low_increase'][temp_index])
-        data_unit.append(src_df['close_increase_to_5_avg'][temp_index])
-        data_unit.append(src_df['close_increase_to_10_avg'][temp_index])
-        data_unit.append(src_df['close_increase_to_30_avg'][temp_index])
-        data_unit.append(src_df['turnover_rate_f'][temp_index])
+    if feature_size == 87:
+        temp_index = feature_day_pointer
+        data_unit.append(src_df['total_share'][temp_index])
+        data_unit.append(src_df['float_share'][temp_index])
+        data_unit.append(src_df['free_share'][temp_index])
+        data_unit.append(src_df['total_mv'][temp_index])
+        data_unit.append(src_df['circ_mv'][temp_index])
+        data_unit.append(src_df['close'][temp_index])
+        data_unit.append(src_df['close_5_avg'][temp_index])
+        for iloop in range(0, feature_days):                
+            temp_index=feature_day_pointer+iloop
+            data_unit.append(src_df['open_increase'][temp_index])
+            data_unit.append(src_df['close_increase'][temp_index])
+            data_unit.append(src_df['high_increase'][temp_index])
+            data_unit.append(src_df['low_increase'][temp_index])
+            data_unit.append(src_df['close_increase_to_5_avg'][temp_index])
+            data_unit.append(src_df['close_increase_to_10_avg'][temp_index])
+            data_unit.append(src_df['close_increase_to_30_avg'][temp_index])
+            data_unit.append(src_df['turnover_rate_f'][temp_index])
+    elif feature_size == 22:
+        temp_index = feature_day_pointer
+        data_unit.append(src_df['total_share'][temp_index])
+        data_unit.append(src_df['float_share'][temp_index])
+        for iloop in range(0, feature_days):                
+            temp_index=feature_day_pointer+iloop
+            data_unit.append(src_df['close_increase'][temp_index])
+            data_unit.append(src_df['turnover_rate_f'][temp_index])
         
 def AppendLabel( src_df, day_index, data_unit):
     feature_day_pointer = day_index + max_predict_day_count
@@ -356,6 +404,12 @@ def AppendLabel( src_df, day_index, data_unit):
         for iloop in reversed(range(0, max_predict_day_count)):
             temp_index = day_index + iloop
             temp_increase_per = ((src_df['close'][temp_index] / feature_last_price) - 1.0) * 100.0
+            data_unit.append(temp_increase_per)
+    elif label_type == LABEL_T1_OPEN_2_TD_OPEN:
+        feature_last_price = src_df['open'][feature_day_pointer - 1]
+        for iloop in reversed(range(0, max_predict_day_count)):
+            temp_index = day_index + iloop
+            temp_increase_per = ((src_df['open'][temp_index] / feature_last_price) - 1.0) * 100.0
             data_unit.append(temp_increase_per)
     elif label_type == LABEL_CONSECUTIVE_RISE_SCORE:
         max_sum_score = -1.0
@@ -460,7 +514,7 @@ def GetAFeature( src_df, day_index, feature_type):
 # 训练数据截至日期、
 # 个股训练数据最小和最大数据量
 def FileNameTrainData():
-    file_name = './temp_data/train_data_%u_%u_%u_%s_%s_%s_%u_%u_%s.npy' % ( \
+    file_name = './temp_data/train_data_%u_%u_%u_%s_%s_%s_%u_%u_%s%s.npy' % ( \
         feature_size, \
         label_type, \
         max_predict_day_count, \
@@ -469,7 +523,8 @@ def FileNameTrainData():
         train_data_end_date, \
         train_a_stock_min_data_num, \
         train_a_stock_max_data_num, \
-        industry_filter)
+        industry_filter, \
+        code_filter)
     return file_name
 
 # 对于整体测试数据，关注
@@ -484,7 +539,7 @@ def FileNameTrainData():
 # 参考特征天数、
 # 测试acture是否包含feature
 def FileNameTestData():
-    file_name = './temp_data/test_data_%u_%u_%u_%u_%s_%s_%s_%u_%d_%s.npy' % ( \
+    file_name = './temp_data/test_data_%u_%u_%u_%u_%s_%s_%s_%u_%d_%s%s.npy' % ( \
         feature_size, \
         label_type, \
         max_predict_day_count, \
@@ -494,7 +549,8 @@ def FileNameTestData():
         test_data_end_date, \
         referfence_feature_count, \
         int(test_acture_data_with_feature), \
-        industry_filter)
+        industry_filter, \
+        code_filter)
     return file_name
 
 # 对于PP data，只关注stock code、结束时间
@@ -518,6 +574,8 @@ def OffsetTradeDate(ref_date, day_offset):
     return temp_list[day_offset]
 
 def UpdateTrainTestData():
+    if os.path.exists(FileNameTrainData()) and os.path.exists(FileNameTestData()):
+        return
     code_list = StockCodes()
     train_data_init_flag = True
     test_data_init_flag = True

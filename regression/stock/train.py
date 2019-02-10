@@ -36,18 +36,10 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # print("train_features: {}".format(train_features.shape))
 # print("train_labels: {}".format(train_labels.shape))
 
-train_features, train_labels = tushare_data.GetTrainData()
-
-mean = train_features.mean(axis=0)
-std = train_features.std(axis=0)
-print("mean: {}".format(mean.shape))
-print("std: {}".format(std.shape))
-train_features = (train_features - mean) / std
-
 #Create the model
-def build_model():
+def build_model(input_layer_shape):
     model = keras.Sequential([
-        keras.layers.Dense(4, activation=tf.nn.relu, input_shape=(train_features.shape[1],)),
+        keras.layers.Dense(4, activation=tf.nn.relu, input_shape=input_layer_shape),
         # keras.layers.Dense(64, activation=tf.nn.relu),
         # keras.layers.Dense(32, activation=tf.nn.relu),
         # keras.layers.Dense(16, activation=tf.nn.relu),
@@ -61,54 +53,68 @@ def build_model():
                     metrics=['mae'])
     return model
 
-model = build_model()
-model.summary()
+def train():
+    train_features, train_labels = tushare_data.GetTrainData()
 
-# Display training progress by printing a single dot for each completed epoch.
-class PrintDot(keras.callbacks.Callback):
-    def on_epoch_end(self,epoch,logs):
-        if epoch % 1 == 0: print('.')
-        #print('.', end='')
-        #print('.')
+    mean = train_features.mean(axis=0)
+    std = train_features.std(axis=0)
+    print("mean: {}".format(mean.shape))
+    print("std: {}".format(std.shape))
+    train_features = (train_features - mean) / std
 
-EPOCHS = 20
+    model = build_model((train_features.shape[1],))
+    model.summary()
 
-# The patience parameter is the amount of epochs to check for improvement.
-early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=200)
+    EPOCHS = 200
 
-history = model.fit(train_features, train_labels, epochs=EPOCHS,
-                    validation_split=0.2, verbose=0,
-                    #callbacks=[early_stop, PrintDot()])
-                    callbacks=[PrintDot()])
+    # Display training progress by printing a single dot for each completed epoch.
+    class PrintDot(keras.callbacks.Callback):
+        def on_epoch_end(self,epoch,logs):
+            if epoch % 1 == 0: 
+                sys.stdout.write('\r%d' % (epoch))
+                sys.stdout.flush()
+            #print('.', end='')
+            #print('.')
 
-history_df=pd.DataFrame(np.array(history.history['val_mean_absolute_error']), columns=['val_err'])
-print("\n\n")
-print(history_df)
-print("\n\n")
+    # The patience parameter is the amount of epochs to check for improvement.
+    early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=200)
 
-print("%-12s%-12s%-12s" %('epoch', 'train_err', 'val_err'))
-for iloop in history.epoch:
-    train_err=history.history['mean_absolute_error'][iloop]
-    val_err=history.history['val_mean_absolute_error'][iloop]
-    print("%8u%8.2f%8.2f" %(iloop, train_err, val_err))
+    history = model.fit(train_features, train_labels, epochs=EPOCHS,
+                        validation_split=0.2, verbose=0,
+                        #callbacks=[early_stop, PrintDot()])
+                        callbacks=[PrintDot()])
 
-# 显示 <<<<<<<<<<
-import matplotlib.pyplot as plt
-def plot_history(history):
-    plt.figure()
-    plt.xlabel('Epoch')
-    plt.ylabel('Mean Abs Error [1000$]')
-    plt.plot(history.epoch, np.array(history.history['mean_absolute_error']), 
-            label='Train Loss')
-    plt.plot(history.epoch, np.array(history.history['val_mean_absolute_error']),
-            label = 'Val loss')
-    plt.legend()
-    #plt.ylim([0,5])
-    plt.show()
-print("\nplot_history")
-plot_history(history)
-# 显示 >>>>>>>>>>>>
+    history_df=pd.DataFrame(np.array(history.history['val_mean_absolute_error']), columns=['val_err'])
+    print("\n\n")
+    print(history_df)
+    print("\n\n")
 
-model.save("./model/model.h5")
-np.save('./model/mean.npy', mean)
-np.save('./model/std.npy', std)
+    print("%-12s%-12s%-12s" %('epoch', 'train_err', 'val_err'))
+    for iloop in history.epoch:
+        train_err=history.history['mean_absolute_error'][iloop]
+        val_err=history.history['val_mean_absolute_error'][iloop]
+        print("%8u%8.2f%8.2f" %(iloop, train_err, val_err))
+
+    # # 显示 <<<<<<<<<<
+    # import matplotlib.pyplot as plt
+    # def plot_history(history):
+    #     plt.figure()
+    #     plt.xlabel('Epoch')
+    #     plt.ylabel('Mean Abs Error [1000$]')
+    #     plt.plot(history.epoch, np.array(history.history['mean_absolute_error']), 
+    #             label='Train Loss')
+    #     plt.plot(history.epoch, np.array(history.history['val_mean_absolute_error']),
+    #             label = 'Val loss')
+    #     plt.legend()
+    #     #plt.ylim([0,5])
+    #     plt.show()
+    # print("\nplot_history")
+    # plot_history(history)
+    # # 显示 >>>>>>>>>>>>
+
+    model.save("./model/model.h5")
+    np.save('./model/mean.npy', mean)
+    np.save('./model/std.npy', std)
+
+if __name__ == "__main__":
+    train()

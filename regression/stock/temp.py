@@ -152,42 +152,53 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # arr = arr[arr[:, 2] == float('20190101')]
 # print(arr)
 
-def StockCodes(filter_industry):
-    pro = ts.pro_api()
+# def StockCodes(filter_industry):
+#     pro = ts.pro_api()
 
-    file_name = './data/' + 'stock_code' + '.csv'
-    if os.path.exists(file_name):
-        print("read_csv:%s" % file_name)
-        load_df = pd.read_csv(file_name)
-    else:
-        load_df = pro.stock_basic(exchange = '', list_status = 'L', fields = 'ts_code,symbol,name,area,industry,list_date')
-        load_df.to_csv(file_name)
+#     file_name = './data/' + 'stock_code' + '.csv'
+#     if os.path.exists(file_name):
+#         print("read_csv:%s" % file_name)
+#         load_df = pd.read_csv(file_name)
+#     else:
+#         load_df = pro.stock_basic(exchange = '', list_status = 'L', fields = 'ts_code,symbol,name,area,industry,list_date')
+#         load_df.to_csv(file_name)
 
-    load_df = load_df[load_df['list_date'] <= 20090101]
-    load_df = load_df.copy()
-    load_df = load_df.reset_index(drop=True)
+#     load_df = load_df[load_df['list_date'] <= 20090101]
+#     load_df = load_df.copy()
+#     load_df = load_df.reset_index(drop=True)
     
-    if filter_industry != '':
-        industry_list = filter_industry.split(',')
-        code_valid_list = []
-        for iloop in range(0, len(load_df)):
-            if load_df['industry'][iloop] in industry_list:
-                code_valid_list.append(True)
-            else:
-                code_valid_list.append(False)
-        load_df = load_df[code_valid_list]
-    code_list = load_df['ts_code'].values
-    print(load_df)
-    print('StockCodes(%s)[%u]' % (filter_industry, len(code_list)))
-    return code_list
+#     if filter_industry != '':
+#         industry_list = filter_industry.split(',')
+#         code_valid_list = []
+#         for iloop in range(0, len(load_df)):
+#             if load_df['industry'][iloop] in industry_list:
+#                 code_valid_list.append(True)
+#             else:
+#                 code_valid_list.append(False)
+#         load_df = load_df[code_valid_list]
+#     code_list = load_df['ts_code'].values
+#     print(load_df)
+#     print('StockCodes(%s)[%u]' % (filter_industry, len(code_list)))
+#     return code_list
 
-# code_list = StockCodes('')
-# code_list = StockCodes('银行')
-# code_list = StockCodes('全国地产')
-code_list = StockCodes('软件服务')
-# code_list = StockCodes('保险')
-# code_list = StockCodes('证券')
-code_list = StockCodes('软件服务,证券')
-print(code_list)
+# # code_list = StockCodes('')
+# # code_list = StockCodes('银行')
+# # code_list = StockCodes('全国地产')
+# code_list = StockCodes('软件服务')
+# # code_list = StockCodes('保险')
+# # code_list = StockCodes('证券')
+# code_list = StockCodes('软件服务,证券')
+# print(code_list)
+
+for iloop in range(1,100):
+    # print('\b\b\b\b%4d' % iloop),
+    print('\r%4d' % iloop)
+    time.sleep(0.1)
+
+    
+# for i in range(100):
+#     sys.stdout.write('\r%s%%' % (i+1))
+#     sys.stdout.flush()
+#     time.sleep(0.1)
 
 
