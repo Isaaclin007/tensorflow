@@ -2,6 +2,7 @@
 
 import tensorflow as tf
 from tensorflow import keras
+from tensorflow.python.keras import backend as K
 import tushare as ts
 import numpy as np
 import pandas as pd
@@ -9,6 +10,7 @@ import os
 import time
 import sys
 import tushare_data
+import math
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -37,18 +39,35 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # print("train_labels: {}".format(train_labels.shape))
 
 #Create the model
+def myloss(y_true, y_pred, e=0.1):
+    return (1-e)*((y_true * y_true - y_pred * y_pred) * (y_true * y_true - y_pred * y_pred))
+
+def mymseloss(y_true, y_pred, e=0.1):
+    return (1-e)*((y_true - y_pred) * (y_true - y_pred))
+
+def mymaeloss(y_true, y_pred, e=0.1):
+    return (1-e)* abs(y_true - y_pred)
+
+def mystockloss(y_true, y_pred, e=0.1):
+    return (1-e) * abs(y_true - y_pred) * K.max([K.max([y_true, y_pred]) - 0.0, 0.0])
+    # return (1-e) * abs(y_true - y_pred) * K.pow(1.5, K.max([y_true, y_pred]))
+    # return (1-e) * abs(y_true - y_pred) * K.pow(1.1, y_true)
+
 def build_model(input_layer_shape):
     model = keras.Sequential([
-        keras.layers.Dense(4, activation=tf.nn.relu, input_shape=input_layer_shape),
-        # keras.layers.Dense(64, activation=tf.nn.relu),
-        # keras.layers.Dense(32, activation=tf.nn.relu),
-        # keras.layers.Dense(16, activation=tf.nn.relu),
+        keras.layers.Dense(128, activation=tf.nn.relu, input_shape=input_layer_shape),
+        keras.layers.Dense(64, activation=tf.nn.relu),
+        keras.layers.Dense(32, activation=tf.nn.relu),
+        keras.layers.Dense(16, activation=tf.nn.relu),
         keras.layers.Dense(1)
     ])
 
     optimizer = tf.train.RMSPropOptimizer(0.001)
 
-    model.compile(loss='mse',
+    # model.compile(loss='mse',
+    #                 optimizer=optimizer,
+    #                 metrics=['mae'])
+    model.compile(loss=mystockloss,
                     optimizer=optimizer,
                     metrics=['mae'])
     return model
@@ -65,7 +84,7 @@ def train():
     model = build_model((train_features.shape[1],))
     model.summary()
 
-    EPOCHS = 200
+    EPOCHS = 20
 
     # Display training progress by printing a single dot for each completed epoch.
     class PrintDot(keras.callbacks.Callback):
@@ -79,6 +98,10 @@ def train():
     # The patience parameter is the amount of epochs to check for improvement.
     early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=200)
 
+    where_are_nan = np.isnan(train_features)
+    where_are_inf = np.isinf(train_features)
+    train_features[where_are_nan] = 0.0
+    train_features[where_are_inf] = 0.0
     history = model.fit(train_features, train_labels, epochs=EPOCHS,
                         validation_split=0.2, verbose=0,
                         #callbacks=[early_stop, PrintDot()])
@@ -88,6 +111,7 @@ def train():
     print("\n\n")
     print(history_df)
     print("\n\n")
+    print(history.history)
 
     print("%-12s%-12s%-12s" %('epoch', 'train_err', 'val_err'))
     for iloop in history.epoch:
@@ -96,20 +120,20 @@ def train():
         print("%8u%8.2f%8.2f" %(iloop, train_err, val_err))
 
     # # 显示 <<<<<<<<<<
-    # import matplotlib.pyplot as plt
-    # def plot_history(history):
-    #     plt.figure()
-    #     plt.xlabel('Epoch')
-    #     plt.ylabel('Mean Abs Error [1000$]')
-    #     plt.plot(history.epoch, np.array(history.history['mean_absolute_error']), 
-    #             label='Train Loss')
-    #     plt.plot(history.epoch, np.array(history.history['val_mean_absolute_error']),
-    #             label = 'Val loss')
-    #     plt.legend()
-    #     #plt.ylim([0,5])
-    #     plt.show()
-    # print("\nplot_history")
-    # plot_history(history)
+    import matplotlib.pyplot as plt
+    def plot_history(history):
+        plt.figure()
+        plt.xlabel('Epoch')
+        plt.ylabel('Mean Abs Error [1000$]')
+        plt.plot(history.epoch, np.array(history.history['mean_absolute_error']), 
+                label='Train Loss')
+        plt.plot(history.epoch, np.array(history.history['val_mean_absolute_error']),
+                label = 'Val loss')
+        plt.legend()
+        #plt.ylim([0,5])
+        plt.show()
+    print("\nplot_history")
+    plot_history(history)
     # # 显示 >>>>>>>>>>>>
 
     model.save("./model/model.h5")

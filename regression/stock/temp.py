@@ -190,15 +190,62 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # code_list = StockCodes('软件服务,证券')
 # print(code_list)
 
-for iloop in range(1,100):
-    # print('\b\b\b\b%4d' % iloop),
-    print('\r%4d' % iloop)
-    time.sleep(0.1)
+# for iloop in range(1,100):
+#     # print('\b\b\b\b%4d' % iloop),
+#     print('\r%4d' % iloop)
+#     time.sleep(0.1)
 
     
 # for i in range(100):
 #     sys.stdout.write('\r%s%%' % (i+1))
 #     sys.stdout.flush()
 #     time.sleep(0.1)
+
+# pp_data = pd.read_csv('./preprocessed_data/preprocess_data_000001.HK_20190215.csv')
+# print(pp_data.dtypes)
+# print('\n')
+# print(pp_data.loc[0,'trade_date'])
+# print('\n')
+
+
+# for day_loop in range(0, len(pp_data)): 
+#     # temp_str = pp_data.loc[day_loop,'trade_date']
+#     # new_str = temp_str.replace('-', '')
+#     # print('temp_str: %s' % new_str)
+#     # pp_data.loc[day_loop,'trade_date'] = new_str
+#     pp_data.loc[day_loop,'trade_date'] = pp_data.loc[day_loop,'trade_date'].replace('-', '')
+
+# print(pp_data.loc[0,'trade_date'])
+# print('\n')
+# pp_data['trade_date'] = pp_data['trade_date'].astype(np.int64)
+# print(pp_data.dtypes)
+# print('\n')
+# print(pp_data)
+# print('\n')
+
+# print(pp_data.loc[0,'trade_date'])
+# print('\n')
+
+def TransferDateType(file_name):
+    pp_data = pd.read_csv(file_name)
+    for day_loop in range(0, len(pp_data)): 
+        pp_data.loc[day_loop,'trade_date'] = pp_data.loc[day_loop,'trade_date'].replace('-', '')
+    pp_data['trade_date'] = pp_data['trade_date'].astype(np.int64)
+    pp_data.to_csv(file_name)
+
+def TransferDateType(file_name):
+    pp_data = pd.read_csv(file_name)
+    for day_loop in range(0, len(pp_data)): 
+        pp_data.loc[day_loop,'trade_date'] = pp_data.loc[day_loop,'trade_date'].replace('-', '')
+    pp_data['trade_date'] = pp_data['trade_date'].astype(np.int64)
+    pp_data.to_csv(file_name)
+
+code_list = tushare_data.StockCodes()
+for code_index in range(0, len(code_list)):
+    stock_code = code_list[code_index]
+    stock_pp_file_name = tushare_data.FileNameStockPreprocessedData(stock_code)
+    TransferDateType(stock_pp_file_name)
+    print('%s 100%%' % stock_pp_file_name)
+
 
 

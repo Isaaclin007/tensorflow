@@ -24,7 +24,11 @@ test_date_list = tushare_data.TestTradeDateList()
 def Predict(feature_size, acture_size, test_data):
     model=keras.models.load_model("./model/model.h5")
     mean=np.load('./model/mean.npy')
+    print('mean:')
+    print(mean)
     std=np.load('./model/std.npy')
+    print('std:')
+    print(std)
     temp_index = tushare_data.TestDataLastPredictFeatureOffset()
     predict_features = test_data[:, temp_index: temp_index + feature_size]
     predict_features = (predict_features - mean) / std
@@ -139,6 +143,7 @@ def TestEntry(predict_trade_threshold, max_trade_count_1_day, print_msg):
                     t0_open = result.iloc[iloop]['T0_open']
                     t0_low = result.iloc[iloop]['T0_low']
                     td_close = result.iloc[iloop]['Td_close']
+                    td_open = result.iloc[iloop]['Td_open']
                     if tushare_data.label_type == tushare_data.LABEL_PRE_CLOSE_2_TD_CLOSE:
                         buying_threshold = pred - 5.0
                         if buying_threshold > 9.0 :
@@ -153,15 +158,20 @@ def TestEntry(predict_trade_threshold, max_trade_count_1_day, print_msg):
                             else:
                                 buying_price = pre_close * ((buying_threshold / 100.0) + 1.0)
                             
-                            out_price = td_close
+                            if tushare_data.label_type == tushare_data.LABEL_T1_OPEN_2_TD_OPEN:
+                                out_price = td_open
+                            else:
+                                out_price = td_close
+                            
                             # 监控
-                            # for mloop in range(0, (tushare_data.predict_day_count - 1)):
-                            #     temp_caption = 'mpred_%d' % mloop
-                            #     monitor_pred = result.iloc[iloop][temp_caption]
-                            #     if monitor_pred < 0:
-                            #         temp_caption = 'T%d_open' % (mloop + 1)
-                            #         out_price = result.iloc[iloop][temp_caption]
-                            #         break
+                            # if tushare_data.test_acture_data_with_feature:
+                            #     for mloop in range(0, (tushare_data.predict_day_count - 1)):
+                            #         temp_caption = 'mpred_%d' % mloop
+                            #         monitor_pred = result.iloc[iloop][temp_caption]
+                            #         if monitor_pred < 0:
+                            #             temp_caption = 'T%d_open' % (mloop + 1)
+                            #             out_price = result.iloc[iloop][temp_caption]
+                            #             break
 
                             # 止损
                             # for mloop in range(0, (tushare_data.predict_day_count - 1)):
@@ -169,7 +179,7 @@ def TestEntry(predict_trade_threshold, max_trade_count_1_day, print_msg):
                             #         temp_caption = 'T%d_close' % mloop
                             #         temp_close = result.iloc[iloop][temp_caption]
                             #         temp_increase = ((temp_close / buying_price) - 1.0) * 100.0
-                            #         if temp_increase < (-5.0):
+                            #         if temp_increase < (0.0):
                             #             out_price = temp_close
                             #             break
 
@@ -254,6 +264,6 @@ if __name__ == "__main__":
     #             max_capital_increase_max_trade_count_1_day = temp_count
     # print("max:")
     # TestEntry(max_capital_increase_threshold, max_capital_increase_max_trade_count_1_day, True)
-    TestEntry(0, 1, True)
+    TestEntry(-10.0, 1, True)
 
 

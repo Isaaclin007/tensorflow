@@ -96,3 +96,10 @@ V1.0.6
 2. 支持 code_filter 筛选
 3. 分析模型性能不稳定的原因
 4. 支持模型稳定性自动测试（测试结果方差 variance）
+
+V1.0.7
+2019-02-17
+1. 支持 hk 港股通数据向 tushare 数据格式的转换
+2. 不从数据源文件中读取 pre_close 避免 pre_close 数据错误
+3. industry_filter 支持 ‘hk’，输出港股通所有 ts_code
+4. proprocess 增加对无效数据的判断
