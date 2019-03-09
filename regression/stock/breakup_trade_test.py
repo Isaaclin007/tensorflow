@@ -1,0 +1,143 @@
+# -*- coding:UTF-8 -*-
+
+import tensorflow as tf
+from tensorflow import keras
+import tushare as ts
+import numpy as np
+import pandas as pd
+import os
+import time
+import sys
+import tushare_data
+import random
+
+reload(sys)
+sys.setdefaultencoding('utf-8')
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
+
+test_date_list = tushare_data.TestTradeDateList()
+# test_date_list = test_date_list[0:100]
+# print("len(test_date_list):")
+# print(len(test_date_list))
+# load_data = np.load('./temp_data/test_data_20090101_20190104_100_1_1_0.npy')
+
+def GetProprocessedData(ts_code):
+    stock_pp_file_name = tushare_data.FileNameStockPreprocessedData(ts_code)
+    if os.path.exists(stock_pp_file_name):
+        pp_data = pd.read_csv(stock_pp_file_name)
+        return pp_data
+
+def TestAStock(ts_code):
+    tushare_data.DownloadAStocksData(ts_code)
+    tushare_data.UpdatePreprocessDataAStock(ts_code)
+    pp_data = GetProprocessedData(ts_code)
+    sleep_count = 0
+    period_trade_count = 0
+    sleep_count_threshold = 400
+    breakup_count_threshold = 0
+    avg_up_continue_count = 0
+    break_up = False
+    holding = False
+    trade_count = 0
+    increase_sum = 0.0
+    holding_days_sum = 0
+    holding_days = 0
+    test_days = 0
+    out_target_trough = 0.0
+    out_target_trough_pre = 0.0
+    out_target_peak = 0.0
+    out_target_max = 0.0
+    out_target_trend = 1
+    out_target_trend_pre = 1
+    out_target_diff = 0.0
+    break_up_price = 0.0
+    capital_value = 1.0
+    for day_loop in reversed(range(0, len(pp_data) - 1)):
+        close = pp_data.loc[day_loop,'close']
+        in_target = pp_data.loc[day_loop,'close_10_avg']
+        out_target = pp_data.loc[day_loop,'close_10_avg']
+        out_target_pre = pp_data.loc[day_loop+1,'close']
+        close_avg = pp_data.loc[day_loop,'close_200_avg']
+        out_target_diff = out_target - out_target_pre
+        if out_target_diff > 0.0:
+            out_target_trend_pre = out_target_trend
+            out_target_trend = 1
+        elif out_target_diff < 0.0:
+            out_target_trend_pre = out_target_trend
+            out_target_trend = -1
+        if (out_target_trend > 0) and (out_target_trend_pre < 0):
+            out_target_peak = out_target_pre
+        elif (out_target_trend < 0) and (out_target_trend_pre > 0):
+            out_target_trough_pre = out_target_trough
+            out_target_trough = out_target_pre
+
+        if in_target > close_avg:
+            avg_up_continue_count += 1
+            if avg_up_continue_count >= breakup_count_threshold:
+                break_up = True
+        else:
+            if break_up:
+                sleep_count = 0
+            sleep_count += 1
+            break_up = False
+            period_trade_count = 0
+        
+        if not holding:
+            if (sleep_count >= sleep_count_threshold) and break_up and (day_loop > 1):
+                if (period_trade_count == 0) or ((period_trade_count > 0) and (close > break_up_price)):
+                    in_trade_date = pp_data.loc[day_loop - 1,'trade_date']
+                    buying_price = pp_data.loc[day_loop - 1,'open']
+                    holding = True
+                    holding_days = 1
+                    out_target_trough = out_target
+                    out_target_peak = 0.0
+                if period_trade_count == 0:
+                    break_up_price = buying_price
+                period_trade_count += 1
+        else:
+            # 卖出条件：当out_taget低于最近波谷时卖出，或者最近波峰小于上一个波峰
+            # if (not break_up) or (out_target < out_target_peak) or (out_target_trough < out_target_trough_pre):
+
+            # 卖出条件：10% 止损
+            # if (not break_up) or (((close - buying_price)/buying_price) < (-0.10)):
+
+            # 卖出条件：target 跌破 avg
+            # if (not break_up):
+
+            # 卖出条件：target 跌破 break_up_price
+            if (not break_up) or (close < break_up_price) or (day_loop == 1):
+                out_trade_date = pp_data.loc[day_loop - 1,'trade_date']
+                out_price = pp_data.loc[day_loop - 1,'open']
+                holding = False
+                trade_count += 1
+                temp_increase = (out_price/buying_price - 1.0) * 100.0
+                capital_value *= (out_price/buying_price)
+                print("%6u%10s%10s%10s%10u%10.2f%10.2f%10.2f" %( \
+                    trade_count, \
+                    ts_code, \
+                    in_trade_date, \
+                    out_trade_date, \
+                    holding_days, \
+                    buying_price, \
+                    out_price, \
+                    temp_increase))
+                increase_sum += temp_increase
+                holding_days_sum += holding_days
+            else:
+                holding_days += 1
+        test_days += 1
+
+    print("test_days: %u, holding_days_sum: %u, increase_sum: %.2f" % (test_days, holding_days_sum, (capital_value - 1.0)*100.0))
+        # print('%8.2f%8.2f%10u%10u%10u%10u' % (\
+        #     close, \
+        #     close_30_avg, \
+        #     sleep_count, \
+        #     avg_30_up_continue_count, \
+        #     break_up, \
+        #     holding))
+
+if __name__ == "__main__":
+    # TestAStock('600104.SH')
+    TestAStock(sys.argv[1])
+
+

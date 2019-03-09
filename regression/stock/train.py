@@ -49,16 +49,16 @@ def mymaeloss(y_true, y_pred, e=0.1):
     return (1-e)* abs(y_true - y_pred)
 
 def mystockloss(y_true, y_pred, e=0.1):
-    return (1-e) * abs(y_true - y_pred) * K.max([K.max([y_true, y_pred]) - 0.0, 0.0])
-    # return (1-e) * abs(y_true - y_pred) * K.pow(1.5, K.max([y_true, y_pred]))
+    # return (1-e) * abs(y_true - y_pred) * K.max([K.max([y_true, y_pred]) - 0.0, 0.0])
+    return (1-e) * abs(y_true - y_pred) * K.pow(1.5, K.max([y_true, y_pred]) / 100.0)
     # return (1-e) * abs(y_true - y_pred) * K.pow(1.1, y_true)
 
 def build_model(input_layer_shape):
     model = keras.Sequential([
-        keras.layers.Dense(128, activation=tf.nn.relu, input_shape=input_layer_shape),
-        keras.layers.Dense(64, activation=tf.nn.relu),
-        keras.layers.Dense(32, activation=tf.nn.relu),
-        keras.layers.Dense(16, activation=tf.nn.relu),
+        keras.layers.Dense(4, activation=tf.nn.relu, input_shape=input_layer_shape),
+        # keras.layers.Dense(64, activation=tf.nn.relu),
+        # keras.layers.Dense(32, activation=tf.nn.relu),
+        # keras.layers.Dense(16, activation=tf.nn.relu),
         keras.layers.Dense(1)
     ])
 
@@ -67,9 +67,13 @@ def build_model(input_layer_shape):
     # model.compile(loss='mse',
     #                 optimizer=optimizer,
     #                 metrics=['mae'])
-    model.compile(loss=mystockloss,
+    model.compile(loss='mae',
                     optimizer=optimizer,
                     metrics=['mae'])
+    # model.compile(loss=mystockloss,
+    #                 optimizer=optimizer,
+    #                 metrics=[mystockloss])
+    #                 # metrics=['mae'])
     return model
 
 def train():
@@ -77,14 +81,14 @@ def train():
 
     mean = train_features.mean(axis=0)
     std = train_features.std(axis=0)
-    print("mean: {}".format(mean.shape))
-    print("std: {}".format(std.shape))
+    # print("mean: {}".format(mean.shape))
+    # print("std: {}".format(std.shape))
     train_features = (train_features - mean) / std
 
     model = build_model((train_features.shape[1],))
     model.summary()
 
-    EPOCHS = 20
+    EPOCHS = 100
 
     # Display training progress by printing a single dot for each completed epoch.
     class PrintDot(keras.callbacks.Callback):
@@ -103,21 +107,16 @@ def train():
     train_features[where_are_nan] = 0.0
     train_features[where_are_inf] = 0.0
     history = model.fit(train_features, train_labels, epochs=EPOCHS,
-                        validation_split=0.2, verbose=0,
+                        validation_split=0.5, verbose=0,
                         #callbacks=[early_stop, PrintDot()])
                         callbacks=[PrintDot()])
 
-    history_df=pd.DataFrame(np.array(history.history['val_mean_absolute_error']), columns=['val_err'])
-    print("\n\n")
-    print(history_df)
-    print("\n\n")
-    print(history.history)
 
-    print("%-12s%-12s%-12s" %('epoch', 'train_err', 'val_err'))
-    for iloop in history.epoch:
-        train_err=history.history['mean_absolute_error'][iloop]
-        val_err=history.history['val_mean_absolute_error'][iloop]
-        print("%8u%8.2f%8.2f" %(iloop, train_err, val_err))
+    # print("%-12s%-12s%-12s" %('epoch', 'train_err', 'val_err'))
+    # for iloop in history.epoch:
+    #     train_err=history.history['mean_absolute_error'][iloop]
+    #     val_err=history.history['val_mean_absolute_error'][iloop]
+    #     print("%8u%8.2f%8.2f" %(iloop, train_err, val_err))
 
     # # 显示 <<<<<<<<<<
     import matplotlib.pyplot as plt
@@ -125,9 +124,9 @@ def train():
         plt.figure()
         plt.xlabel('Epoch')
         plt.ylabel('Mean Abs Error [1000$]')
-        plt.plot(history.epoch, np.array(history.history['mean_absolute_error']), 
+        plt.plot(history.epoch, np.array(history.history['loss']), 
                 label='Train Loss')
-        plt.plot(history.epoch, np.array(history.history['val_mean_absolute_error']),
+        plt.plot(history.epoch, np.array(history.history['val_loss']),
                 label = 'Val loss')
         plt.legend()
         #plt.ylim([0,5])

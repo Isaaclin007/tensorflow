@@ -264,6 +264,6 @@ if __name__ == "__main__":
     #             max_capital_increase_max_trade_count_1_day = temp_count
     # print("max:")
     # TestEntry(max_capital_increase_threshold, max_capital_increase_max_trade_count_1_day, True)
-    TestEntry(-10.0, 1, True)
+    TestEntry(14.1, 1, True)
 
 

@@ -12,30 +12,39 @@ from skimage import feature
 from dask.dataframe.methods import size
 from llvmlite.ir.types import LabelType
 import hk_2_tu_data
+import math
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
-feature_days = 10
-max_predict_day_count = 10  # 决定train_data 和 test_data 的predict_day_count
-predict_day_count = 1  # 预测未来几日的数据
+max_predict_day_count = 100  # 决定train_data 和 test_data 的predict_day_count
+predict_day_count = 30  # 预测未来几日的数据
 referfence_feature_count = 1
 test_acture_data_with_feature = False
 train_a_stock_min_data_num = 400
 train_a_stock_max_data_num = 1000000
 
-FEATURE_G7_D8 = 0
-FEATURE_G2_D2 = 1
-FEATURE_G0_D2 = 2
-FEATURE_G2_D8 = 3
-feature_type = FEATURE_G2_D8
-if feature_type == FEATURE_G7_D8:
-    feature_size = 7 + (8 * feature_days)
-elif feature_type == FEATURE_G2_D2:
-    feature_size = 2 + (2 * feature_days)
-elif feature_type == FEATURE_G0_D2:
-    feature_size = 0 + (2 * feature_days)
-elif feature_type == FEATURE_G2_D8:
-    feature_size = 2 + (8 * feature_days)
+FEATURE_G7_10D8 = 0
+FEATURE_G2_10D2 = 1
+FEATURE_G0_10D2 = 2
+FEATURE_G2_10D8 = 3
+FEATURE_G7_10AVG102_10D8 = 4
+
+feature_type = FEATURE_G7_10AVG102_10D8
+if feature_type == FEATURE_G7_10D8:
+    feature_size = 7 + (8 * 10)
+    feature_relate_days = 10
+elif feature_type == FEATURE_G2_10D2:
+    feature_size = 2 + (2 * 10)
+    feature_relate_days = 10
+elif feature_type == FEATURE_G0_10D2:
+    feature_size = 0 + (2 * 10)
+    feature_relate_days = 10
+elif feature_type == FEATURE_G2_10D8:
+    feature_size = 2 + (8 * 10)
+    feature_relate_days = 10
+elif feature_type == FEATURE_G7_10AVG102_10D8:
+    feature_size = 7 + (2 * 10) + (8 * 10)
+    feature_relate_days = 100
 
 LABEL_PRE_CLOSE_2_TD_CLOSE = 0
 LABEL_T1_OPEN_2_TD_CLOSE = 1
@@ -45,6 +54,9 @@ label_type = LABEL_T1_OPEN_2_TD_CLOSE
 
 acture_size = 7
 label_col_index = feature_size + predict_day_count - 1
+
+def CurrentDate():
+    return time.strftime('%Y%m%d',time.localtime(time.time()))
 
 # stocks_list_end_date = '20130601'
 # train_data_start_date = '20140101'
@@ -62,20 +74,12 @@ label_col_index = feature_size + predict_day_count - 1
 # train_test_date = '20190111'
 # predict_date = '20190111'
 
-stocks_list_end_date = '20090101'
+stocks_list_end_date = '20190101'
 train_data_start_date = '20100101'
 train_data_end_date = '20170101'
 test_data_start_date = '20170101'
 test_data_end_date = '20190111'
-train_test_date = '20190111'
-predict_date = '20181225'
-
-stocks_list_end_date = '20090101'
-train_data_start_date = '20000101'
-train_data_end_date = '20170101'
-test_data_start_date = '20170101'
-test_data_end_date = '20190111'
-train_test_date = '20190215'
+train_test_date = CurrentDate()
 predict_date = '20181225'
 
 # stocks_list_end_date = '20140101'
@@ -94,11 +98,11 @@ predict_date = '20181225'
 # train_test_date = '20190201'
 # predict_date = '20190127'
 
-code_filter = ''
+code_filter = '000001.SH,002415,000650,000937,600104'
 # industry_filter = '软件服务,互联网,半导体,电脑设备,百货,仓储物流,电脑设备,电器设备'
 # industry_filter = '半导体,电脑设备'
-# industry_filter = ''
-industry_filter = 'hk'
+industry_filter = ''
+# industry_filter = 'hk'
 # industry_filter = '软件服务'
 # industry_filter = '百货'
 # industry_filter = '半导体'
@@ -173,7 +177,7 @@ def StockCodeFilter(ts_code, code_filter_list):
             return True
     return False
 
-def StockCodes():
+def StockCodesName():
     pro = ts.pro_api()
 
     if industry_filter == 'hk':
@@ -214,7 +218,19 @@ def StockCodes():
         print(load_df)
         print('StockCodes(%s)[%u]' % (industry_filter, len(load_df)))
         code_list = load_df['ts_code'].values
-        return code_list
+        name_list = load_df['name'].values
+        return code_list, name_list
+
+def StockCodes():
+    code_list, name_list = StockCodesName()
+    return code_list
+
+def StockName(ts_code):
+    code_list, name_list = StockCodesName()
+    for iloop in range(0, len(code_list)):
+        if code_list[iloop] == ts_code:
+            return name_list[iloop]
+    return 'unknow'
 
 def FileNameStockDownloadData(stock_code):
     temp_file_name = './download_data/' + stock_code + '_' + train_test_date + '.csv'
@@ -283,7 +299,7 @@ def DownloadTrainTestData():
         print("%-4d : %s 100%%" % (code_index, stock_code))
 
 def PredictTradeDateList():
-    ref_trade_day_num = feature_days + referfence_feature_count + 30 - 1 + 20  # 允许有20天停盘
+    ref_trade_day_num = feature_relate_days + referfence_feature_count + 30 - 1 + 20  # 允许有20天停盘
     date_list = TradeDateList(predict_date, ref_trade_day_num)
     return date_list
 
@@ -328,55 +344,112 @@ def StockDataPreProcess(stock_data_df):
     src_df_2['close_5_avg']=0.0
     src_df_2['close_10_avg']=0.0
     src_df_2['close_30_avg']=0.0
+    src_df_2['turnover_rate_f_5_avg']=0.0
+    src_df_2['turnover_rate_f_10_avg']=0.0
+    src_df_2['turnover_rate_f_30_avg']=0.0
     src_df_2['close_increase_to_5_avg']=0.0
     src_df_2['close_increase_to_10_avg']=0.0
     src_df_2['close_increase_to_30_avg']=0.0
     src_df=src_df_2.copy()
 
-    for day_loop in range(0, len(src_df) - 1):
+    for day_loop in range(0, len(src_df)):
         if src_df_1.loc[day_loop,'trade_date'] == '' \
                 or src_df.loc[day_loop,'open'] == 0.0 \
                 or src_df.loc[day_loop,'close'] == 0.0 \
                 or src_df.loc[day_loop,'high'] == 0.0 \
                 or src_df.loc[day_loop,'low'] == 0.0:
-            print('StockDataPreProcess.Error, %s, %f, %f, %f, %f' %(src_df.loc[day_loop,'trade_date'], \
+            print('StockDataPreProcess.Error1, %s, %f, %f, %f, %f' %(src_df.loc[day_loop,'trade_date'], \
                                                                     src_df.loc[day_loop,'open'], \
                                                                     src_df.loc[day_loop,'close'], \
                                                                     src_df.loc[day_loop,'high'], \
                                                                     src_df.loc[day_loop,'low']))
             return src_df[0:0]
+        if math.isnan(src_df_1.loc[day_loop,'trade_date']) \
+                or math.isnan(src_df_1.loc[day_loop,'open']) \
+                or math.isnan(src_df_1.loc[day_loop,'close']) \
+                or math.isnan(src_df_1.loc[day_loop,'high']) \
+                or math.isnan(src_df_1.loc[day_loop,'low']) \
+                or math.isnan(src_df_1.loc[day_loop,'turnover_rate_f']):
+            print('StockDataPreProcess.Error2, %s, %f, %f, %f, %f, %f' %(src_df.loc[day_loop,'trade_date'], \
+                                                                    src_df.loc[day_loop,'open'], \
+                                                                    src_df.loc[day_loop,'close'], \
+                                                                    src_df.loc[day_loop,'high'], \
+                                                                    src_df.loc[day_loop,'low'],
+                                                                    src_df.loc[day_loop,'turnover_rate_f']))
+            return src_df[0:0]
     
     avg_5_sum = 0.0
     avg_10_sum = 0.0
     avg_30_sum = 0.0
+    avg_100_sum = 0.0
+    avg_200_sum = 0.0
+    trf_5_sum = 0.0
+    trf_10_sum = 0.0
+    trf_30_sum = 0.0
+    trf_100_sum = 0.0
+    trf_200_sum = 0.0
     avg_5_count = 0
     avg_10_count = 0
     avg_30_count = 0
+    avg_100_count = 0
+    avg_200_count = 0
     for day_loop in reversed(range(0, len(src_df))):
         close_current = src_df.loc[day_loop, 'close']
+        trf_current = src_df.loc[day_loop, 'turnover_rate_f']
         # 计算5日均值
         if avg_5_count < 5:
             avg_5_sum += close_current
+            trf_5_sum += trf_current
             avg_5_count += 1
         else:
             avg_5_sum = avg_5_sum + close_current - src_df.loc[day_loop + 5, 'close']
-            src_df.loc[day_loop,'close_5_avg'] = avg_5_sum / 5
+            trf_5_sum = trf_5_sum + trf_current - src_df.loc[day_loop + 5, 'turnover_rate_f']
+            src_df.loc[day_loop,'close_5_avg'] = avg_5_sum / 5.0
+            src_df.loc[day_loop,'turnover_rate_f_5_avg'] = trf_5_sum / 5.0
             
         # 计算10日均值
         if avg_10_count < 10:
             avg_10_sum += close_current
+            trf_10_sum += trf_current
             avg_10_count += 1
         else:
             avg_10_sum = avg_10_sum + close_current - src_df.loc[day_loop + 10, 'close']
-            src_df.loc[day_loop,'close_10_avg'] = avg_10_sum / 10
+            trf_10_sum = trf_10_sum + trf_current - src_df.loc[day_loop + 10, 'turnover_rate_f']
+            src_df.loc[day_loop,'close_10_avg'] = avg_10_sum / 10.0
+            src_df.loc[day_loop,'turnover_rate_f_10_avg'] = trf_10_sum / 10.0
             
         # 计算30日均值
         if avg_30_count < 30:
             avg_30_sum += close_current
+            trf_30_sum += trf_current
             avg_30_count += 1
         else:
             avg_30_sum = avg_30_sum + close_current - src_df.loc[day_loop + 30, 'close']
-            src_df.loc[day_loop,'close_30_avg'] = avg_30_sum / 30
+            trf_30_sum = trf_30_sum + trf_current - src_df.loc[day_loop + 30, 'turnover_rate_f']
+            src_df.loc[day_loop,'close_30_avg'] = avg_30_sum / 30.0
+            src_df.loc[day_loop,'turnover_rate_f_30_avg'] = trf_30_sum / 30.0
+
+        # 计算100日均值
+        if avg_100_count < 100:
+            avg_100_sum += close_current
+            trf_100_sum += trf_current
+            avg_100_count += 1
+        else:
+            avg_100_sum = avg_100_sum + close_current - src_df.loc[day_loop + 100, 'close']
+            trf_100_sum = trf_100_sum + trf_current - src_df.loc[day_loop + 100, 'turnover_rate_f']
+            src_df.loc[day_loop,'close_100_avg'] = avg_100_sum / 100.0
+            src_df.loc[day_loop,'turnover_rate_f_100_avg'] = trf_100_sum / 100.0
+
+        # 计算200日均值
+        if avg_200_count < 200:
+            avg_200_sum += close_current
+            trf_200_sum += trf_current
+            avg_200_count += 1
+        else:
+            avg_200_sum = avg_200_sum + close_current - src_df.loc[day_loop + 200, 'close']
+            trf_200_sum = trf_200_sum + trf_current - src_df.loc[day_loop + 200, 'turnover_rate_f']
+            src_df.loc[day_loop,'close_200_avg'] = avg_200_sum / 200.0
+            src_df.loc[day_loop,'turnover_rate_f_200_avg'] = trf_200_sum / 200.0
             
     temp_open = 0.0
     temp_close = 0.0
@@ -405,10 +478,10 @@ def StockDataPreProcess(stock_data_df):
         src_df.loc[day_loop,'close_increase_to_10_avg'] = ((temp_close / temp_close_10_avg) - 1.0) * 100.0
         src_df.loc[day_loop,'close_increase_to_30_avg'] = ((temp_close / temp_close_30_avg) - 1.0) * 100.0
 
-    return src_df[:len(src_df)-30]
+    return src_df[:len(src_df)-200]
 
 def AppendFeature( src_df, feature_day_pointer, data_unit):
-    if feature_type == FEATURE_G7_D8:
+    if feature_type == FEATURE_G7_10D8:
         temp_index = feature_day_pointer
         data_unit.append(src_df['total_share'][temp_index])
         data_unit.append(src_df['float_share'][temp_index])
@@ -417,7 +490,7 @@ def AppendFeature( src_df, feature_day_pointer, data_unit):
         data_unit.append(src_df['circ_mv'][temp_index])
         data_unit.append(src_df['close'][temp_index])
         data_unit.append(src_df['close_5_avg'][temp_index])
-        for iloop in range(0, feature_days):                
+        for iloop in range(0, 10):                
             temp_index=feature_day_pointer+iloop
             data_unit.append(src_df['open_increase'][temp_index])
             data_unit.append(src_df['close_increase'][temp_index])
@@ -427,11 +500,11 @@ def AppendFeature( src_df, feature_day_pointer, data_unit):
             data_unit.append(src_df['close_increase_to_10_avg'][temp_index])
             data_unit.append(src_df['close_increase_to_30_avg'][temp_index])
             data_unit.append(src_df['turnover_rate_f'][temp_index])
-    elif feature_type == FEATURE_G2_D8:
+    elif feature_type == FEATURE_G2_10D8:
         temp_index = feature_day_pointer
         data_unit.append(src_df['close'][temp_index])
         data_unit.append(src_df['close_5_avg'][temp_index])
-        for iloop in range(0, feature_days):                
+        for iloop in range(0, 10):                
             temp_index=feature_day_pointer+iloop
             data_unit.append(src_df['open_increase'][temp_index])
             data_unit.append(src_df['close_increase'][temp_index])
@@ -441,20 +514,45 @@ def AppendFeature( src_df, feature_day_pointer, data_unit):
             data_unit.append(src_df['close_increase_to_10_avg'][temp_index])
             data_unit.append(src_df['close_increase_to_30_avg'][temp_index])
             data_unit.append(src_df['turnover_rate_f'][temp_index])
-    elif feature_type == FEATURE_G2_D2:
+    elif feature_type == FEATURE_G2_10D2:
         temp_index = feature_day_pointer
         data_unit.append(src_df['total_share'][temp_index])
         data_unit.append(src_df['float_share'][temp_index])
-        for iloop in range(0, feature_days):                
+        for iloop in range(0, 10):                
             temp_index=feature_day_pointer+iloop
             data_unit.append(src_df['close_increase'][temp_index])
             data_unit.append(src_df['turnover_rate_f'][temp_index])
-    elif feature_type == FEATURE_G0_D2:
+    elif feature_type == FEATURE_G0_10D2:
         temp_index = feature_day_pointer
-        for iloop in range(0, feature_days):                
+        for iloop in range(0, 10):                
             temp_index=feature_day_pointer+iloop
             data_unit.append(src_df['close'][temp_index])
             data_unit.append(src_df['open'][temp_index])
+    elif feature_type == FEATURE_G7_10AVG102_10D8:
+        temp_index = feature_day_pointer
+        data_unit.append(src_df['total_share'][temp_index])
+        data_unit.append(src_df['float_share'][temp_index])
+        data_unit.append(src_df['free_share'][temp_index])
+        data_unit.append(src_df['total_mv'][temp_index])
+        data_unit.append(src_df['circ_mv'][temp_index])
+        data_unit.append(src_df['close'][temp_index])
+        data_unit.append(src_df['close_5_avg'][temp_index])
+        for iloop in range(0, 10):                
+            temp_index = feature_day_pointer + iloop * 10
+            if math.isnan(src_df['turnover_rate_f_10_avg'][temp_index]):
+                print('------------------------%s, %d' % (src_df['ts_code'][temp_index], temp_index))
+            data_unit.append(src_df['close_10_avg'][temp_index])
+            data_unit.append(src_df['turnover_rate_f_10_avg'][temp_index])
+        for iloop in range(0, 10):                
+            temp_index=feature_day_pointer+iloop
+            data_unit.append(src_df['open_increase'][temp_index])
+            data_unit.append(src_df['close_increase'][temp_index])
+            data_unit.append(src_df['high_increase'][temp_index])
+            data_unit.append(src_df['low_increase'][temp_index])
+            data_unit.append(src_df['close_increase_to_5_avg'][temp_index])
+            data_unit.append(src_df['close_increase_to_10_avg'][temp_index])
+            data_unit.append(src_df['close_increase_to_30_avg'][temp_index])
+            data_unit.append(src_df['turnover_rate_f'][temp_index])
         
 def AppendLabel( src_df, day_index, data_unit):
     feature_day_pointer = day_index + max_predict_day_count
@@ -488,14 +586,18 @@ def AppendLabel( src_df, day_index, data_unit):
             else:
                 day_score = src_df['close_increase'][temp_index] * 2
             sum_score += day_score
-            if sum_score > max_sum_score:
-                max_sum_score = sum_score
-            # if (iloop == 8) and ((sum_score > 10) or (sum_score < -10)):
-            #     print('%04u, %f, %s, %s, %f, %f' % (iloop, sum_score, src_df['ts_code'][temp_index], \
-            #         src_df['trade_date'][temp_index], \
-            #         src_df['close'][temp_index], \
-            #         src_df['close_increase'][temp_index]))
-            data_unit.append(max_sum_score)
+            # if sum_score > max_sum_score:
+            #     max_sum_score = sum_score
+            # # if (iloop == 8) and ((sum_score > 10) or (sum_score < -10)):
+            # #     print('%04u, %f, %s, %s, %f, %f' % (iloop, sum_score, src_df['ts_code'][temp_index], \
+            # #         src_df['trade_date'][temp_index], \
+            # #         src_df['close'][temp_index], \
+            # #         src_df['close_increase'][temp_index]))
+            # data_unit.append(max_sum_score)
+            temp_score = sum_score
+            if temp_score < 0.0:
+                temp_score = 0.0
+            data_unit.append(temp_score)
     
 
 ACTURE_DATA_INDEX_OPEN_INCREASE = 0
@@ -586,7 +688,7 @@ def GetAFeature(src_df, day_index, feature_type):
 #         data_unit.append(src_df['circ_mv'][temp_index])
 #         data_unit.append(src_df['close'][temp_index])
 #         data_unit.append(src_df['close_5_avg'][temp_index])
-#         for iloop in range(0, feature_days):                
+#         for iloop in range(0, 10):                
 #             temp_index=feature_day_pointer+iloop
 #             data_unit.append(src_df['open_increase'][temp_index])
 #             data_unit.append(src_df['close_increase'][temp_index])
@@ -612,10 +714,9 @@ def GetAFeature(src_df, day_index, feature_type):
 # 训练数据截至日期、
 # 个股训练数据最小和最大数据量
 def FileNameTrainData():
-    file_name = './temp_data/train_data_%u_%u_%u_%u_%s_%s_%s_%u_%u_%s%s.npy' % ( \
+    file_name = './temp_data/train_data_%u_%u_%u_%s_%s_%s_%u_%u_%s%s.npy' % ( \
         feature_type, \
         label_type, \
-        feature_days, \
         max_predict_day_count, \
         stocks_list_end_date, \
         train_data_start_date, \
@@ -638,10 +739,9 @@ def FileNameTrainData():
 # 参考特征天数、
 # 测试acture是否包含feature
 def FileNameTestData():
-    file_name = './temp_data/test_data_%u_%u_%u_%u_%u_%s_%s_%s_%u_%d_%s%s.npy' % ( \
+    file_name = './temp_data/test_data_%u_%u_%u_%u_%s_%s_%s_%u_%d_%s%s.npy' % ( \
         feature_type, \
         label_type, \
-        feature_days, \
         max_predict_day_count, \
         acture_size, \
         stocks_list_end_date, \
@@ -673,6 +773,20 @@ def OffsetTradeDate(ref_date, day_offset):
     temp_list = TradeDateList(ref_date, day_offset + 1)
     return temp_list[day_offset]
 
+def UpdatePreprocessDataAStock(ts_code):
+    stock_code = ts_code
+    stock_download_file_name = FileNameStockDownloadData(stock_code)
+    stock_pp_file_name = FileNameStockPreprocessedData(stock_code)
+    if os.path.exists(stock_download_file_name):
+        download_df = pd.read_csv(stock_download_file_name)
+        if not os.path.exists(stock_pp_file_name):
+            pp_data = StockDataPreProcess(download_df)
+            if len(pp_data) > 0:
+                pp_data.to_csv(stock_pp_file_name)
+                print("%-4d : %s 100%%" % (0, stock_code))
+            else:
+                print("%-4d : %s error" % (0, stock_code))
+
 def UpdatePreprocessData():
     code_list = StockCodes()
     for code_index in range(0, len(code_list)):
@@ -681,9 +795,60 @@ def UpdatePreprocessData():
         stock_pp_file_name = FileNameStockPreprocessedData(stock_code)
         if os.path.exists(stock_download_file_name):
             download_df = pd.read_csv(stock_download_file_name)
-            pp_data = StockDataPreProcess(download_df)
-            if len(pp_data) > 0:
-                pp_data.to_csv(stock_pp_file_name)
+            if not os.path.exists(stock_pp_file_name):
+                pp_data = StockDataPreProcess(download_df)
+                if len(pp_data) > 0:
+                    pp_data.to_csv(stock_pp_file_name)
+                    print("%-4d : %s 100%%" % (code_index, stock_code))
+                else:
+                    print("%-4d : %s error" % (code_index, stock_code))
+
+def CheckPreprocessDataAStock(stock_pp_file_name):
+    if os.path.exists(stock_pp_file_name):
+        src_df = pd.read_csv(stock_pp_file_name)
+        for day_loop in range(0, len(src_df)):
+            if src_df.loc[day_loop,'trade_date'] == '' \
+                    or src_df.loc[day_loop,'open'] == 0.0 \
+                    or src_df.loc[day_loop,'close'] == 0.0 \
+                    or src_df.loc[day_loop,'high'] == 0.0 \
+                    or src_df.loc[day_loop,'low'] == 0.0:
+                print('CheckPreprocessDataAStock.Error1, %s, %s, %f, %f, %f, %f' %( \
+                                                                        src_df.loc[day_loop,'ts_code'], \
+                                                                        src_df.loc[day_loop,'trade_date'], \
+                                                                        src_df.loc[day_loop,'open'], \
+                                                                        src_df.loc[day_loop,'close'], \
+                                                                        src_df.loc[day_loop,'high'], \
+                                                                        src_df.loc[day_loop,'low']))
+                return False
+            if math.isnan(src_df.loc[day_loop,'trade_date']) \
+                    or math.isnan(src_df.loc[day_loop,'open']) \
+                    or math.isnan(src_df.loc[day_loop,'close']) \
+                    or math.isnan(src_df.loc[day_loop,'high']) \
+                    or math.isnan(src_df.loc[day_loop,'low']) \
+                    or math.isnan(src_df.loc[day_loop,'turnover_rate_f']) \
+                    or math.isnan(src_df.loc[day_loop,'turnover_rate_f_10_avg']):
+                print('CheckPreprocessDataAStock.Error2, %s, %s, %f, %f, %f, %f, %f, %f' %( \
+                                                                        src_df.loc[day_loop,'ts_code'], \
+                                                                        src_df.loc[day_loop,'trade_date'], \
+                                                                        src_df.loc[day_loop,'open'], \
+                                                                        src_df.loc[day_loop,'close'], \
+                                                                        src_df.loc[day_loop,'high'], \
+                                                                        src_df.loc[day_loop,'low'], \
+                                                                        src_df.loc[day_loop,'turnover_rate_f'], \
+                                                                        src_df.loc[day_loop,'turnover_rate_f_10_avg']))
+                return False
+        return True
+    else:
+        print('CheckPreprocessDataAStock.Error3, %s' % stock_pp_file_name)
+        return False
+
+def CheckPreprocessData():
+    code_list = StockCodes()
+    for code_index in range(0, len(code_list)):
+        stock_code = code_list[code_index]
+        stock_pp_file_name = FileNameStockPreprocessedData(stock_code)
+        if os.path.exists(stock_pp_file_name):
+            if CheckPreprocessDataAStock(stock_pp_file_name):
                 print("%-4d : %s 100%%" % (code_index, stock_code))
 
 def UpdateTrainTestData():
@@ -692,9 +857,9 @@ def UpdateTrainTestData():
     code_list = StockCodes()
     train_data_init_flag = True
     test_data_init_flag = True
-    train_pp_start_date = OffsetTradeDate(train_data_start_date, feature_days + max_predict_day_count)
+    train_pp_start_date = OffsetTradeDate(train_data_start_date, feature_relate_days + max_predict_day_count)
     train_pp_end_date = train_data_end_date
-    test_pp_start_date = OffsetTradeDate(test_data_start_date, feature_days + max_predict_day_count)
+    test_pp_start_date = OffsetTradeDate(test_data_start_date, feature_relate_days + max_predict_day_count)
     test_pp_end_date = test_data_end_date
     for code_index in range(0, len(code_list)):
         stock_code = code_list[code_index]
@@ -715,7 +880,7 @@ def UpdateTrainTestData():
                 test_pp_data = test_pp_data.reset_index(drop=True)
 
                 train_data_list = []
-                valid_data_num = len(train_pp_data) - feature_days - max_predict_day_count
+                valid_data_num = len(train_pp_data) - feature_relate_days - max_predict_day_count
                 if valid_data_num >= train_a_stock_min_data_num:
                     for day_loop in range(0, valid_data_num):
                         data_unit = GetAFeature(train_pp_data, day_loop, FEATURE_TYPE_TRAIN)
@@ -732,7 +897,7 @@ def UpdateTrainTestData():
                         train_data = np.vstack((train_data, temp_train_data))
 
                 test_data_list = []
-                valid_data_num = len(test_pp_data) - feature_days - max_predict_day_count
+                valid_data_num = len(test_pp_data) - feature_relate_days - max_predict_day_count
                 if valid_data_num > 0:
                     for day_loop in range(0, valid_data_num):
                         data_unit = GetAFeature(test_pp_data, day_loop, FEATURE_TYPE_TEST)
@@ -764,7 +929,7 @@ def GetTrainData():
     print("reorder...")
     order=np.argsort(np.random.random(len(train_data)))
     train_data=train_data[order]
-    train_data=train_data[:700000]
+    train_data=train_data[:2000000]
     # raw_input("Enter ...")
 
     label_index = label_col_index
@@ -799,7 +964,7 @@ def UpdatePredictData():
         stock_code = code_list[code_index]
         stock_df = merge_df[merge_df['ts_code'] == stock_code]
         processed_df = StockDataPreProcess(stock_df)
-        if(len(processed_df) >= (feature_days)):
+        if(len(processed_df) >= (feature_relate_days)):
             data_unit = GetAFeature(processed_df, 0, FEATURE_TYPE_PREDICT)
             predict_data_list.append(data_unit)
         else:
@@ -917,9 +1082,9 @@ def UpdateFutTrainTestData():
     code_list = FutCodes()
     train_data_init_flag = True
     test_data_init_flag = True
-    train_pp_start_date = OffsetTradeDate(train_data_start_date, feature_days + max_predict_day_count)
+    train_pp_start_date = OffsetTradeDate(train_data_start_date, feature_relate_days + max_predict_day_count)
     train_pp_end_date = train_data_end_date
-    test_pp_start_date = OffsetTradeDate(test_data_start_date, feature_days + max_predict_day_count)
+    test_pp_start_date = OffsetTradeDate(test_data_start_date, feature_relate_days + max_predict_day_count)
     test_pp_end_date = test_data_end_date
     for code_index in range(0, len(code_list)):
         fut_code = code_list[code_index]
@@ -939,7 +1104,7 @@ def UpdateFutTrainTestData():
             test_pp_data = test_pp_data.reset_index(drop=True)
 
             train_data_list = []
-            valid_data_num = len(train_pp_data) - feature_days - max_predict_day_count
+            valid_data_num = len(train_pp_data) - feature_relate_days - max_predict_day_count
             if valid_data_num >= train_a_stock_min_data_num:
                 for day_loop in range(0, valid_data_num):
                     data_unit = GetAFeature(train_pp_data, day_loop, FEATURE_TYPE_TRAIN)
@@ -956,7 +1121,7 @@ def UpdateFutTrainTestData():
                     train_data = np.vstack((train_data, temp_train_data))
 
             test_data_list = []
-            valid_data_num = len(test_pp_data) - feature_days - max_predict_day_count
+            valid_data_num = len(test_pp_data) - feature_relate_days - max_predict_day_count
             if valid_data_num > 0:
                 for day_loop in range(0, valid_data_num):
                     data_unit = GetAFeature(test_pp_data, day_loop, FEATURE_TYPE_TEST)

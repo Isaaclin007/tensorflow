@@ -103,3 +103,12 @@ V1.0.7
 2. 不从数据源文件中读取 pre_close 避免 pre_close 数据错误
 3. industry_filter 支持 ‘hk’，输出港股通所有 ts_code
 4. proprocess 增加对无效数据的判断
+
+V1.0.8
+2019-02-23
+1. 特征支持G7_10AVG102_10D8，全局7个特征，avg10 2个特征，日线8个特征
+2. 不从数据源文件中读取 pre_close 避免 pre_close 数据错误
+3. industry_filter 支持 ‘hk’，输出港股通所有 ts_code
+4. proprocess 增加对无效数据的判断
+5. 支持 breakup 交易方法测试
+

@@ -226,26 +226,28 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # print(pp_data.loc[0,'trade_date'])
 # print('\n')
 
-def TransferDateType(file_name):
-    pp_data = pd.read_csv(file_name)
-    for day_loop in range(0, len(pp_data)): 
-        pp_data.loc[day_loop,'trade_date'] = pp_data.loc[day_loop,'trade_date'].replace('-', '')
-    pp_data['trade_date'] = pp_data['trade_date'].astype(np.int64)
-    pp_data.to_csv(file_name)
+# def TransferDateType(file_name):
+#     pp_data = pd.read_csv(file_name)
+#     for day_loop in range(0, len(pp_data)): 
+#         pp_data.loc[day_loop,'trade_date'] = pp_data.loc[day_loop,'trade_date'].replace('-', '')
+#     pp_data['trade_date'] = pp_data['trade_date'].astype(np.int64)
+#     pp_data.to_csv(file_name)
 
-def TransferDateType(file_name):
-    pp_data = pd.read_csv(file_name)
-    for day_loop in range(0, len(pp_data)): 
-        pp_data.loc[day_loop,'trade_date'] = pp_data.loc[day_loop,'trade_date'].replace('-', '')
-    pp_data['trade_date'] = pp_data['trade_date'].astype(np.int64)
-    pp_data.to_csv(file_name)
+# def TransferDateType(file_name):
+#     pp_data = pd.read_csv(file_name)
+#     for day_loop in range(0, len(pp_data)): 
+#         pp_data.loc[day_loop,'trade_date'] = pp_data.loc[day_loop,'trade_date'].replace('-', '')
+#     pp_data['trade_date'] = pp_data['trade_date'].astype(np.int64)
+#     pp_data.to_csv(file_name)
 
-code_list = tushare_data.StockCodes()
-for code_index in range(0, len(code_list)):
-    stock_code = code_list[code_index]
-    stock_pp_file_name = tushare_data.FileNameStockPreprocessedData(stock_code)
-    TransferDateType(stock_pp_file_name)
-    print('%s 100%%' % stock_pp_file_name)
+# code_list = tushare_data.StockCodes()
+# for code_index in range(0, len(code_list)):
+#     stock_code = code_list[code_index]
+#     stock_pp_file_name = tushare_data.FileNameStockPreprocessedData(stock_code)
+#     TransferDateType(stock_pp_file_name)
+#     print('%s 100%%' % stock_pp_file_name)
 
+# print(tushare_data.CurrentDate())
 
+print(sys.argv)
 
