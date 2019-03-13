@@ -33,7 +33,7 @@ def TestAStock(ts_code):
     pp_data = GetProprocessedData(ts_code)
     sleep_count = 0
     period_trade_count = 0
-    sleep_count_threshold = 400
+    sleep_count_threshold = 5
     breakup_count_threshold = 0
     avg_up_continue_count = 0
     break_up = False

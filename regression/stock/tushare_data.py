@@ -14,6 +14,8 @@ from llvmlite.ir.types import LabelType
 import hk_2_tu_data
 import math
 
+preprocess_ref_days = 200
+
 reload(sys)
 sys.setdefaultencoding('utf-8')
 max_predict_day_count = 100  # 决定train_data 和 test_data 的predict_day_count
@@ -153,7 +155,13 @@ pd.set_option('display.max_rows', 100)  # 设置显示最大行
 def TradeDateList(input_end_date, trade_day_num):
     pro = ts.pro_api()
     # print('TradeDateList(%s, %u)' % (input_end_date, trade_day_num))
-    df_trade_cal = pro.trade_cal(exchange = 'SSE', start_date = '19800101', end_date = input_end_date)
+    file_name = './download_data/trade_date_list_%s.csv' % input_end_date
+    if os.path.exists(file_name):
+        df_trade_cal = pd.read_csv(file_name)
+        df_trade_cal['cal_date'] = df_trade_cal['cal_date'].astype(str)
+    else:
+        df_trade_cal = pro.trade_cal(exchange = 'SSE', start_date = '19800101', end_date = input_end_date)
+        df_trade_cal.to_csv(file_name)
     df_trade_cal = df_trade_cal.sort_index(ascending = False)
     df_trade_cal = df_trade_cal[df_trade_cal['is_open'] == 1]
     df_trade_cal = df_trade_cal[:trade_day_num]
@@ -177,10 +185,10 @@ def StockCodeFilter(ts_code, code_filter_list):
             return True
     return False
 
-def StockCodesName():
+def StockCodesName(input_stocks_list_end_date, input_industry_filter, input_code_filter):
     pro = ts.pro_api()
 
-    if industry_filter == 'hk':
+    if input_industry_filter == 'hk':
         return hk_2_tu_data.HKCodeList()
     else:
         file_name = './data/' + 'stock_code' + '.csv'
@@ -191,17 +199,17 @@ def StockCodesName():
             load_df = pro.stock_basic(exchange = '', list_status = 'L', fields = 'ts_code,symbol,name,area,industry,list_date')
             load_df.to_csv(file_name)
 
-        load_df = load_df[load_df['list_date'] <= int(stocks_list_end_date)]
+        load_df = load_df[load_df['list_date'] <= int(input_stocks_list_end_date)]
         load_df = load_df.copy()
         load_df = load_df.reset_index(drop=True)
 
         industry_filter_en = False
         code_filter_en = False
-        if industry_filter != '':
-            industry_list = industry_filter.split(',')
+        if input_industry_filter != '':
+            industry_list = input_industry_filter.split(',')
             industry_filter_en = True
-        if code_filter != '':
-            code_filter_list = code_filter.split(',')
+        if input_code_filter != '':
+            code_filter_list = input_code_filter.split(',')
             code_filter_en = True
 
         code_valid_list = []
@@ -216,17 +224,17 @@ def StockCodesName():
             code_valid_list.append(temp_code_valid)
         load_df = load_df[code_valid_list]
         print(load_df)
-        print('StockCodes(%s)[%u]' % (industry_filter, len(load_df)))
+        print('StockCodes(%s)[%u]' % (input_industry_filter, len(load_df)))
         code_list = load_df['ts_code'].values
         name_list = load_df['name'].values
         return code_list, name_list
 
 def StockCodes():
-    code_list, name_list = StockCodesName()
+    code_list, name_list = StockCodesName(stocks_list_end_date, industry_filter, code_filter)
     return code_list
 
 def StockName(ts_code):
-    code_list, name_list = StockCodesName()
+    code_list, name_list = StockCodesName(stocks_list_end_date, industry_filter, code_filter)
     for iloop in range(0, len(code_list)):
         if code_list[iloop] == ts_code:
             return name_list[iloop]
@@ -353,7 +361,7 @@ def StockDataPreProcess(stock_data_df):
     src_df=src_df_2.copy()
 
     for day_loop in range(0, len(src_df)):
-        if src_df_1.loc[day_loop,'trade_date'] == '' \
+        if src_df.loc[day_loop,'trade_date'] == '' \
                 or src_df.loc[day_loop,'open'] == 0.0 \
                 or src_df.loc[day_loop,'close'] == 0.0 \
                 or src_df.loc[day_loop,'high'] == 0.0 \
@@ -364,12 +372,12 @@ def StockDataPreProcess(stock_data_df):
                                                                     src_df.loc[day_loop,'high'], \
                                                                     src_df.loc[day_loop,'low']))
             return src_df[0:0]
-        if math.isnan(src_df_1.loc[day_loop,'trade_date']) \
-                or math.isnan(src_df_1.loc[day_loop,'open']) \
-                or math.isnan(src_df_1.loc[day_loop,'close']) \
-                or math.isnan(src_df_1.loc[day_loop,'high']) \
-                or math.isnan(src_df_1.loc[day_loop,'low']) \
-                or math.isnan(src_df_1.loc[day_loop,'turnover_rate_f']):
+        if math.isnan(src_df.loc[day_loop,'trade_date']) \
+                or math.isnan(src_df.loc[day_loop,'open']) \
+                or math.isnan(src_df.loc[day_loop,'close']) \
+                or math.isnan(src_df.loc[day_loop,'high']) \
+                or math.isnan(src_df.loc[day_loop,'low']) \
+                or math.isnan(src_df.loc[day_loop,'turnover_rate_f']):
             print('StockDataPreProcess.Error2, %s, %f, %f, %f, %f, %f' %(src_df.loc[day_loop,'trade_date'], \
                                                                     src_df.loc[day_loop,'open'], \
                                                                     src_df.loc[day_loop,'close'], \
@@ -478,7 +486,7 @@ def StockDataPreProcess(stock_data_df):
         src_df.loc[day_loop,'close_increase_to_10_avg'] = ((temp_close / temp_close_10_avg) - 1.0) * 100.0
         src_df.loc[day_loop,'close_increase_to_30_avg'] = ((temp_close / temp_close_30_avg) - 1.0) * 100.0
 
-    return src_df[:len(src_df)-200]
+    return src_df[:len(src_df)-preprocess_ref_days]
 
 def AppendFeature( src_df, feature_day_pointer, data_unit):
     if feature_type == FEATURE_G7_10D8:
