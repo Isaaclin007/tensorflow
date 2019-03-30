@@ -63,7 +63,8 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         ShowAStock(sys.argv[1])
     else:
-        for ts_code in tushare_data.StockCodes():
+        code_list = ['002236.SZ', '002415.SZ', '000650.SZ', '000937.SZ', '600104.SH']
+        for ts_code in code_list:
             ShowAStock(ts_code)
 
     

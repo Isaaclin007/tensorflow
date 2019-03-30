@@ -15,7 +15,36 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
+
+# model=keras.models.load_model("./model/model.h5")
+# mean=np.load('./model/mean.npy')
+# print('mean:')
+# print(mean)
+# std=np.load('./model/std.npy')
+# print('std:')
+# print(std)
+# temp_index = tushare_data.TestDataLastPredictFeatureOffset()
+# test_data = tushare_data.GetTestData()
+# predict_features = test_data[:, temp_index: temp_index + tushare_data.feature_size]
+# predict_features = (predict_features - mean) / std
+# predictions = model.predict(predict_features)
+# print('predictions:')
+# print(predictions)
+
+# predictions = predictions[:, 1:2]
+# print('predictions:')
+# print(predictions)
+
+
+
+
+
+
+
+
+
 test_date_list = tushare_data.TestTradeDateList()
+
 # test_date_list = test_date_list[0:100]
 # print("len(test_date_list):")
 # print(len(test_date_list))
@@ -33,6 +62,8 @@ def Predict(feature_size, acture_size, test_data):
     predict_features = test_data[:, temp_index: temp_index + feature_size]
     predict_features = (predict_features - mean) / std
     predictions = model.predict(predict_features)
+    predictions = predictions[:, 1:2]
+
     predictions_df = pd.DataFrame(predictions, columns=['pred'])
     if tushare_data.test_acture_data_with_feature:
         for iloop in range(0, tushare_data.predict_day_count):
@@ -264,6 +295,6 @@ if __name__ == "__main__":
     #             max_capital_increase_max_trade_count_1_day = temp_count
     # print("max:")
     # TestEntry(max_capital_increase_threshold, max_capital_increase_max_trade_count_1_day, True)
-    TestEntry(0, 2, True)
+    TestEntry(0.0, 1, True)
 
 

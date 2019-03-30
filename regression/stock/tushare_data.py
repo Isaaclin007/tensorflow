@@ -18,8 +18,8 @@ preprocess_ref_days = 200
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
-max_predict_day_count = 100  # 决定train_data 和 test_data 的predict_day_count
-predict_day_count = 30  # 预测未来几日的数据
+max_predict_day_count = 10  # 决定train_data 和 test_data 的predict_day_count
+predict_day_count = 1  # 预测未来几日的数据
 referfence_feature_count = 1
 test_acture_data_with_feature = False
 train_a_stock_min_data_num = 400
@@ -31,7 +31,7 @@ FEATURE_G0_10D2 = 2
 FEATURE_G2_10D8 = 3
 FEATURE_G7_10AVG102_10D8 = 4
 
-feature_type = FEATURE_G7_10AVG102_10D8
+feature_type = FEATURE_G7_10D8
 if feature_type == FEATURE_G7_10D8:
     feature_size = 7 + (8 * 10)
     feature_relate_days = 10
@@ -76,12 +76,12 @@ def CurrentDate():
 # train_test_date = '20190111'
 # predict_date = '20190111'
 
-stocks_list_end_date = '20190101'
+stocks_list_end_date = '20090101'
 train_data_start_date = '20100101'
 train_data_end_date = '20170101'
 test_data_start_date = '20170101'
 test_data_end_date = '20190111'
-train_test_date = CurrentDate()
+train_test_date = '20190111'
 predict_date = '20181225'
 
 # stocks_list_end_date = '20140101'
@@ -100,7 +100,8 @@ predict_date = '20181225'
 # train_test_date = '20190201'
 # predict_date = '20190127'
 
-code_filter = '000001.SH,002415,000650,000937,600104'
+code_filter = ''
+# code_filter = '000001.SH,002415,000650,000937,600104'
 # industry_filter = '软件服务,互联网,半导体,电脑设备,百货,仓储物流,电脑设备,电器设备'
 # industry_filter = '半导体,电脑设备'
 industry_filter = ''

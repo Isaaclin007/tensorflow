@@ -59,10 +59,12 @@ def BreakupStatusAStockADate(input_pp_data, \
 
 
 # 分析一支股票的历史状态
+# only_output_event: True=值返回breakup事件, False=返回breakup状态
 # 返回值：breakup 事件列表 pandas dataframe
 def BreakupHistoryAStock(input_pp_data, \
                         input_sleep_count_threshold, \
-                        input_breakup_count_threshold):
+                        input_breakup_count_threshold, \
+                        only_output_event):
     period_status = PERIOD_STATUS_INIT
     period_continue_sleep_count = 0
     period_continue_up_count = 0
@@ -77,9 +79,10 @@ def BreakupHistoryAStock(input_pp_data, \
                 period_continue_up_count = 0
             period_continue_up_count += 1
             if period_continue_sleep_count >= input_sleep_count_threshold:
-                if period_continue_up_count == input_breakup_count_threshold:
+                if ((not only_output_event) and (period_continue_up_count >= input_breakup_count_threshold)) \
+                      or (only_output_event and (period_continue_up_count == input_breakup_count_threshold)):
                     stock_code = input_pp_data.loc[day_loop, 'ts_code']
-                    trade_date = input_pp_data.loc[day_loop, 'trade_date']
+                    trade_date = input_pp_data.loc[day_loop, 'trade_date'].astype(str)
                     row = {'ts_code':stock_code, 'trade_date':trade_date, 'sleep_count':period_continue_sleep_count}
                     result_df = result_df.append(row, ignore_index=True)
         else:
@@ -88,4 +91,5 @@ def BreakupHistoryAStock(input_pp_data, \
                 period_continue_sleep_count = 0
             period_continue_sleep_count += 1
     return result_df
-        
+
+

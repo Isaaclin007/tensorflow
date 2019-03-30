@@ -14,6 +14,8 @@ class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
                'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
 print "train_images.shape:", train_images.shape
 print "train_labels.shape:", train_labels.shape
+print "train_labels:"
+print train_labels
 print "len(train_images):", len(train_images)
 print "len(train_labels):", len(train_labels)
 #print "train_images[0]:", train_images[0]
@@ -53,11 +55,12 @@ test_loss, test_acc = model.evaluate(test_images, test_labels)
 print('Test loss:', test_loss)
 print('Test accuracy:', test_acc)
 
-'''
+
 predictions=model.predict(test_images)
 print('predictions[0]: ', predictions[0])
 print('np.argmax(predictions[0]', np.argmax(predictions[0]))
 
+'''
 def plot_image(i, predictions_array, true_label, img):
   predictions_array, true_label, img = predictions_array[i], true_label[i], img[i]
   plt.grid(False)
