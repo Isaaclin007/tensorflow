@@ -60,7 +60,7 @@ def Predict(feature_size, acture_size, test_data):
         'stock_code', \
         'T0_trade_date'])
 
-    for iloop in range(1, tushare_data.predict_day_count):
+    for iloop in range(1, tushare_data.max_predict_day_count):
         temp_acture_index = tushare_data.TestDataMonitorActureOffset(iloop)
         temp_index = temp_acture_index + tushare_data.ACTURE_DATA_INDEX_OPEN
         tn_acture_data = test_data[:, temp_index:temp_index+1]
@@ -264,6 +264,6 @@ if __name__ == "__main__":
     #             max_capital_increase_max_trade_count_1_day = temp_count
     # print("max:")
     # TestEntry(max_capital_increase_threshold, max_capital_increase_max_trade_count_1_day, True)
-    TestEntry(0, 2, True)
+    TestEntry(0, 1, True)
 
 

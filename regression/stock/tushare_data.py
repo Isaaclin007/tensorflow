@@ -19,19 +19,29 @@ preprocess_ref_days = 200
 reload(sys)
 sys.setdefaultencoding('utf-8')
 max_predict_day_count = 10  # 决定train_data 和 test_data 的predict_day_count
-predict_day_count = 1  # 预测未来几日的数据
+predict_day_count = 10  # 预测未来几日的数据
 referfence_feature_count = 1
 test_acture_data_with_feature = False
 train_a_stock_min_data_num = 400
 train_a_stock_max_data_num = 1000000
+
+DATA_TYPE_DAY = 0
+DATA_TYPE_WEEK = 1
+data_type = DATA_TYPE_DAY
 
 FEATURE_G7_10D8 = 0
 FEATURE_G2_10D2 = 1
 FEATURE_G0_10D2 = 2
 FEATURE_G2_10D8 = 3
 FEATURE_G7_10AVG102_10D8 = 4
+FEATURE_G0_10D5 = 5
+FEATURE_G0_10D5_TO_30_AVG = 6
+FEATURE_G0_10D5_TO_100_AVG = 7
+FEATURE_G0_10W5_TO_100_AVG = 8
+FEATURE_G0_100D5_TO_100_AVG = 9
+FEATURE_G0_100D2_TO_100_AVG = 10
 
-feature_type = FEATURE_G7_10D8
+feature_type = FEATURE_G0_100D2_TO_100_AVG
 if feature_type == FEATURE_G7_10D8:
     feature_size = 7 + (8 * 10)
     feature_relate_days = 10
@@ -46,6 +56,24 @@ elif feature_type == FEATURE_G2_10D8:
     feature_relate_days = 10
 elif feature_type == FEATURE_G7_10AVG102_10D8:
     feature_size = 7 + (2 * 10) + (8 * 10)
+    feature_relate_days = 100
+elif feature_type == FEATURE_G0_10D5:
+    feature_size = (5 * 10)
+    feature_relate_days = 10
+elif feature_type == FEATURE_G0_10D5_TO_30_AVG:
+    feature_size = (5 * 10)
+    feature_relate_days = 10
+elif feature_type == FEATURE_G0_10D5_TO_100_AVG:
+    feature_size = (5 * 10)
+    feature_relate_days = 10
+elif feature_type == FEATURE_G0_10W5_TO_100_AVG:
+    feature_size = (5 * 10)
+    feature_relate_days = 5 * 10
+elif feature_type == FEATURE_G0_100D5_TO_100_AVG:
+    feature_size = (5 * 100)
+    feature_relate_days = 100
+elif feature_type == FEATURE_G0_100D2_TO_100_AVG:
+    feature_size = (2 * 100)
     feature_relate_days = 100
 
 LABEL_PRE_CLOSE_2_TD_CLOSE = 0
@@ -242,11 +270,17 @@ def StockName(ts_code):
     return 'unknow'
 
 def FileNameStockDownloadData(stock_code):
-    temp_file_name = './download_data/' + stock_code + '_' + train_test_date + '.csv'
+    if DATA_TYPE_DAY == data_type:
+        temp_file_name = './download_data/' + stock_code + '_' + train_test_date + '.csv'
+    elif DATA_TYPE_WEEK == data_type:
+        temp_file_name = './download_data/' + stock_code + '_' + train_test_date + '_week.csv'
     return temp_file_name
 
 def FileNameTradeDayDownloadData(trade_date):
-    temp_file_name = './download_data/'+'trade_date'+'_'+trade_date+'.csv'
+    if DATA_TYPE_DAY == data_type:
+        temp_file_name = './download_data/'+'trade_date'+'_'+trade_date+'.csv'
+    elif DATA_TYPE_WEEK == data_type:
+        temp_file_name = './download_data/'+'trade_date'+'_'+trade_date+'_week.csv'
     return temp_file_name
 
 def DownloadAStocksData(ts_code):
@@ -255,23 +289,18 @@ def DownloadAStocksData(ts_code):
     end_data = train_test_date
     file_name = FileNameStockDownloadData(ts_code)
     if not os.path.exists(file_name):
-        df_basic=pro.daily_basic(ts_code = ts_code, start_date = start_date, end_date = end_data)
-        df = pro.daily(ts_code = ts_code, start_date = start_date, end_date = end_data)
-        if len(df_basic) != len(df) :
-            print("DownloadAStocksData.error.1")
-            return
-        # print("\n\ndf_basic:")
-        # print(df_basic.dtypes)
-        # print(df_basic)
-        # print("\n\ndf:")
-        # print(df.dtypes)
-        # print(df)
-        df.drop(['close','ts_code'],axis=1,inplace=True)
-        df_merge = pd.merge(df_basic, df, left_on='trade_date', right_on='trade_date')
-        # print("\n\ndf_merge:")
-        # print(df_merge.dtypes)
-        # print(df_merge)
-        df_merge.to_csv(file_name)
+        if DATA_TYPE_DAY == data_type:
+            df_basic=pro.daily_basic(ts_code = ts_code, start_date = start_date, end_date = end_data)
+            df = pro.daily(ts_code = ts_code, start_date = start_date, end_date = end_data)
+            if len(df_basic) != len(df) :
+                print("DownloadAStocksData.error.1")
+                return
+            df.drop(['close','ts_code'],axis=1,inplace=True)
+            df_merge = pd.merge(df_basic, df, left_on='trade_date', right_on='trade_date')
+            df_merge.to_csv(file_name)
+        elif DATA_TYPE_WEEK == data_type:
+            df_week = pro.weekly(ts_code = ts_code, start_date = start_date, end_date = end_data)
+            df_week.to_csv(file_name)
     
 def DownloadATradeDayData(input_trade_date):
     pro = ts.pro_api()
@@ -324,21 +353,45 @@ def DownloadPredictData():
         print("%-4d : %s 100%%" % (date_index, temp_date))
 
 def StockDataPreProcess(stock_data_df):
-    src_df_1=stock_data_df[
-        [
-            'ts_code',
-            'trade_date',
-            'total_share', 
-            'float_share', 
-            'free_share', 
-            'total_mv', 
-            'circ_mv', 
-            'open', 
-            'close', 
-            'high', 
-            'low', 
-            'turnover_rate_f'
-            ]]
+    src_col_names = [
+        'ts_code',
+        'trade_date',
+        # 'pe',
+        # 'pe_ttm',
+        # 'pb',
+        # 'ps',
+        # 'ps_ttm',
+        'total_share', 
+        'float_share', 
+        'free_share', 
+        'total_mv', 
+        'circ_mv', 
+        'open', 
+        'close', 
+        'high', 
+        'low', 
+        'turnover_rate_f',
+        'vol'
+    ]
+    src_float_col_names = [
+        # 'pe',
+        # 'pe_ttm',
+        # 'pb',
+        # 'ps',
+        # 'ps_ttm',
+        'total_share', 
+        'float_share', 
+        'free_share', 
+        'total_mv', 
+        'circ_mv', 
+        'open', 
+        'close', 
+        'high', 
+        'low', 
+        'turnover_rate_f',
+        'vol'
+    ]
+    src_df_1=stock_data_df[src_col_names]
     src_df_2=src_df_1.copy()
     src_df_2=src_df_2.reset_index(drop=True)
     src_df_2['pre_close']=0.0
@@ -353,39 +406,47 @@ def StockDataPreProcess(stock_data_df):
     src_df_2['close_5_avg']=0.0
     src_df_2['close_10_avg']=0.0
     src_df_2['close_30_avg']=0.0
+    src_df_2['close_100_avg']=0.0
+    src_df_2['close_200_avg']=0.0
     src_df_2['turnover_rate_f_5_avg']=0.0
     src_df_2['turnover_rate_f_10_avg']=0.0
     src_df_2['turnover_rate_f_30_avg']=0.0
+    src_df_2['turnover_rate_f_100_avg']=0.0
+    src_df_2['turnover_rate_f_200_avg']=0.0
+    src_df_2['vol_5_avg']=0.0
+    src_df_2['vol_10_avg']=0.0
+    src_df_2['vol_30_avg']=0.0
+    src_df_2['vol_100_avg']=0.0
+    src_df_2['vol_200_avg']=0.0
     src_df_2['close_increase_to_5_avg']=0.0
     src_df_2['close_increase_to_10_avg']=0.0
     src_df_2['close_increase_to_30_avg']=0.0
+    src_df_2['close_increase_to_100_avg']=0.0
+    src_df_2['close_increase_to_200_avg']=0.0
+    src_df_2['open_5']=0.0
+    src_df_2['close_5']=0.0
+    src_df_2['high_5']=0.0
+    src_df_2['low_5']=0.0
+    src_df_2['turnover_rate_f_5']=0.0
+    src_df_2['vol_5']=0.0
     src_df=src_df_2.copy()
 
     for day_loop in range(0, len(src_df)):
+        for col_name in src_float_col_names:
+            if math.isnan(src_df.loc[day_loop, col_name]):
+                print('StockDataPreProcess.Error1, %s[%d] is nan' %(col_name, day_loop))
+                return src_df[0:0]  
         if src_df.loc[day_loop,'trade_date'] == '' \
                 or src_df.loc[day_loop,'open'] == 0.0 \
                 or src_df.loc[day_loop,'close'] == 0.0 \
                 or src_df.loc[day_loop,'high'] == 0.0 \
                 or src_df.loc[day_loop,'low'] == 0.0:
-            print('StockDataPreProcess.Error1, %s, %f, %f, %f, %f' %(src_df.loc[day_loop,'trade_date'], \
+            print('StockDataPreProcess.Error2, %s, %f, %f, %f, %f' %(src_df.loc[day_loop,'trade_date'], \
                                                                     src_df.loc[day_loop,'open'], \
                                                                     src_df.loc[day_loop,'close'], \
                                                                     src_df.loc[day_loop,'high'], \
                                                                     src_df.loc[day_loop,'low']))
-            return src_df[0:0]
-        if math.isnan(src_df.loc[day_loop,'trade_date']) \
-                or math.isnan(src_df.loc[day_loop,'open']) \
-                or math.isnan(src_df.loc[day_loop,'close']) \
-                or math.isnan(src_df.loc[day_loop,'high']) \
-                or math.isnan(src_df.loc[day_loop,'low']) \
-                or math.isnan(src_df.loc[day_loop,'turnover_rate_f']):
-            print('StockDataPreProcess.Error2, %s, %f, %f, %f, %f, %f' %(src_df.loc[day_loop,'trade_date'], \
-                                                                    src_df.loc[day_loop,'open'], \
-                                                                    src_df.loc[day_loop,'close'], \
-                                                                    src_df.loc[day_loop,'high'], \
-                                                                    src_df.loc[day_loop,'low'],
-                                                                    src_df.loc[day_loop,'turnover_rate_f']))
-            return src_df[0:0]
+            return src_df[0:0]     
     
     avg_5_sum = 0.0
     avg_10_sum = 0.0
@@ -397,95 +458,126 @@ def StockDataPreProcess(stock_data_df):
     trf_30_sum = 0.0
     trf_100_sum = 0.0
     trf_200_sum = 0.0
+    vol_5_sum = 0.0
+    vol_10_sum = 0.0
+    vol_30_sum = 0.0
+    vol_100_sum = 0.0
+    vol_200_sum = 0.0
     avg_5_count = 0
     avg_10_count = 0
     avg_30_count = 0
     avg_100_count = 0
     avg_200_count = 0
+    loop_count = 0
     for day_loop in reversed(range(0, len(src_df))):
         close_current = src_df.loc[day_loop, 'close']
         trf_current = src_df.loc[day_loop, 'turnover_rate_f']
+        vol_current = src_df.loc[day_loop, 'vol']
         # 计算5日均值
         if avg_5_count < 5:
             avg_5_sum += close_current
             trf_5_sum += trf_current
+            vol_5_sum += vol_current
             avg_5_count += 1
         else:
             avg_5_sum = avg_5_sum + close_current - src_df.loc[day_loop + 5, 'close']
             trf_5_sum = trf_5_sum + trf_current - src_df.loc[day_loop + 5, 'turnover_rate_f']
+            vol_5_sum = vol_5_sum + vol_current - src_df.loc[day_loop + 5, 'vol']
             src_df.loc[day_loop,'close_5_avg'] = avg_5_sum / 5.0
             src_df.loc[day_loop,'turnover_rate_f_5_avg'] = trf_5_sum / 5.0
-            
+            src_df.loc[day_loop,'vol_5_avg'] = trf_5_sum / 5.0
+
         # 计算10日均值
         if avg_10_count < 10:
             avg_10_sum += close_current
             trf_10_sum += trf_current
+            vol_10_sum += vol_current
             avg_10_count += 1
         else:
             avg_10_sum = avg_10_sum + close_current - src_df.loc[day_loop + 10, 'close']
             trf_10_sum = trf_10_sum + trf_current - src_df.loc[day_loop + 10, 'turnover_rate_f']
+            vol_10_sum = vol_10_sum + vol_current - src_df.loc[day_loop + 10, 'vol']
             src_df.loc[day_loop,'close_10_avg'] = avg_10_sum / 10.0
             src_df.loc[day_loop,'turnover_rate_f_10_avg'] = trf_10_sum / 10.0
+            src_df.loc[day_loop,'vol_10_avg'] = trf_10_sum / 10.0
             
         # 计算30日均值
         if avg_30_count < 30:
             avg_30_sum += close_current
             trf_30_sum += trf_current
+            vol_30_sum += vol_current
             avg_30_count += 1
         else:
             avg_30_sum = avg_30_sum + close_current - src_df.loc[day_loop + 30, 'close']
             trf_30_sum = trf_30_sum + trf_current - src_df.loc[day_loop + 30, 'turnover_rate_f']
+            vol_30_sum = vol_30_sum + vol_current - src_df.loc[day_loop + 30, 'vol']
             src_df.loc[day_loop,'close_30_avg'] = avg_30_sum / 30.0
             src_df.loc[day_loop,'turnover_rate_f_30_avg'] = trf_30_sum / 30.0
+            src_df.loc[day_loop,'vol_30_avg'] = trf_30_sum / 30.0
 
         # 计算100日均值
         if avg_100_count < 100:
             avg_100_sum += close_current
             trf_100_sum += trf_current
+            vol_100_sum += vol_current
             avg_100_count += 1
         else:
             avg_100_sum = avg_100_sum + close_current - src_df.loc[day_loop + 100, 'close']
             trf_100_sum = trf_100_sum + trf_current - src_df.loc[day_loop + 100, 'turnover_rate_f']
+            vol_100_sum = vol_100_sum + vol_current - src_df.loc[day_loop + 100, 'vol']
             src_df.loc[day_loop,'close_100_avg'] = avg_100_sum / 100.0
             src_df.loc[day_loop,'turnover_rate_f_100_avg'] = trf_100_sum / 100.0
+            src_df.loc[day_loop,'vol_100_avg'] = trf_100_sum / 100.0
 
         # 计算200日均值
         if avg_200_count < 200:
             avg_200_sum += close_current
             trf_200_sum += trf_current
+            vol_200_sum += vol_current
             avg_200_count += 1
         else:
             avg_200_sum = avg_200_sum + close_current - src_df.loc[day_loop + 200, 'close']
             trf_200_sum = trf_200_sum + trf_current - src_df.loc[day_loop + 200, 'turnover_rate_f']
+            vol_200_sum = vol_200_sum + vol_current - src_df.loc[day_loop + 200, 'vol']
             src_df.loc[day_loop,'close_200_avg'] = avg_200_sum / 200.0
             src_df.loc[day_loop,'turnover_rate_f_200_avg'] = trf_200_sum / 200.0
+            src_df.loc[day_loop,'vol_200_avg'] = trf_200_sum / 200.0
+
+        # open_5, close_5, high_5, low_5
+        if loop_count >= 5:
+            src_df.loc[day_loop, 'open_5'] = src_df.loc[day_loop + 4, 'open']
+            src_df.loc[day_loop, 'close_5'] = src_df.loc[day_loop, 'close']
+            high_5 = 0
+            low_5 = 100000.0
+            for iloop in range(0, 5):
+                if high_5 < src_df.loc[day_loop + iloop, 'high']:
+                    high_5 = src_df.loc[day_loop + iloop, 'high']
+                if low_5 > src_df.loc[day_loop + iloop, 'low']:
+                    low_5 = src_df.loc[day_loop + iloop, 'low']
+            src_df.loc[day_loop, 'high_5'] = high_5
+            src_df.loc[day_loop, 'low_5'] = low_5
+            src_df.loc[day_loop, 'turnover_rate_f_5'] = trf_5_sum
+            src_df.loc[day_loop, 'vol_5'] = vol_5_sum
+
+        loop_count += 1
             
     temp_open = 0.0
     temp_close = 0.0
     temp_high = 0.0
     temp_low = 0.0
     temp_pre_close = 0.0
-    temp_close_5_avg = 0.0
-    temp_close_10_avg = 0.0
-    temp_close_30_avg = 0.0
     for day_loop in range(0, (len(src_df)-30)):
         temp_open = src_df.loc[day_loop,'open']
         temp_close = src_df.loc[day_loop,'close']
         temp_high = src_df.loc[day_loop,'high']
         temp_low = src_df.loc[day_loop,'low']
         temp_pre_close = src_df.loc[day_loop,'pre_close']
-        temp_close_5_avg = src_df.loc[day_loop,'close_5_avg']
-        temp_close_10_avg = src_df.loc[day_loop,'close_10_avg']
-        temp_close_30_avg = src_df.loc[day_loop,'close_30_avg']
         if temp_pre_close == 0.0:
             print('Error: pre_close == %f, trade_date: %s' % (src_df.loc[day_loop,'pre_close'], src_df.loc[day_loop,'trade_date']))
         src_df.loc[day_loop,'open_increase'] = ((temp_open / temp_pre_close) - 1.0) * 100.0
         src_df.loc[day_loop,'close_increase'] = ((temp_close / temp_pre_close) - 1.0) * 100.0
         src_df.loc[day_loop,'high_increase'] = ((temp_high / temp_pre_close) - 1.0) * 100.0
         src_df.loc[day_loop,'low_increase'] = ((temp_low / temp_pre_close) - 1.0) * 100.0
-        src_df.loc[day_loop,'close_increase_to_5_avg'] = ((temp_close / temp_close_5_avg) - 1.0) * 100.0
-        src_df.loc[day_loop,'close_increase_to_10_avg'] = ((temp_close / temp_close_10_avg) - 1.0) * 100.0
-        src_df.loc[day_loop,'close_increase_to_30_avg'] = ((temp_close / temp_close_30_avg) - 1.0) * 100.0
 
     return src_df[:len(src_df)-preprocess_ref_days]
 
@@ -505,9 +597,9 @@ def AppendFeature( src_df, feature_day_pointer, data_unit):
             data_unit.append(src_df['close_increase'][temp_index])
             data_unit.append(src_df['high_increase'][temp_index])
             data_unit.append(src_df['low_increase'][temp_index])
-            data_unit.append(src_df['close_increase_to_5_avg'][temp_index])
-            data_unit.append(src_df['close_increase_to_10_avg'][temp_index])
-            data_unit.append(src_df['close_increase_to_30_avg'][temp_index])
+            data_unit.append(src_df['close'][temp_index] / src_df['close_5_avg'][temp_index])
+            data_unit.append(src_df['close'][temp_index] / src_df['close_10_avg'][temp_index])
+            data_unit.append(src_df['close'][temp_index] / src_df['close_30_avg'][temp_index])
             data_unit.append(src_df['turnover_rate_f'][temp_index])
     elif feature_type == FEATURE_G2_10D8:
         temp_index = feature_day_pointer
@@ -519,9 +611,9 @@ def AppendFeature( src_df, feature_day_pointer, data_unit):
             data_unit.append(src_df['close_increase'][temp_index])
             data_unit.append(src_df['high_increase'][temp_index])
             data_unit.append(src_df['low_increase'][temp_index])
-            data_unit.append(src_df['close_increase_to_5_avg'][temp_index])
-            data_unit.append(src_df['close_increase_to_10_avg'][temp_index])
-            data_unit.append(src_df['close_increase_to_30_avg'][temp_index])
+            data_unit.append(src_df['close'][temp_index] / src_df['close_5_avg'][temp_index])
+            data_unit.append(src_df['close'][temp_index] / src_df['close_10_avg'][temp_index])
+            data_unit.append(src_df['close'][temp_index] / src_df['close_30_avg'][temp_index])
             data_unit.append(src_df['turnover_rate_f'][temp_index])
     elif feature_type == FEATURE_G2_10D2:
         temp_index = feature_day_pointer
@@ -562,6 +654,54 @@ def AppendFeature( src_df, feature_day_pointer, data_unit):
             data_unit.append(src_df['close_increase_to_10_avg'][temp_index])
             data_unit.append(src_df['close_increase_to_30_avg'][temp_index])
             data_unit.append(src_df['turnover_rate_f'][temp_index])
+    elif feature_type == FEATURE_G0_10D5:
+        temp_index = feature_day_pointer
+        for iloop in range(0, 10):                
+            temp_index=feature_day_pointer+iloop
+            data_unit.append(src_df['open'][temp_index])
+            data_unit.append(src_df['close'][temp_index])
+            data_unit.append(src_df['high'][temp_index])
+            data_unit.append(src_df['low'][temp_index])
+            data_unit.append(src_df['turnover_rate_f'][temp_index])
+    elif feature_type == FEATURE_G0_10D5_TO_100_AVG:
+        temp_index = feature_day_pointer
+        base_close = src_df['close_100_avg'][feature_day_pointer]
+        base_vol = src_df['vol_100_avg'][feature_day_pointer]
+        for iloop in range(0, 10):                
+            temp_index=feature_day_pointer+iloop
+            data_unit.append(src_df['open'][temp_index] / base_close)
+            data_unit.append(src_df['close'][temp_index] / base_close)
+            data_unit.append(src_df['high'][temp_index] / base_close)
+            data_unit.append(src_df['low'][temp_index] / base_close)
+            data_unit.append(src_df['vol'][temp_index] / base_vol)
+    elif feature_type == FEATURE_G0_10W5_TO_100_AVG:
+        temp_index = feature_day_pointer
+        base_close = src_df['close_100_avg'][feature_day_pointer]
+        base_vol = src_df['vol_100_avg'][feature_day_pointer]
+        for iloop in range(0, 10):                
+            temp_index = feature_day_pointer + (iloop * 5)
+            data_unit.append(src_df['open_5'][temp_index] / base_close)
+            data_unit.append(src_df['close_5'][temp_index] / base_close)
+            data_unit.append(src_df['high_5'][temp_index] / base_close)
+            data_unit.append(src_df['low_5'][temp_index] / base_close)
+            data_unit.append(src_df['vol_5'][temp_index] / base_vol)
+    elif feature_type == FEATURE_G0_100D5_TO_100_AVG:
+        base_close = src_df['close_100_avg'][feature_day_pointer]
+        base_vol = src_df['vol_100_avg'][feature_day_pointer]
+        for iloop in range(0, 100):                
+            temp_index=feature_day_pointer+iloop
+            data_unit.append(src_df['open'][temp_index] / base_close)
+            data_unit.append(src_df['close'][temp_index] / base_close)
+            data_unit.append(src_df['high'][temp_index] / base_close)
+            data_unit.append(src_df['low'][temp_index] / base_close)
+            data_unit.append(src_df['vol'][temp_index] / base_vol)
+    elif feature_type == FEATURE_G0_100D2_TO_100_AVG:
+        base_close = src_df['close_100_avg'][feature_day_pointer]
+        base_vol = src_df['vol_100_avg'][feature_day_pointer]
+        for iloop in range(0, 100):                
+            temp_index=feature_day_pointer+iloop
+            data_unit.append(src_df['close'][temp_index] / base_close)
+            data_unit.append(src_df['vol'][temp_index] / base_vol)
         
 def AppendLabel( src_df, day_index, data_unit):
     feature_day_pointer = day_index + max_predict_day_count
@@ -607,6 +747,113 @@ def AppendLabel( src_df, day_index, data_unit):
             if temp_score < 0.0:
                 temp_score = 0.0
             data_unit.append(temp_score)
+
+def GetTrainDataCaption():
+    caption = []
+    if feature_type == FEATURE_G7_10D8:
+        caption.append('total_share')
+        caption.append('float_share')
+        caption.append('free_share')
+        caption.append('total_mv')
+        caption.append('circ_mv')
+        caption.append('close')
+        caption.append('close_5_avg')
+        for iloop in range(0, 10):                
+            caption.append('open_increase_pre_%u' % iloop)
+            caption.append('close_increase_pre_%u' % iloop)
+            caption.append('high_increase_pre_%u' % iloop)
+            caption.append('low_increase_pre_%u' % iloop)
+            caption.append('close_to_close_5_avg_pre_%u' % iloop)
+            caption.append('close_to_close_10_avg_pre_%u' % iloop)
+            caption.append('close_to_close_30_avg_pre_%u' % iloop)
+            caption.append('turnover_rate_f_pre_%u' % iloop)
+    elif feature_type == FEATURE_G2_10D8:
+        caption.append('close')
+        caption.append('close_5_avg')
+        for iloop in range(0, 10):                
+            caption.append('open_increase_pre_%u' % iloop)
+            caption.append('close_increase_pre_%u' % iloop)
+            caption.append('high_increase_pre_%u' % iloop)
+            caption.append('low_increase_pre_%u' % iloop)
+            caption.append('close_to_close_5_avg_pre_%u' % iloop)
+            caption.append('close_to_close_10_avg_pre_%u' % iloop)
+            caption.append('close_to_close_30_avg_pre_%u' % iloop)
+            caption.append('turnover_rate_f_pre_%u' % iloop)
+    elif feature_type == FEATURE_G2_10D2:
+        caption.append('total_share')
+        caption.append('float_share')
+        for iloop in range(0, 10):                
+            caption.append('close_increase_pre_%u' % iloop)
+            caption.append('turnover_rate_f_pre_%u' % iloop)
+    elif feature_type == FEATURE_G0_10D2:
+        for iloop in range(0, 10):                
+            caption.append('close_pre_%u' % iloop)
+            caption.append('open_pre_%u' % iloop)
+    elif feature_type == FEATURE_G7_10AVG102_10D8:
+        temp_index = feature_day_pointer
+        caption.append('total_share')
+        caption.append('float_share')
+        caption.append('free_share')
+        caption.append('total_mv')
+        caption.append('circ_mv')
+        caption.append('close')
+        caption.append('close_5_avg')
+        for iloop in range(0, 10):                
+            caption.append('close_10_avg_pre_%u' % iloop * 10)
+            caption.append('turnover_rate_f_10_avg_pre_%u' % iloop * 10)
+        for iloop in range(0, 10):                
+            caption.append('open_increase_pre_%u' % iloop)
+            caption.append('close_increase_pre_%u' % iloop)
+            caption.append('high_increase_pre_%u' % iloop)
+            caption.append('low_increase_pre_%u' % iloop)
+            caption.append('close_to_close_5_avg_pre_%u' % iloop)
+            caption.append('close_to_close_10_avg_pre_%u' % iloop)
+            caption.append('close_to_close_30_avg_pre_%u' % iloop)
+            caption.append('turnover_rate_f_pre_%u' % iloop)
+    elif feature_type == FEATURE_G0_10D5:
+        for iloop in range(0, 10):            
+            caption.append('open_pre_%u' % iloop)
+            caption.append('close_pre_%u' % iloop)
+            caption.append('high_pre_%u' % iloop)
+            caption.append('low_pre_%u' % iloop)
+            caption.append('turnover_rate_f_pre_%u' % iloop)    
+    elif feature_type == FEATURE_G0_10D5_TO_100_AVG:
+        for iloop in range(0, 10):           
+            caption.append('open_to_close_100_avg_pre_%u' % iloop)
+            caption.append('close_to_close_100_avg_pre_%u' % iloop)
+            caption.append('high_to_close_100_avg_pre_%u' % iloop)
+            caption.append('low_to_close_100_avg_pre_%u' % iloop)
+            caption.append('vol_to_vol_100_avg_pre_%u' % iloop)     
+    elif feature_type == FEATURE_G0_10W5_TO_100_AVG:
+        for iloop in range(0, 10):        
+            caption.append('open_5_to_close_100_avg_pre_%u' % iloop)
+            caption.append('close_5_to_close_100_avg_pre_%u' % iloop)
+            caption.append('high_5_to_close_100_avg_pre_%u' % iloop)
+            caption.append('low_5_to_close_100_avg_pre_%u' % iloop)
+            caption.append('vol_5_to_vol_100_avg_pre_%u' % iloop)        
+    elif feature_type == FEATURE_G0_100D5_TO_100_AVG:
+        for iloop in range(0, 100):                
+            caption.append('open_to_close_100_avg_pre_%u' % iloop)
+            caption.append('close_to_close_100_avg_pre_%u' % iloop)
+            caption.append('high_to_close_100_avg_pre_%u' % iloop)
+            caption.append('low_to_close_100_avg_pre_%u' % iloop)
+            caption.append('vol_to_vol_100_avg_pre_%u' % iloop)   
+    elif feature_type == FEATURE_G0_100D2_TO_100_AVG:
+        for iloop in range(0, 100):                
+            caption.append('close_to_close_100_avg_pre_%u' % iloop)
+            caption.append('vol_to_vol_100_avg_pre_%u' % iloop)    
+
+    for iloop in range(0, max_predict_day_count):
+        caption.append('label_%u' % iloop)
+
+    caption.append('act_open_increase')
+    caption.append('act_low_increase')
+    caption.append('act_open')
+    caption.append('act_low')
+    caption.append('act_close')
+    caption.append('act_tscode')
+    caption.append('act_date')
+    return caption
     
 
 ACTURE_DATA_INDEX_OPEN_INCREASE = 0
@@ -664,6 +911,7 @@ def GetAFeature(src_df, day_index, feature_type):
     if feature_type == FEATURE_TYPE_TRAIN:
         AppendFeature(src_df, day_index + max_predict_day_count, data_unit)
         AppendLabel(src_df, day_index, data_unit)
+        AppendActureData(src_df, day_index + max_predict_day_count, data_unit)
 
     elif feature_type == FEATURE_TYPE_PREDICT:
         AppendFeature(src_df, day_index, data_unit)
@@ -685,8 +933,6 @@ def GetAFeature(src_df, day_index, feature_type):
         # for iloop in range(0, len(data_unit)):
             # print('data_unit[%d]:%f' % (iloop, data_unit[iloop]))
 
-    temp_str = src_df['trade_date'][day_index]
-    data_unit.append(float(temp_str))
     return data_unit
 
 # def GetDataCaption(feature_type):
@@ -862,6 +1108,9 @@ def CheckPreprocessData():
 
 def UpdateTrainTestData():
     if os.path.exists(FileNameTrainData()) and os.path.exists(FileNameTestData()):
+        print('train test data already exist:')
+        print('%s' % FileNameTrainData())
+        print('%s' % FileNameTestData())
         return
     code_list = StockCodes()
     train_data_init_flag = True
@@ -940,8 +1189,47 @@ def GetTrainData():
     train_data=train_data[order]
     train_data=train_data[:2000000]
     # raw_input("Enter ...")
+    sample_train_data = train_data[:10]
 
     label_index = label_col_index
+    print("get feature ...")
+    train_features = train_data[:, 0:feature_size].copy()
+    # raw_input("Enter ...")
+
+    print("get label...")
+    train_labels = train_data[:, label_index:label_index+1].copy()
+    # raw_input("Enter ...")
+    print("train_features: {}".format(train_features.shape))
+    print("train_labels: {}".format(train_labels.shape))
+
+    # caption = GetTrainDataCaption()
+    # print('caption[%u]:' % len(caption))
+    # print(caption)
+    
+    # sample_train_data_df = pd.DataFrame(sample_train_data, columns=caption)
+    # sample_train_data_df.to_csv('./sample_train_data_df.csv')
+    return train_features, train_labels
+
+def GetTrainDataBalance(label_threshold, neg_ratio):
+    train_data = np.load(FileNameTrainData())
+    print("train_data: {}".format(train_data.shape))
+    # raw_input("Enter ...")
+
+    label_index = label_col_index
+    sort_order = train_data[:,label_index].argsort()
+    sort_order = sort_order[::-1]
+    train_data = train_data[sort_order]
+    pos_mask = train_data[:,label_index] >= label_threshold
+    pos_mask = pos_mask[pos_mask]
+    pos_num = len(pos_mask)
+    train_data = train_data[:(1+neg_ratio)*pos_num]
+
+    print("reorder...")
+    order=np.argsort(np.random.random(len(train_data)))
+    train_data=train_data[order]
+    train_data=train_data[:2000000]
+    # raw_input("Enter ...")
+
     print("get feature ...")
     train_features = train_data[:, 0:feature_size].copy()
     # raw_input("Enter ...")

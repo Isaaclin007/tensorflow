@@ -55,10 +55,10 @@ def mystockloss(y_true, y_pred, e=0.1):
 
 def build_model(input_layer_shape):
     model = keras.Sequential([
-        keras.layers.Dense(128, activation=tf.nn.relu, input_shape=input_layer_shape),
-        keras.layers.Dense(64, activation=tf.nn.relu),
-        keras.layers.Dense(32, activation=tf.nn.relu),
-        keras.layers.Dense(16, activation=tf.nn.relu),
+        keras.layers.Dense(4, activation=tf.nn.relu, input_shape=input_layer_shape),
+        # keras.layers.Dense(64, activation=tf.nn.relu),
+        # keras.layers.Dense(32, activation=tf.nn.relu),
+        # keras.layers.Dense(16, activation=tf.nn.relu),
         keras.layers.Dense(1)
     ])
 
@@ -67,13 +67,13 @@ def build_model(input_layer_shape):
     # model.compile(loss='mse',
     #                 optimizer=optimizer,
     #                 metrics=['mae'])
-    model.compile(loss='mae',
-                    optimizer=optimizer,
-                    metrics=['mae'])
-    # model.compile(loss=mystockloss,
+    # model.compile(loss='mae',
     #                 optimizer=optimizer,
-    #                 metrics=[mystockloss])
-    #                 # metrics=['mae'])
+    #                 metrics=['mae'])
+    model.compile(loss=mystockloss,
+                    optimizer=optimizer,
+                    metrics=[mystockloss])
+                    # metrics=['mae'])
     return model
 
 def train():

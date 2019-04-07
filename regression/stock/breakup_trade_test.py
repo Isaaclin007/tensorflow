@@ -52,6 +52,7 @@ def TestAStock(ts_code):
     out_target_diff = 0.0
     break_up_price = 0.0
     capital_value = 1.0
+    max_close = 0.0
     for day_loop in reversed(range(0, len(pp_data) - 1)):
         close = pp_data.loc[day_loop,'close']
         in_target = pp_data.loc[day_loop,'close_10_avg']
@@ -81,9 +82,10 @@ def TestAStock(ts_code):
             sleep_count += 1
             break_up = False
             period_trade_count = 0
+            max_close = 0
         
         if not holding:
-            if (sleep_count >= sleep_count_threshold) and break_up and (day_loop > 1):
+            if (sleep_count >= sleep_count_threshold) and break_up and (day_loop > 1) and (close > max_close):
                 if (period_trade_count == 0) or ((period_trade_count > 0) and (close > break_up_price)):
                     in_trade_date = pp_data.loc[day_loop - 1,'trade_date']
                     buying_price = pp_data.loc[day_loop - 1,'open']
@@ -91,6 +93,7 @@ def TestAStock(ts_code):
                     holding_days = 1
                     out_target_trough = out_target
                     out_target_peak = 0.0
+                    max_close = buying_price
                 if period_trade_count == 0:
                     break_up_price = buying_price
                 period_trade_count += 1
@@ -105,7 +108,10 @@ def TestAStock(ts_code):
             # if (not break_up):
 
             # 卖出条件：target 跌破 break_up_price
-            if (not break_up) or (close < break_up_price) or (day_loop == 1):
+            if max_close < close:
+                max_close = close
+            if (not break_up) or (close < break_up_price) or (close < (max_close * 0.8)) or (day_loop == 1):
+            # if (close < (max_close * 0.9)) or (close < (buying_price * 0.95)) or (day_loop == 1):
                 out_trade_date = pp_data.loc[day_loop - 1,'trade_date']
                 out_price = pp_data.loc[day_loop - 1,'open']
                 holding = False
@@ -127,7 +133,7 @@ def TestAStock(ts_code):
                 holding_days += 1
         test_days += 1
 
-    print("test_days: %u, holding_days_sum: %u, increase_sum: %.2f" % (test_days, holding_days_sum, (capital_value - 1.0)*100.0))
+    print("test_days: %u, holding_days_sum: %u, increase: %.2f" % (test_days, holding_days_sum, (capital_value - 1.0)*100.0))
         # print('%8.2f%8.2f%10u%10u%10u%10u' % (\
         #     close, \
         #     close_30_avg, \

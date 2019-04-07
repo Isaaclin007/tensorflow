@@ -56,10 +56,10 @@ def mystockloss(y_true, y_pred, e=0.1):
 def build_model(input_layer_shape):
 
     model = keras.Sequential([
-        keras.layers.Dense(4, activation=tf.nn.relu, input_shape=input_layer_shape),
-        # keras.layers.Dense(64, activation=tf.nn.relu),
-        # keras.layers.Dense(32, activation=tf.nn.relu),
-        # keras.layers.Dense(16, activation=tf.nn.relu),
+        keras.layers.Dense(128, activation=tf.nn.relu, input_shape=input_layer_shape),
+        keras.layers.Dense(64, activation=tf.nn.relu),
+        keras.layers.Dense(32, activation=tf.nn.relu),
+        keras.layers.Dense(16, activation=tf.nn.relu),
         keras.layers.Dense(2, activation=tf.nn.softmax)
     ])
     model.compile(optimizer=tf.train.AdamOptimizer(), 
@@ -68,7 +68,7 @@ def build_model(input_layer_shape):
     return model
 
 def train():
-    train_features, train_labels = tushare_data.GetTrainData()
+    train_features, train_labels = tushare_data.GetTrainDataBalance(20.0, 5)
 
     mean = train_features.mean(axis=0)
     std = train_features.std(axis=0)
@@ -76,14 +76,16 @@ def train():
     # print("std: {}".format(std.shape))
     train_features = (train_features - mean) / std
 
-    train_labels = train_labels > 5.0
-    pos_labels = train_labels[train_labels]
+    pos_mask = train_labels >= 20.0
+    train_labels = pos_mask
+    pos_labels = train_labels[pos_mask]
+
     print("pos/all: %u/%u" % (len(pos_labels), len(train_labels)))
     # print(train_labels)
     model = build_model((train_features.shape[1],))
     model.summary()
 
-    EPOCHS = 100
+    EPOCHS = 500
 
     # Display training progress by printing a single dot for each completed epoch.
     class PrintDot(keras.callbacks.Callback):
@@ -95,13 +97,13 @@ def train():
             #print('.')
 
     # The patience parameter is the amount of epochs to check for improvement.
-    early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=20)
+    early_stop = keras.callbacks.EarlyStopping(monitor='val_acc', patience=20)
 
     where_are_nan = np.isnan(train_features)
     where_are_inf = np.isinf(train_features)
     train_features[where_are_nan] = 0.0
     train_features[where_are_inf] = 0.0
-    history = model.fit(train_features, train_labels, epochs=EPOCHS, validation_split=0.2)
+    history = model.fit(train_features, train_labels, epochs=EPOCHS, validation_split=0.2, callbacks=[early_stop])
     print('history.history:')
     print(history.history)
 
