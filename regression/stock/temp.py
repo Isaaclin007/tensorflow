@@ -249,5 +249,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # print(tushare_data.CurrentDate())
 
-print(sys.argv)
+# print(sys.argv)
+
+
+df = pro.moneyflow(ts_code='002149.SZ', start_date='20190115', end_date='20190315')
 

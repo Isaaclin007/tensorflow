@@ -12,6 +12,6 @@ import sys
 import tushare_data
 
 tushare_data.UpdatePreprocessData()
-tushare_data.CheckPreprocessData()
+# tushare_data.CheckPreprocessData()
 print("\n\n\n")
 

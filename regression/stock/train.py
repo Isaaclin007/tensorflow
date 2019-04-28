@@ -50,12 +50,52 @@ def mymaeloss(y_true, y_pred, e=0.1):
 
 def mystockloss(y_true, y_pred, e=0.1):
     # return (1-e) * abs(y_true - y_pred) * K.max([K.max([y_true, y_pred]) - 0.0, 0.0])
-    return (1-e) * abs(y_true - y_pred) * K.pow(1.5, K.max([y_true, y_pred]) / 100.0)
+    # return (1-e) * abs(y_true - y_pred) * K.pow(1.2, K.max([y_true, y_pred])) / 100.0
+    # max_y = K.max([y_true, y_pred]) / 10.0  # predict_day_count
+    # return (1-e) * abs(y_true - y_pred) * tf.where(tf.greater(max_y, 5.0), max_y / 5.0, K.pow(1.584893, max_y) / 10.0)
+
+    max_y = K.max([y_true, y_pred]) / 10.0  # predict_day_count
+    return (1-e) * abs(y_true - y_pred) * K.pow(2.0, max_y) / 10.0
+
     # return (1-e) * abs(y_true - y_pred) * K.pow(1.1, y_true)
+
+def lossValue(y_true, y_pred):
+    temp_loss = mystockloss(y_true, y_pred)
+    with tf.Session() as sess:
+        return temp_loss.eval()
+
+def printLoss(y_true, y_pred):
+    print('%-20f%-20f%-20f' % (y_true, y_pred, lossValue(y_true, y_pred)))
+
+def lossTest():
+    print('%-20s%-20s%-20s' % ('y_true', 'y_pred', 'loss'))
+    print('----------------------------------------------')
+
+    printLoss(-20.0, -19.0)
+    printLoss(-20.0, 20.0)
+    printLoss(-20.0, 0.0)
+    printLoss(20.0, 0.0)
+    printLoss(50.0, 0.0)
+    printLoss(50.0, 49.0)
+    printLoss(100.0, 0.0)
+    printLoss(100.0, 99.0)
+    printLoss(-100.0, 0.0)
+    printLoss(-100.0, 0.0)
 
 def build_model(input_layer_shape):
     model = keras.Sequential([
         keras.layers.Dense(4, activation=tf.nn.relu, input_shape=input_layer_shape),
+        # keras.layers.Dense(128, activation=tf.nn.relu),
+        # keras.layers.Dense(128, activation=tf.nn.relu),
+        # keras.layers.Dense(128, activation=tf.nn.relu),
+        # keras.layers.Dense(128, activation=tf.nn.relu),
+        # keras.layers.Dense(128, activation=tf.nn.relu),
+        # keras.layers.Dense(128, activation=tf.nn.relu),
+        # keras.layers.Dense(128, activation=tf.nn.relu),
+        # keras.layers.Dense(128, activation=tf.nn.relu),
+        # keras.layers.Dense(128, activation=tf.nn.relu),
+        # keras.layers.Dense(128, activation=tf.nn.relu),
+        # keras.layers.Dense(128, activation=tf.nn.relu),
         # keras.layers.Dense(64, activation=tf.nn.relu),
         # keras.layers.Dense(32, activation=tf.nn.relu),
         # keras.layers.Dense(16, activation=tf.nn.relu),
@@ -85,6 +125,10 @@ def train():
     # print("std: {}".format(std.shape))
     train_features = (train_features - mean) / std
 
+    max_label_value = tushare_data.predict_day_count * 10.0
+    temp_mask = train_labels >= max_label_value
+    train_labels[temp_mask] = max_label_value
+
     model = build_model((train_features.shape[1],))
     model.summary()
 
@@ -100,14 +144,14 @@ def train():
             #print('.')
 
     # The patience parameter is the amount of epochs to check for improvement.
-    early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=20)
+    early_stop = keras.callbacks.EarlyStopping(monitor='loss', patience=20)
 
     where_are_nan = np.isnan(train_features)
     where_are_inf = np.isinf(train_features)
     train_features[where_are_nan] = 0.0
     train_features[where_are_inf] = 0.0
     history = model.fit(train_features, train_labels, epochs=EPOCHS,
-                        validation_split=0.5, verbose=0,
+                        validation_split=0.1, verbose=0,
                         callbacks=[early_stop, PrintDot()])
                         # callbacks=[PrintDot()])
 
@@ -123,11 +167,11 @@ def train():
     def plot_history(history):
         plt.figure()
         plt.xlabel('Epoch')
-        plt.ylabel('Mean Abs Error [1000$]')
+        plt.ylabel('loss')
         plt.plot(history.epoch, np.array(history.history['loss']), 
                 label='Train Loss')
-        plt.plot(history.epoch, np.array(history.history['val_loss']),
-                label = 'Val loss')
+        # plt.plot(history.epoch, np.array(history.history['val_loss']),
+        #         label = 'Val loss')
         plt.legend()
         #plt.ylim([0,5])
         plt.show()
@@ -141,3 +185,4 @@ def train():
 
 if __name__ == "__main__":
     train()
+    # lossTest()

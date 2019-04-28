@@ -31,7 +31,7 @@ def BreakupStatusAStockADate(input_pp_data, \
     period_continue_sleep_count = 0
     for day_loop in range(intput_day_index, len(input_pp_data)):
         in_target = input_pp_data.loc[day_loop,'close_10_avg']
-        close_avg = input_pp_data.loc[day_loop,'close_200_avg']
+        close_avg = input_pp_data.loc[day_loop,'close_100_avg']
         if in_target > close_avg:
             # 状态跳转
             if period_status == PERIOD_STATUS_INIT:
@@ -71,7 +71,7 @@ def BreakupHistoryAStock(input_pp_data, \
     result_df = pd.DataFrame()
     for day_loop in reversed(range(0, len(input_pp_data))):
         target = input_pp_data.loc[day_loop,'close_10_avg']
-        close_avg = input_pp_data.loc[day_loop,'close_200_avg']
+        close_avg = input_pp_data.loc[day_loop,'close_100_avg']
 
         if target > close_avg:
             if period_status != PERIOD_STATUS_UP:

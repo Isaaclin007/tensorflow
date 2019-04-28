@@ -18,8 +18,8 @@ preprocess_ref_days = 200
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
-max_predict_day_count = 10  # 决定train_data 和 test_data 的predict_day_count
-predict_day_count = 10  # 预测未来几日的数据
+max_predict_day_count = 30  # 决定train_data 和 test_data 的predict_day_count
+predict_day_count = 2  # 预测未来几日的数据
 referfence_feature_count = 1
 test_acture_data_with_feature = False
 train_a_stock_min_data_num = 400
@@ -40,8 +40,9 @@ FEATURE_G0_10D5_TO_100_AVG = 7
 FEATURE_G0_10W5_TO_100_AVG = 8
 FEATURE_G0_100D5_TO_100_AVG = 9
 FEATURE_G0_100D2_TO_100_AVG = 10
+FEATURE_G0_10D14_TO_100_AVG = 11
 
-feature_type = FEATURE_G0_100D2_TO_100_AVG
+feature_type = FEATURE_G0_10D14_TO_100_AVG
 if feature_type == FEATURE_G7_10D8:
     feature_size = 7 + (8 * 10)
     feature_relate_days = 10
@@ -75,6 +76,9 @@ elif feature_type == FEATURE_G0_100D5_TO_100_AVG:
 elif feature_type == FEATURE_G0_100D2_TO_100_AVG:
     feature_size = (2 * 100)
     feature_relate_days = 100
+elif feature_type == FEATURE_G0_10D14_TO_100_AVG:
+    feature_size = (14 * 10)
+    feature_relate_days = 100
 
 LABEL_PRE_CLOSE_2_TD_CLOSE = 0
 LABEL_T1_OPEN_2_TD_CLOSE = 1
@@ -104,12 +108,13 @@ def CurrentDate():
 # train_test_date = '20190111'
 # predict_date = '20190111'
 
+pp_data_start_date = '20120101'
 stocks_list_end_date = '20090101'
-train_data_start_date = '20100101'
+train_data_start_date = '20120101'
 train_data_end_date = '20170101'
 test_data_start_date = '20170101'
-test_data_end_date = '20190111'
-train_test_date = '20190111'
+test_data_end_date = '20190414'
+train_test_date = '20190414'
 predict_date = '20181225'
 
 # stocks_list_end_date = '20140101'
@@ -134,7 +139,7 @@ code_filter = ''
 # industry_filter = '半导体,电脑设备'
 industry_filter = ''
 # industry_filter = 'hk'
-# industry_filter = '软件服务'
+industry_filter = '软件服务'
 # industry_filter = '百货'
 # industry_filter = '半导体'
 # industry_filter = '保险'
@@ -184,7 +189,7 @@ pd.set_option('display.max_rows', 100)  # 设置显示最大行
 def TradeDateList(input_end_date, trade_day_num):
     pro = ts.pro_api()
     # print('TradeDateList(%s, %u)' % (input_end_date, trade_day_num))
-    file_name = './download_data/trade_date_list_%s.csv' % input_end_date
+    file_name = './data/trade_date_list_%s.csv' % input_end_date
     if os.path.exists(file_name):
         df_trade_cal = pd.read_csv(file_name)
         df_trade_cal['cal_date'] = df_trade_cal['cal_date'].astype(str)
@@ -269,65 +274,113 @@ def StockName(ts_code):
             return name_list[iloop]
     return 'unknow'
 
-def FileNameStockDownloadData(stock_code):
-    if DATA_TYPE_DAY == data_type:
-        temp_file_name = './download_data/' + stock_code + '_' + train_test_date + '.csv'
-    elif DATA_TYPE_WEEK == data_type:
-        temp_file_name = './download_data/' + stock_code + '_' + train_test_date + '_week.csv'
+def FileNameStockDownloadDataDaily(stock_code):
+    temp_file_name = './data/daily/' + stock_code + '_' + train_test_date + '.csv'
     return temp_file_name
 
-def FileNameTradeDayDownloadData(trade_date):
-    if DATA_TYPE_DAY == data_type:
-        temp_file_name = './download_data/'+'trade_date'+'_'+trade_date+'.csv'
-    elif DATA_TYPE_WEEK == data_type:
-        temp_file_name = './download_data/'+'trade_date'+'_'+trade_date+'_week.csv'
+def FileNameStockDownloadDataDailyBasic(stock_code):
+    temp_file_name = './data/daily_basic/' + stock_code + '_' + train_test_date + '.csv'
     return temp_file_name
 
-def DownloadAStocksData(ts_code):
+def FileNameStockDownloadDataMoneyFlow(stock_code):
+    temp_file_name = './data/moneyflow/' + stock_code + '_' + train_test_date + '.csv'
+    return temp_file_name
+
+def FileNameTradeDayDownloadDataDaily(trade_date):
+    temp_file_name = './data/daily/'+'trade_date'+'_'+trade_date+'.csv'
+    return temp_file_name
+
+def FileNameTradeDayDownloadDataDailyBasic(trade_date):
+    temp_file_name = './data/daily_basic/'+'trade_date'+'_'+trade_date+'.csv'
+    return temp_file_name
+
+def FileNameTradeDayDownloadDataMoneyFlow(trade_date):
+    temp_file_name = './data/moneyflow/'+'trade_date'+'_'+trade_date+'.csv'
+    return temp_file_name
+
+# 对于PP data，只关注stock code、结束时间
+def FileNameStockPreprocessedData(stock_code):
+    temp_file_name = './data/preprocessed/' + stock_code + '_' + pp_data_start_date + '_' + train_test_date + '.csv'
+    return temp_file_name
+
+def DownloadAStocksDataDaily(ts_code):
     pro = ts.pro_api()
     start_date = '19000101'
     end_data = train_test_date
-    file_name = FileNameStockDownloadData(ts_code)
+    file_name = FileNameStockDownloadDataDaily(ts_code)
+    if not os.path.exists(file_name):
+        df_daily = pro.daily(ts_code = ts_code, start_date = start_date, end_date = end_data)
+        df_daily.to_csv(file_name)
+
+def DownloadAStocksDataDailyBasic(ts_code):
+    pro = ts.pro_api()
+    start_date = '19000101'
+    end_data = train_test_date
+    file_name = FileNameStockDownloadDataDailyBasic(ts_code)
     if not os.path.exists(file_name):
         if DATA_TYPE_DAY == data_type:
-            df_basic=pro.daily_basic(ts_code = ts_code, start_date = start_date, end_date = end_data)
-            df = pro.daily(ts_code = ts_code, start_date = start_date, end_date = end_data)
-            if len(df_basic) != len(df) :
-                print("DownloadAStocksData.error.1")
-                return
-            df.drop(['close','ts_code'],axis=1,inplace=True)
-            df_merge = pd.merge(df_basic, df, left_on='trade_date', right_on='trade_date')
-            df_merge.to_csv(file_name)
+            # df_basic=pro.daily_basic(ts_code = ts_code, start_date = start_date, end_date = end_data)
+            # df = pro.daily(ts_code = ts_code, start_date = start_date, end_date = end_data)
+            # if len(df_basic) != len(df) :
+            #     print("DownloadAStocksData.error.1")
+            #     return
+            # df.drop(['close','ts_code'],axis=1,inplace=True)
+            # df_merge = pd.merge(df_basic, df, left_on='trade_date', right_on='trade_date')
+            # df_merge.to_csv(file_name)
+
+            df_basic = pro.daily_basic(ts_code = ts_code, start_date = start_date, end_date = end_data)
+            df_basic.to_csv(file_name)
         elif DATA_TYPE_WEEK == data_type:
             df_week = pro.weekly(ts_code = ts_code, start_date = start_date, end_date = end_data)
             df_week.to_csv(file_name)
-    
-def DownloadATradeDayData(input_trade_date):
+
+def DownloadAStocksDataMoneyFlow(ts_code):
     pro = ts.pro_api()
-    file_name = FileNameTradeDayDownloadData(input_trade_date)
+    start_date = '19000101'
+    end_data = train_test_date
+    file_name = FileNameStockDownloadDataMoneyFlow(ts_code)
+    if not os.path.exists(file_name):
+        df_moneyflow = pro.moneyflow(ts_code = ts_code, start_date = start_date, end_date = end_data)
+        df_moneyflow.to_csv(file_name)
+
+def DownloadAStocksData(ts_code):
+    DownloadAStocksDataDaily(ts_code)
+    # DownloadAStocksDataDailyBasic(ts_code)
+    DownloadAStocksDataMoneyFlow(ts_code)
+
+def DownloadATradeDayDataDailyBasic(input_trade_date):
+    pro = ts.pro_api()
+    file_name = FileNameTradeDayDownloadDataDailyBasic(input_trade_date)
     if not os.path.exists(file_name):
         df_basic = pro.daily_basic(trade_date=input_trade_date)
-        df = pro.daily(trade_date=input_trade_date)
-        if len(df_basic) != len(df) :
-            print("DownloadATradeDayData.error.1")
-            return
-        # print("\n\ndf_basic:")
-        # print(df_basic.dtypes)
-        # print(df_basic)
-        # print("\n\ndf:")
-        # print(df.dtypes)
-        # print(df)
-        df.drop(['close','trade_date'],axis=1,inplace=True)
-        df_merge=pd.merge(df_basic, df, left_on='ts_code', right_on='ts_code')
-        # print("\n\ndf_merge:")
-        # print(df_merge.dtypes)
-        # print(df_merge)
-        df_merge.to_csv(file_name)
+        df_basic.to_csv(file_name)
+
+def DownloadATradeDayDataDaily(input_trade_date):
+    pro = ts.pro_api()
+    file_name = FileNameTradeDayDownloadDataDaily(input_trade_date)
+    if not os.path.exists(file_name):
+        df_basic = pro.daily(trade_date=input_trade_date)
+        df_basic.to_csv(file_name)
+
+def DownloadATradeDayDataMoneyFlow(input_trade_date):
+    pro = ts.pro_api()
+    file_name = FileNameTradeDayDownloadDataMoneyFlow(input_trade_date)
+    if not os.path.exists(file_name):
+        df_basic = pro.moneyflow(trade_date=input_trade_date)
+        df_basic.to_csv(file_name)
+    
+def DownloadATradeDayData(input_trade_date):
+    DownloadATradeDayDataDaily(input_trade_date)
+    # DownloadATradeDayDataDailyBasic(input_trade_date)
+    # DownloadATradeDayDataMoneyFlow(input_trade_date)
 
 def LoadATradeDayData(trade_date):
-    file_name = FileNameTradeDayDownloadData(trade_date)
-    load_df = pd.read_csv(file_name)
-    return load_df
+    file_name = FileNameTradeDayDownloadDataDaily(trade_date)
+    daily_df = pd.read_csv(file_name)
+    return daily_df
+    # file_name = FileNameTradeDayDownloadDataMoneyFlow(trade_date)
+    # moneyflow_df = pd.read_csv(file_name)
+    # return StockDataMerge(daily_df, moneyflow_df)
 
 def DownloadTrainTestData():
     code_list = StockCodes()
@@ -352,46 +405,74 @@ def DownloadPredictData():
         DownloadATradeDayData(temp_date)
         print("%-4d : %s 100%%" % (date_index, temp_date))
 
-def StockDataPreProcess(stock_data_df):
-    src_col_names = [
+def StockDataMerge(daily_basic_df, money_flow_df):
+    money_flow_df.drop(['ts_code'],axis=1,inplace=True)
+    df_merge = pd.merge(daily_basic_df, money_flow_df, left_on='trade_date', right_on='trade_date')
+    return df_merge
+
+def StockDataPreProcess_AddAvg(src_df, target_name, avg_period):
+    avg_name = '%s_%u_avg' % (target_name, avg_period)
+    src_df[avg_name]=0.0
+    current_value = 0.0
+    avg_count = 0
+    avg_sum = 0.0
+    for day_loop in reversed(range(0, len(src_df))):
+        current_value = src_df.loc[day_loop, target_name]
+
+        if avg_count < avg_period:
+            avg_sum += current_value
+            avg_count += 1
+        else:
+            avg_sum = avg_sum + current_value - src_df.loc[day_loop + avg_period, target_name]
+            src_df.loc[day_loop, avg_name] = avg_sum / avg_period
+    
+def StockDataPreProcess(stock_data_df, use_money_flow = True, use_turnover_rate_f = False):
+    src_basic_col_names_str = [
         'ts_code',
-        'trade_date',
+        'trade_date'
+    ]
+    src_basic_col_names_float = [
         # 'pe',
         # 'pe_ttm',
         # 'pb',
         # 'ps',
         # 'ps_ttm',
-        'total_share', 
-        'float_share', 
-        'free_share', 
-        'total_mv', 
-        'circ_mv', 
+        # 'total_share', 
+        # 'float_share', 
+        # 'free_share', 
+        # 'total_mv', 
+        # 'circ_mv', 
         'open', 
         'close', 
         'high', 
         'low', 
-        'turnover_rate_f',
+        # 'turnover_rate_f',
         'vol'
     ]
-    src_float_col_names = [
-        # 'pe',
-        # 'pe_ttm',
-        # 'pb',
-        # 'ps',
-        # 'ps_ttm',
-        'total_share', 
-        'float_share', 
-        'free_share', 
-        'total_mv', 
-        'circ_mv', 
-        'open', 
+    src_moneyflow_col_names = [
+        'buy_sm_vol',
+        'sell_sm_vol',
+        'buy_md_vol',
+        'sell_md_vol',
+        'buy_lg_vol',
+        'sell_lg_vol',
+        'buy_elg_vol',
+        'sell_elg_vol',
+        'net_mf_vol'
+    ]
+    src_avg_col_names = [
         'close', 
-        'high', 
-        'low', 
-        'turnover_rate_f',
         'vol'
     ]
-    src_df_1=stock_data_df[src_col_names]
+    src_all_col_names = src_basic_col_names_str + src_basic_col_names_float
+    src_float_col_names = src_basic_col_names_float
+    if use_money_flow:
+        src_all_col_names = src_all_col_names + src_moneyflow_col_names
+        src_float_col_names = src_float_col_names + src_moneyflow_col_names
+
+    if len(stock_data_df) == 0:
+        return stock_data_df
+    src_df_1=stock_data_df[src_all_col_names]
     src_df_2=src_df_1.copy()
     src_df_2=src_df_2.reset_index(drop=True)
     src_df_2['pre_close']=0.0
@@ -408,11 +489,12 @@ def StockDataPreProcess(stock_data_df):
     src_df_2['close_30_avg']=0.0
     src_df_2['close_100_avg']=0.0
     src_df_2['close_200_avg']=0.0
-    src_df_2['turnover_rate_f_5_avg']=0.0
-    src_df_2['turnover_rate_f_10_avg']=0.0
-    src_df_2['turnover_rate_f_30_avg']=0.0
-    src_df_2['turnover_rate_f_100_avg']=0.0
-    src_df_2['turnover_rate_f_200_avg']=0.0
+    if use_turnover_rate_f:
+        src_df_2['turnover_rate_f_5_avg']=0.0
+        src_df_2['turnover_rate_f_10_avg']=0.0
+        src_df_2['turnover_rate_f_30_avg']=0.0
+        src_df_2['turnover_rate_f_100_avg']=0.0
+        src_df_2['turnover_rate_f_200_avg']=0.0
     src_df_2['vol_5_avg']=0.0
     src_df_2['vol_10_avg']=0.0
     src_df_2['vol_30_avg']=0.0
@@ -427,7 +509,8 @@ def StockDataPreProcess(stock_data_df):
     src_df_2['close_5']=0.0
     src_df_2['high_5']=0.0
     src_df_2['low_5']=0.0
-    src_df_2['turnover_rate_f_5']=0.0
+    if use_turnover_rate_f:
+        src_df_2['turnover_rate_f_5']=0.0
     src_df_2['vol_5']=0.0
     src_df=src_df_2.copy()
 
@@ -448,101 +531,15 @@ def StockDataPreProcess(stock_data_df):
                                                                     src_df.loc[day_loop,'low']))
             return src_df[0:0]     
     
-    avg_5_sum = 0.0
-    avg_10_sum = 0.0
-    avg_30_sum = 0.0
-    avg_100_sum = 0.0
-    avg_200_sum = 0.0
-    trf_5_sum = 0.0
-    trf_10_sum = 0.0
-    trf_30_sum = 0.0
-    trf_100_sum = 0.0
-    trf_200_sum = 0.0
-    vol_5_sum = 0.0
-    vol_10_sum = 0.0
-    vol_30_sum = 0.0
-    vol_100_sum = 0.0
-    vol_200_sum = 0.0
-    avg_5_count = 0
-    avg_10_count = 0
-    avg_30_count = 0
-    avg_100_count = 0
-    avg_200_count = 0
+    for col_name in src_avg_col_names:
+        StockDataPreProcess_AddAvg(src_df, col_name, 5)
+        StockDataPreProcess_AddAvg(src_df, col_name, 10)
+        StockDataPreProcess_AddAvg(src_df, col_name, 30)
+        StockDataPreProcess_AddAvg(src_df, col_name, 100)
+        StockDataPreProcess_AddAvg(src_df, col_name, 200)
+
     loop_count = 0
     for day_loop in reversed(range(0, len(src_df))):
-        close_current = src_df.loc[day_loop, 'close']
-        trf_current = src_df.loc[day_loop, 'turnover_rate_f']
-        vol_current = src_df.loc[day_loop, 'vol']
-        # 计算5日均值
-        if avg_5_count < 5:
-            avg_5_sum += close_current
-            trf_5_sum += trf_current
-            vol_5_sum += vol_current
-            avg_5_count += 1
-        else:
-            avg_5_sum = avg_5_sum + close_current - src_df.loc[day_loop + 5, 'close']
-            trf_5_sum = trf_5_sum + trf_current - src_df.loc[day_loop + 5, 'turnover_rate_f']
-            vol_5_sum = vol_5_sum + vol_current - src_df.loc[day_loop + 5, 'vol']
-            src_df.loc[day_loop,'close_5_avg'] = avg_5_sum / 5.0
-            src_df.loc[day_loop,'turnover_rate_f_5_avg'] = trf_5_sum / 5.0
-            src_df.loc[day_loop,'vol_5_avg'] = trf_5_sum / 5.0
-
-        # 计算10日均值
-        if avg_10_count < 10:
-            avg_10_sum += close_current
-            trf_10_sum += trf_current
-            vol_10_sum += vol_current
-            avg_10_count += 1
-        else:
-            avg_10_sum = avg_10_sum + close_current - src_df.loc[day_loop + 10, 'close']
-            trf_10_sum = trf_10_sum + trf_current - src_df.loc[day_loop + 10, 'turnover_rate_f']
-            vol_10_sum = vol_10_sum + vol_current - src_df.loc[day_loop + 10, 'vol']
-            src_df.loc[day_loop,'close_10_avg'] = avg_10_sum / 10.0
-            src_df.loc[day_loop,'turnover_rate_f_10_avg'] = trf_10_sum / 10.0
-            src_df.loc[day_loop,'vol_10_avg'] = trf_10_sum / 10.0
-            
-        # 计算30日均值
-        if avg_30_count < 30:
-            avg_30_sum += close_current
-            trf_30_sum += trf_current
-            vol_30_sum += vol_current
-            avg_30_count += 1
-        else:
-            avg_30_sum = avg_30_sum + close_current - src_df.loc[day_loop + 30, 'close']
-            trf_30_sum = trf_30_sum + trf_current - src_df.loc[day_loop + 30, 'turnover_rate_f']
-            vol_30_sum = vol_30_sum + vol_current - src_df.loc[day_loop + 30, 'vol']
-            src_df.loc[day_loop,'close_30_avg'] = avg_30_sum / 30.0
-            src_df.loc[day_loop,'turnover_rate_f_30_avg'] = trf_30_sum / 30.0
-            src_df.loc[day_loop,'vol_30_avg'] = trf_30_sum / 30.0
-
-        # 计算100日均值
-        if avg_100_count < 100:
-            avg_100_sum += close_current
-            trf_100_sum += trf_current
-            vol_100_sum += vol_current
-            avg_100_count += 1
-        else:
-            avg_100_sum = avg_100_sum + close_current - src_df.loc[day_loop + 100, 'close']
-            trf_100_sum = trf_100_sum + trf_current - src_df.loc[day_loop + 100, 'turnover_rate_f']
-            vol_100_sum = vol_100_sum + vol_current - src_df.loc[day_loop + 100, 'vol']
-            src_df.loc[day_loop,'close_100_avg'] = avg_100_sum / 100.0
-            src_df.loc[day_loop,'turnover_rate_f_100_avg'] = trf_100_sum / 100.0
-            src_df.loc[day_loop,'vol_100_avg'] = trf_100_sum / 100.0
-
-        # 计算200日均值
-        if avg_200_count < 200:
-            avg_200_sum += close_current
-            trf_200_sum += trf_current
-            vol_200_sum += vol_current
-            avg_200_count += 1
-        else:
-            avg_200_sum = avg_200_sum + close_current - src_df.loc[day_loop + 200, 'close']
-            trf_200_sum = trf_200_sum + trf_current - src_df.loc[day_loop + 200, 'turnover_rate_f']
-            vol_200_sum = vol_200_sum + vol_current - src_df.loc[day_loop + 200, 'vol']
-            src_df.loc[day_loop,'close_200_avg'] = avg_200_sum / 200.0
-            src_df.loc[day_loop,'turnover_rate_f_200_avg'] = trf_200_sum / 200.0
-            src_df.loc[day_loop,'vol_200_avg'] = trf_200_sum / 200.0
-
         # open_5, close_5, high_5, low_5
         if loop_count >= 5:
             src_df.loc[day_loop, 'open_5'] = src_df.loc[day_loop + 4, 'open']
@@ -556,8 +553,9 @@ def StockDataPreProcess(stock_data_df):
                     low_5 = src_df.loc[day_loop + iloop, 'low']
             src_df.loc[day_loop, 'high_5'] = high_5
             src_df.loc[day_loop, 'low_5'] = low_5
-            src_df.loc[day_loop, 'turnover_rate_f_5'] = trf_5_sum
-            src_df.loc[day_loop, 'vol_5'] = vol_5_sum
+            # if use_turnover_rate_f:
+            #     src_df.loc[day_loop, 'turnover_rate_f_5'] = trf_5_sum
+            # src_df.loc[day_loop, 'vol_5'] = vol_5_sum
 
         loop_count += 1
             
@@ -702,6 +700,27 @@ def AppendFeature( src_df, feature_day_pointer, data_unit):
             temp_index=feature_day_pointer+iloop
             data_unit.append(src_df['close'][temp_index] / base_close)
             data_unit.append(src_df['vol'][temp_index] / base_vol)
+    elif feature_type == FEATURE_G0_10D14_TO_100_AVG:
+        temp_index = feature_day_pointer
+        base_close = src_df['close_100_avg'][feature_day_pointer]
+        base_vol = src_df['vol_100_avg'][feature_day_pointer]
+        for iloop in range(0, 10):                
+            temp_index=feature_day_pointer+iloop
+            data_unit.append(src_df['open'][temp_index] / base_close)
+            data_unit.append(src_df['close'][temp_index] / base_close)
+            data_unit.append(src_df['high'][temp_index] / base_close)
+            data_unit.append(src_df['low'][temp_index] / base_close)
+            data_unit.append(src_df['vol'][temp_index] / base_vol)
+            temp_vol = src_df['vol'][temp_index]
+            data_unit.append(src_df['buy_sm_vol'][temp_index] / temp_vol)
+            data_unit.append(src_df['sell_sm_vol'][temp_index] / temp_vol)
+            data_unit.append(src_df['buy_md_vol'][temp_index] / temp_vol)
+            data_unit.append(src_df['sell_md_vol'][temp_index] / temp_vol)
+            data_unit.append(src_df['buy_lg_vol'][temp_index] / temp_vol)
+            data_unit.append(src_df['sell_lg_vol'][temp_index] / temp_vol)
+            data_unit.append(src_df['buy_elg_vol'][temp_index] / temp_vol)
+            data_unit.append(src_df['sell_elg_vol'][temp_index] / temp_vol)
+            data_unit.append(src_df['net_mf_vol'][temp_index] / temp_vol)
         
 def AppendLabel( src_df, day_index, data_unit):
     feature_day_pointer = day_index + max_predict_day_count
@@ -969,7 +988,7 @@ def GetAFeature(src_df, day_index, feature_type):
 # 训练数据截至日期、
 # 个股训练数据最小和最大数据量
 def FileNameTrainData():
-    file_name = './temp_data/train_data_%u_%u_%u_%s_%s_%s_%u_%u_%s%s.npy' % ( \
+    file_name = './data/dataset/train_data_%u_%u_%u_%s_%s_%s_%u_%u_%s%s.npy' % ( \
         feature_type, \
         label_type, \
         max_predict_day_count, \
@@ -994,7 +1013,7 @@ def FileNameTrainData():
 # 参考特征天数、
 # 测试acture是否包含feature
 def FileNameTestData():
-    file_name = './temp_data/test_data_%u_%u_%u_%u_%s_%s_%s_%u_%d_%s%s.npy' % ( \
+    file_name = './data/dataset/test_data_%u_%u_%u_%u_%s_%s_%s_%u_%d_%s%s.npy' % ( \
         feature_type, \
         label_type, \
         max_predict_day_count, \
@@ -1007,13 +1026,6 @@ def FileNameTestData():
         industry_filter, \
         code_filter)
     return file_name
-
-# 对于PP data，只关注stock code、结束时间
-def FileNameStockPreprocessedData(stock_code):
-    temp_file_name = './preprocessed_data/preprocess_data_%s_%s.csv' % (\
-                    stock_code, \
-                    train_test_date)
-    return temp_file_name
 
 def TrainStockDataExist(stock_code):
     file_name = FileNameStockDownloadData(stock_code)
@@ -1028,35 +1040,30 @@ def OffsetTradeDate(ref_date, day_offset):
     temp_list = TradeDateList(ref_date, day_offset + 1)
     return temp_list[day_offset]
 
-def UpdatePreprocessDataAStock(ts_code):
-    stock_code = ts_code
-    stock_download_file_name = FileNameStockDownloadData(stock_code)
+def UpdatePreprocessDataAStock(code_index, stock_code):
+    file_name_daily = FileNameStockDownloadDataDaily(stock_code)
+    file_name_money_flow = FileNameStockDownloadDataMoneyFlow(stock_code)
     stock_pp_file_name = FileNameStockPreprocessedData(stock_code)
-    if os.path.exists(stock_download_file_name):
-        download_df = pd.read_csv(stock_download_file_name)
+    if os.path.exists(file_name_daily) and os.path.exists(file_name_money_flow):
         if not os.path.exists(stock_pp_file_name):
-            pp_data = StockDataPreProcess(download_df)
+            df_daily = pd.read_csv(file_name_daily)
+            df_money_flow = pd.read_csv(file_name_money_flow)
+            merge_df = StockDataMerge(df_daily, df_money_flow)
+            merge_df = merge_df[merge_df['trade_date'] >= int(pp_data_start_date)]
+            pp_data = StockDataPreProcess(merge_df)
             if len(pp_data) > 0:
                 pp_data.to_csv(stock_pp_file_name)
-                print("%-4d : %s 100%%" % (0, stock_code))
+                if code_index > 0:
+                    print("%-4d : %s 100%%" % (code_index, stock_code))
             else:
-                print("%-4d : %s error" % (0, stock_code))
+                if code_index > 0:
+                    print("%-4d : %s error" % (code_index, stock_code))
 
 def UpdatePreprocessData():
     code_list = StockCodes()
     for code_index in range(0, len(code_list)):
         stock_code = code_list[code_index]
-        stock_download_file_name = FileNameStockDownloadData(stock_code)
-        stock_pp_file_name = FileNameStockPreprocessedData(stock_code)
-        if os.path.exists(stock_download_file_name):
-            download_df = pd.read_csv(stock_download_file_name)
-            if not os.path.exists(stock_pp_file_name):
-                pp_data = StockDataPreProcess(download_df)
-                if len(pp_data) > 0:
-                    pp_data.to_csv(stock_pp_file_name)
-                    print("%-4d : %s 100%%" % (code_index, stock_code))
-                else:
-                    print("%-4d : %s error" % (code_index, stock_code))
+        UpdatePreprocessDataAStock(code_index, stock_code)
 
 def CheckPreprocessDataAStock(stock_pp_file_name):
     if os.path.exists(stock_pp_file_name):
@@ -1462,11 +1469,13 @@ if __name__ == "__main__":
     # print("\n\n\n")
     # Test()
 
-    stock_code = '000119.HK'
-    stock_download_file_name = FileNameStockDownloadData(stock_code)
-    stock_pp_file_name = FileNameStockPreprocessedData(stock_code)
-    download_df = pd.read_csv(stock_download_file_name)
-    pp_data = StockDataPreProcess(download_df)
-    print('len(pp_data) : %d' % len(pp_data))
-    if len(pp_data) > 0:
-        pp_data.to_csv(stock_pp_file_name)
+    # stock_code = '000119.HK'
+    # stock_download_file_name = FileNameStockDownloadData(stock_code)
+    # stock_pp_file_name = FileNameStockPreprocessedData(stock_code)
+    # download_df = pd.read_csv(stock_download_file_name)
+    # pp_data = StockDataPreProcess(download_df)
+    # print('len(pp_data) : %d' % len(pp_data))
+    # if len(pp_data) > 0:
+    #     pp_data.to_csv(stock_pp_file_name)
+
+    DownloadAStocksDataMoneyFlow('600050.SH')

@@ -68,7 +68,7 @@ def build_model(input_layer_shape):
     return model
 
 def train():
-    train_features, train_labels = tushare_data.GetTrainDataBalance(20.0, 5)
+    train_features, train_labels = tushare_data.GetTrainDataBalance(5.0, 1)
 
     mean = train_features.mean(axis=0)
     std = train_features.std(axis=0)
@@ -76,7 +76,7 @@ def train():
     # print("std: {}".format(std.shape))
     train_features = (train_features - mean) / std
 
-    pos_mask = train_labels >= 20.0
+    pos_mask = train_labels >= 5.0
     train_labels = pos_mask
     pos_labels = train_labels[pos_mask]
 

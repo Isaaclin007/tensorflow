@@ -22,8 +22,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # 配置信息
 # test_date = '20160131'
-test_date = '20190324'
-filter_days = 500
+test_date = '20190427'
+filter_days = 1500
 trading_halt_permit_days = 300
 sleep_count_threshold = 1
 breakup_count_threshold = 1
@@ -66,7 +66,7 @@ def GetDownloadMergeData():
     return merge_df
 
 # 生成 preprocessed 集合
-file_name = './temp_data/breakup_filter_merge_pp_data_%s_%s_%u_%u_%u_%u.csv' % \
+file_name = './data/temp/breakup_filter_merge_pp_data_%s_%s_%u_%u_%u_%u.csv' % \
             (test_date, \
             stocks_list_end_date, \
             filter_days, \
@@ -81,7 +81,7 @@ else:
     for code_index in range(0, len(code_list)):
         stock_code = code_list[code_index]
         stock_df = download_merge_data[download_merge_data['ts_code'] == stock_code]
-        stock_pp_data = tushare_data.StockDataPreProcess(stock_df)
+        stock_pp_data = tushare_data.StockDataPreProcess(stock_df, False)
         merge_pp_data = merge_pp_data.append(stock_pp_data)
         print("%-4d : %s 100%% preprocessed" % (code_index, stock_code))
     merge_pp_data.to_csv(file_name)
@@ -127,7 +127,7 @@ def GetBreakupStatusDataSet():
             print("%-4d : %s error len(processed_df): %d" % (code_index, stock_code, len(processed_df)))
     return temp_result_df
 
-file_name = './temp_data/breakup_filter_result_%s_%s_%u_%u_%u_%u.csv' % \
+file_name = './data/temp/breakup_filter_result_%s_%s_%u_%u_%u_%u.csv' % \
             (test_date, \
             stocks_list_end_date, \
             filter_days, \
@@ -147,7 +147,9 @@ for date_index in range(0, len(date_list)):
     temp_date_breakup_count = len(temp_date_history_df)
     row = {'trade_date':temp_date, 'breakup_count':temp_date_breakup_count}
     date_breakup_count_df = date_breakup_count_df.append(row, ignore_index=True)
-plt.figure(dpi=70,figsize=(32,10))
+fig1 = plt.figure(dpi=70,figsize=(32,10))
+ax1 = fig1.add_subplot(1,1,1) 
+ax1.xaxis.set_major_formatter(mdate.DateFormatter('%Y-%m-%d'))
 plt.title('breakup_count')
 plt.xlabel('date')
 plt.ylabel('breakup')

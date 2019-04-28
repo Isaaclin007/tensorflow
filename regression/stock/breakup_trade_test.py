@@ -27,9 +27,9 @@ def GetProprocessedData(ts_code):
         pp_data = pd.read_csv(stock_pp_file_name)
         return pp_data
 
-def TestAStock(ts_code):
+def TestAStockLowLevel(ts_code, print_record):
     tushare_data.DownloadAStocksData(ts_code)
-    tushare_data.UpdatePreprocessDataAStock(ts_code)
+    tushare_data.UpdatePreprocessDataAStock(-1, ts_code)
     pp_data = GetProprocessedData(ts_code)
     sleep_count = 0
     period_trade_count = 0
@@ -58,7 +58,7 @@ def TestAStock(ts_code):
         in_target = pp_data.loc[day_loop,'close_10_avg']
         out_target = pp_data.loc[day_loop,'close_10_avg']
         out_target_pre = pp_data.loc[day_loop+1,'close']
-        close_avg = pp_data.loc[day_loop,'close_200_avg']
+        close_avg = pp_data.loc[day_loop,'close_100_avg']
         out_target_diff = out_target - out_target_pre
         if out_target_diff > 0.0:
             out_target_trend_pre = out_target_trend
@@ -118,22 +118,25 @@ def TestAStock(ts_code):
                 trade_count += 1
                 temp_increase = (out_price/buying_price - 1.0) * 100.0
                 capital_value *= (out_price/buying_price)
-                print("%6u%10s%10s%10s%10u%10.2f%10.2f%10.2f" %( \
-                    trade_count, \
-                    ts_code, \
-                    in_trade_date, \
-                    out_trade_date, \
-                    holding_days, \
-                    buying_price, \
-                    out_price, \
-                    temp_increase))
+                if print_record:
+                    print("%6u%10s%10s%10s%10u%10.2f%10.2f%10.2f" %( \
+                        trade_count, \
+                        ts_code, \
+                        in_trade_date, \
+                        out_trade_date, \
+                        holding_days, \
+                        buying_price, \
+                        out_price, \
+                        temp_increase))
                 increase_sum += temp_increase
                 holding_days_sum += holding_days
             else:
                 holding_days += 1
         test_days += 1
 
-    print("test_days: %u, holding_days_sum: %u, increase: %.2f" % (test_days, holding_days_sum, (capital_value - 1.0)*100.0))
+    compound_inclrease = (capital_value - 1.0)*100.0
+    if print_record:
+        print("test_days: %u, holding_days_sum: %u, increase: %.2f" % (test_days, holding_days_sum, compound_inclrease))
         # print('%8.2f%8.2f%10u%10u%10u%10u' % (\
         #     close, \
         #     close_30_avg, \
@@ -141,9 +144,24 @@ def TestAStock(ts_code):
         #     avg_30_up_continue_count, \
         #     break_up, \
         #     holding))
+    # return compound_inclrease
+    return increase_sum
+
+def TestAStock(ts_code):
+    return TestAStockLowLevel(ts_code, True)
+
+def TestAllStocks():
+    increase_sum = 0.0
+    code_list = tushare_data.StockCodes()
+    for code_index in range(0, len(code_list)):
+        stock_code = code_list[code_index]
+        temp_increase = TestAStockLowLevel(stock_code, False)
+        increase_sum += temp_increase
+        print("%-4d : %s 100%%, %.2f, %.2f" % (code_index, stock_code, temp_increase, increase_sum))
 
 if __name__ == "__main__":
     # TestAStock('600104.SH')
-    TestAStock(sys.argv[1])
+    # TestAStock(sys.argv[1])
+    TestAllStocks()
 
 
