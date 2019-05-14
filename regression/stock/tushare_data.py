@@ -114,7 +114,9 @@ train_data_start_date = '20120101'
 train_data_end_date = '20170101'
 test_data_start_date = '20170101'
 test_data_end_date = '20190414'
-train_test_date = '20190414'
+# train_test_date = '20190414'
+train_test_date = '20190513'
+# train_test_date = CurrentDate()
 predict_date = '20181225'
 
 # stocks_list_end_date = '20140101'
@@ -134,6 +136,33 @@ predict_date = '20181225'
 # predict_date = '20190127'
 
 code_filter = ''
+# 软件服务 wave_test 20180101前测试数据前十
+# code_filter = '000938.SZ,600446.SH,600570.SH,000662.SZ,002195.SZ,600556.SH,000555.SZ,600536.SH,600571.SH'
+# wave_test 20180101前测试数据前20
+# code_filter = '600701.SH,\
+# 600053.SH,\
+# 000025.SZ,\
+# 000938.SZ,\
+# 000584.SZ,\
+# 600862.SH,\
+# 000856.SZ,\
+# 002071.SZ,\
+# 600446.SH,\
+# 600179.SH,\
+# 600745.SH,\
+# 600822.SH,\
+# 000676.SZ,\
+# 002075.SZ,\
+# 600055.SH,\
+# 002113.SZ,\
+# 600570.SH,\
+# 000796.SZ,\
+# 000913.SZ,\
+# 000559.SZ'
+
+# code_filter = '600556.SH,002184.SZ,002232.SZ'
+
+
 # code_filter = '000001.SH,002415,000650,000937,600104'
 # industry_filter = '软件服务,互联网,半导体,电脑设备,百货,仓储物流,电脑设备,电器设备'
 # industry_filter = '半导体,电脑设备'
@@ -180,6 +209,9 @@ industry_filter = '软件服务'
 # industry_filter = '区域地产'
 # industry_filter = '全国地产'
 
+min_circ_mv = 0
+max_circ_mv = 0
+
 
 ts.set_token('230c446ae448ec95357d0f7e804ddeebc7a51ff340b4e6e0913ea2fa')
 
@@ -205,11 +237,16 @@ def TradeDateList(input_end_date, trade_day_num):
 
 def TradeDateListRange(input_start_date, input_end_date):
     pro = ts.pro_api()
-
-    df_trade_cal = pro.trade_cal(exchange = 'SSE', start_date = input_start_date, end_date = input_end_date)
+    print('TradeDateListRange(%s, %s)' % (input_start_date, input_end_date))
+    file_name = './data/trade_date_list_%s_%s.csv' % (input_start_date, input_end_date)
+    if os.path.exists(file_name):
+        df_trade_cal = pd.read_csv(file_name)
+        df_trade_cal['cal_date'] = df_trade_cal['cal_date'].astype(str)
+    else:
+        df_trade_cal = pro.trade_cal(exchange = 'SSE', start_date = input_start_date, end_date = input_end_date)
+        df_trade_cal.to_csv(file_name)
     df_trade_cal = df_trade_cal.sort_index(ascending = False)
     df_trade_cal = df_trade_cal[df_trade_cal['is_open'] == 1]
-    # print(df_trade_cal)
     date_list = df_trade_cal['cal_date'].values
     return date_list
 
@@ -239,22 +276,41 @@ def StockCodesName(input_stocks_list_end_date, input_industry_filter, input_code
 
         industry_filter_en = False
         code_filter_en = False
+        circ_mv_filter_en = False
         if input_industry_filter != '':
             industry_list = input_industry_filter.split(',')
             industry_filter_en = True
         if input_code_filter != '':
             code_filter_list = input_code_filter.split(',')
             code_filter_en = True
+        if min_circ_mv > 0 or max_circ_mv > 0:
+            circ_mv_filter_en = True
+            DownloadATradeDayDataDailyBasic('20190510')
+            daily_basic_df = LoadATradeDayDataDailyBasic('20190510')
 
         code_valid_list = []
         for iloop in range(0, len(load_df)):
+            temp_code = load_df['ts_code'][iloop]
             temp_code_valid = True
             if industry_filter_en:
                 if not load_df['industry'][iloop] in industry_list:
                     temp_code_valid = False
             if code_filter_en:
-                if not StockCodeFilter(load_df['ts_code'][iloop], code_filter_list):
+                if not StockCodeFilter(temp_code, code_filter_list):
                     temp_code_valid = False
+            if circ_mv_filter_en:
+                find_df = daily_basic_df[daily_basic_df['ts_code'] == temp_code]
+                find_df = find_df.copy()
+                find_df = find_df.reset_index(drop=True)
+                if len(find_df) == 0:
+                    temp_code_valid = False
+                else:
+                    temp_circ_mv = find_df.loc[0, 'circ_mv']
+                    if min_circ_mv > 0 and temp_circ_mv < min_circ_mv:
+                        temp_code_valid = False
+                    if max_circ_mv > 0 and temp_circ_mv > max_circ_mv:
+                        temp_code_valid = False
+                
             code_valid_list.append(temp_code_valid)
         load_df = load_df[code_valid_list]
         print(load_df)
@@ -345,7 +401,7 @@ def DownloadAStocksDataMoneyFlow(ts_code):
 
 def DownloadAStocksData(ts_code):
     DownloadAStocksDataDaily(ts_code)
-    # DownloadAStocksDataDailyBasic(ts_code)
+    DownloadAStocksDataDailyBasic(ts_code)
     DownloadAStocksDataMoneyFlow(ts_code)
 
 def DownloadATradeDayDataDailyBasic(input_trade_date):
@@ -381,6 +437,11 @@ def LoadATradeDayData(trade_date):
     # file_name = FileNameTradeDayDownloadDataMoneyFlow(trade_date)
     # moneyflow_df = pd.read_csv(file_name)
     # return StockDataMerge(daily_df, moneyflow_df)
+
+def LoadATradeDayDataDailyBasic(trade_date):
+    file_name = FileNameTradeDayDownloadDataDailyBasic(trade_date)
+    daily_df = pd.read_csv(file_name)
+    return daily_df
 
 def DownloadTrainTestData():
     code_list = StockCodes()
@@ -1042,13 +1103,20 @@ def OffsetTradeDate(ref_date, day_offset):
 
 def UpdatePreprocessDataAStock(code_index, stock_code):
     file_name_daily = FileNameStockDownloadDataDaily(stock_code)
+    file_name_daily_basic = FileNameStockDownloadDataDailyBasic(stock_code)
     file_name_money_flow = FileNameStockDownloadDataMoneyFlow(stock_code)
     stock_pp_file_name = FileNameStockPreprocessedData(stock_code)
-    if os.path.exists(file_name_daily) and os.path.exists(file_name_money_flow):
+    if os.path.exists(file_name_daily) and \
+       os.path.exists(file_name_daily_basic) and \
+       os.path.exists(file_name_money_flow):
         if not os.path.exists(stock_pp_file_name):
             df_daily = pd.read_csv(file_name_daily)
+            df_daily_basic = pd.read_csv(file_name_daily_basic)
             df_money_flow = pd.read_csv(file_name_money_flow)
-            merge_df = StockDataMerge(df_daily, df_money_flow)
+            df_daily_basic.drop(['close'],axis=1,inplace=True)
+            merge_df = StockDataMerge(df_daily, df_daily_basic)
+            merge_df = StockDataMerge(merge_df, df_money_flow)
+            # print(merge_df.dtypes)
             merge_df = merge_df[merge_df['trade_date'] >= int(pp_data_start_date)]
             pp_data = StockDataPreProcess(merge_df)
             if len(pp_data) > 0:

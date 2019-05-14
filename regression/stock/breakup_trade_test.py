@@ -31,6 +31,11 @@ def TestAStockLowLevel(ts_code, print_record):
     tushare_data.DownloadAStocksData(ts_code)
     tushare_data.UpdatePreprocessDataAStock(-1, ts_code)
     pp_data = GetProprocessedData(ts_code)
+    # pp_data = pp_data[pp_data['trade_date'] >= 20150101]
+    # pp_data = pp_data[pp_data['trade_date'] < 20160101]
+
+    pp_data = pp_data.copy()
+    pp_data = pp_data.reset_index(drop=True)
     sleep_count = 0
     period_trade_count = 0
     sleep_count_threshold = 5
@@ -145,19 +150,25 @@ def TestAStockLowLevel(ts_code, print_record):
         #     break_up, \
         #     holding))
     # return compound_inclrease
-    return increase_sum
+    return increase_sum, holding_days_sum
 
 def TestAStock(ts_code):
     return TestAStockLowLevel(ts_code, True)
 
 def TestAllStocks():
     increase_sum = 0.0
+    holding_days_sum = 0
     code_list = tushare_data.StockCodes()
     for code_index in range(0, len(code_list)):
         stock_code = code_list[code_index]
-        temp_increase = TestAStockLowLevel(stock_code, False)
+        temp_increase, temp_holding_days = TestAStockLowLevel(stock_code, False)
         increase_sum += temp_increase
-        print("%-4d : %s 100%%, %.2f, %.2f" % (code_index, stock_code, temp_increase, increase_sum))
+        holding_days_sum += temp_holding_days
+        if holding_days_sum > 0:
+            daily_increase = increase_sum/holding_days_sum
+        else:
+            daily_increase = 0.0
+        print("%-4d : %s 100%%, %.2f, %.2f, %.2f" % (code_index, stock_code, temp_increase, increase_sum, daily_increase))
 
 if __name__ == "__main__":
     # TestAStock('600104.SH')

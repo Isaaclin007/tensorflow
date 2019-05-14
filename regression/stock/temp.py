@@ -252,5 +252,9 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # print(sys.argv)
 
 
-df = pro.moneyflow(ts_code='002149.SZ', start_date='20190115', end_date='20190315')
+# df = pro.moneyflow(ts_code='002149.SZ', start_date='20190115', end_date='20190315')
+
+for iloop in range(0,10):
+    iloop += 1
+    print(iloop)
 

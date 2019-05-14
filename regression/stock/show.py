@@ -9,6 +9,7 @@ import os
 import time
 import sys
 import tushare_data
+import wave_kernel
 import random
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -53,12 +54,12 @@ def ShowAStock(ts_code):
     plt.grid(True)
 
     # plt.plot(xs, pp_data['open'].values, label='open', linewidth=1)
-    plt.plot(xs, pp_data['close'].values, label='close', linewidth=1)
-    plt.plot(xs, pp_data['close_5_avg'].values, label='5', linewidth=1)
+    plt.plot(xs, pp_data['close'].values, label='close', linewidth=2)
+    # plt.plot(xs, pp_data['close_5_avg'].values, label='5', linewidth=1)
     plt.plot(xs, pp_data['close_10_avg'].values, label='10', linewidth=1)
     # plt.plot(xs, pp_data['close_30_avg'].values, label='30', linewidth=1)
     # plt.plot(xs, pp_data['close_100_avg'].values, label='100', linewidth=1)
-    plt.plot(xs, pp_data['close_200_avg'].values, label='200', linewidth=1)
+    plt.plot(xs, pp_data['close_100_avg'].values, label='100', linewidth=1)
 
     # pp_data['vol'] = pp_data['vol'] / pp_data.loc[0,'vol_100_avg'] * pp_data.loc[0,'close_100_avg'] * 0.2
     close_max = pp_data['close'].max()
@@ -75,6 +76,16 @@ def ShowAStock(ts_code):
     plt.plot(xs, pp_data['vol_10_avg'].values, label='v_10', linewidth=1)
     # plt.plot(xs, pp_data['vol_200_avg'].values, label='v_200', linewidth=1)
     # plt.plot(xs, pp_data['sell_elg_vol_30_avg'].values, label='ssm_vol', linewidth=1)
+
+    wave_kernel.AppendWaveData(pp_data)
+    peak_data = pp_data[pp_data['wave_extreme'] == wave_kernel.EXTREME_PEAK]
+    xs = [datetime.strptime(d, '%Y%m%d').date() for d in peak_data['trade_date'].astype(str).values]
+    plt.plot(xs, peak_data[wave_kernel.wave_index].values, label='peak', linewidth=1)
+
+    valley_data = pp_data[pp_data['wave_extreme'] == wave_kernel.EXTREME_VALLEY]
+    xs = [datetime.strptime(d, '%Y%m%d').date() for d in valley_data['trade_date'].astype(str).values]
+    plt.plot(xs, valley_data[wave_kernel.wave_index].values, label='valley', linewidth=1)
+
     plt.gcf().autofmt_xdate()
     plt.legend()
     #plt.ylim([0,5])
