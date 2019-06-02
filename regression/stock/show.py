@@ -71,20 +71,20 @@ def ShowAStock(ts_code):
     pp_data['vol_200_avg'] = pp_data['vol_200_avg'] * vol_ratio
     # pp_data['sell_sm_vol_30_avg'] = (pp_data['sell_sm_vol_30_avg'] - pp_data['buy_sm_vol_30_avg']) * vol_ratio * 10.0
     # pp_data['sell_elg_vol_30_avg'] = (pp_data['sell_elg_vol_30_avg'] - pp_data['buy_elg_vol_30_avg']) * vol_ratio * 10.0
-    # plt.plot(xs, pp_data['vol'].values, label='vol', linewidth=1)
-    # plt.plot(xs, pp_data['vol_5_avg'].values, label='v_5', linewidth=1)
-    plt.plot(xs, pp_data['vol_10_avg'].values, label='v_10', linewidth=1)
+    plt.plot(xs, pp_data['vol'].values, label='vol', linewidth=1)
+    plt.plot(xs, pp_data['vol_5_avg'].values, label='v_5', linewidth=1)
+    # plt.plot(xs, pp_data['vol_10_avg'].values, label='v_10', linewidth=1)
     # plt.plot(xs, pp_data['vol_200_avg'].values, label='v_200', linewidth=1)
     # plt.plot(xs, pp_data['sell_elg_vol_30_avg'].values, label='ssm_vol', linewidth=1)
 
-    wave_kernel.AppendWaveData(pp_data)
-    peak_data = pp_data[pp_data['wave_extreme'] == wave_kernel.EXTREME_PEAK]
-    xs = [datetime.strptime(d, '%Y%m%d').date() for d in peak_data['trade_date'].astype(str).values]
-    plt.plot(xs, peak_data[wave_kernel.wave_index].values, label='peak', linewidth=1)
+    # wave_kernel.AppendWaveData(pp_data)
+    # peak_data = pp_data[pp_data['wave_extreme'] == wave_kernel.EXTREME_PEAK]
+    # xs = [datetime.strptime(d, '%Y%m%d').date() for d in peak_data['trade_date'].astype(str).values]
+    # plt.plot(xs, peak_data[wave_kernel.wave_index].values, label='peak', linewidth=1)
 
-    valley_data = pp_data[pp_data['wave_extreme'] == wave_kernel.EXTREME_VALLEY]
-    xs = [datetime.strptime(d, '%Y%m%d').date() for d in valley_data['trade_date'].astype(str).values]
-    plt.plot(xs, valley_data[wave_kernel.wave_index].values, label='valley', linewidth=1)
+    # valley_data = pp_data[pp_data['wave_extreme'] == wave_kernel.EXTREME_VALLEY]
+    # xs = [datetime.strptime(d, '%Y%m%d').date() for d in valley_data['trade_date'].astype(str).values]
+    # plt.plot(xs, valley_data[wave_kernel.wave_index].values, label='valley', linewidth=1)
 
     plt.gcf().autofmt_xdate()
     plt.legend()

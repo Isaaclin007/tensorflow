@@ -180,6 +180,78 @@ V1.0.12
             20亿内117支：12.87
             10亿内4支：20.55
             15亿内25支：20.64
+    筛选方案：2016年财报较前两年净利润增加
+        min_wave_width=2， 20160101-20190101
+            软件服务40支平均收益：-10.59
+            软件服务40选平均收益：-10.59
             
+V1.0.13
+2019-05-17
+1. 以 wave_test 的测试数据作为训练数据训练模型
+    特征：FEATURE_G0_10D5
+    label：wave_test 收益
+    对比测试：
+        min_wave_width=2， 20180101-20190101
+            所有行业1566支平均收益：-4.79
+            regression 预测大于10的平均收益：1 左右
+        min_wave_width=2， 20180101-20190411
+            所有行业1566支平均收益：1.65
+            regression 预测大于10的平均收益：4.0
+    特征：FEATURE_G0_10D10
+    label：wave_test 收益
+    对比测试：
+        stocks_list_end_date = '20160101'
+        训练数据：20000101-20180101前，测试数据：20180101-20190414
+            min_wave_width=2，
+            trade_off_threshold = 0
+            up_100avg_condition = True
+            up_200avg_condition = False
+                所有行业2797支平均每次交易收益：1.42，平均每天收益：0.14
+                regression 预测大于5的平均收益：3.56，平均每天收益：0.34
 
+            min_wave_width=2，
+            trade_off_threshold = 0
+            up_100avg_condition = False
+            up_200avg_condition = False
+                所有行业2797支平均每次交易收益： 0.69 ，平均每天收益： 0.07
+                regression 预测大于5的平均收益： 2.63 ，平均每天收益： 0.24
+
+            min_wave_width=5，
+            trade_off_threshold = 0
+            up_100avg_condition = True
+            up_200avg_condition = False
+                所有行业2797支平均每次交易收益： -0.25 ，平均每天收益： -0.01
+                regression 预测大于5的平均收益： 2.38 ，平均每天收益： 0.14
+
+2. 分析 wave_test 交易频率和收益率的关系
+    图表显示，一段时间内，每天的持仓数量和所持仓的这些股票的平局收益率
+3. 特征加入holding_stocks_num
+    已完成
+
+4. wave_test_daily 的预测算法：
+    首先生成 wave_test_daily 的 data_set，与训练用 data_set 结构类似，区别是加入未开始和未结束的交易记录，wave_test_daily
+    对 data_set 进行测试。
+    设计方案：
+        1. wave_kernel.TradeTest 接口增加设置 save_unfinished_dataset 默认值 False
+        2. 添加 SaveDailyDataset 和 GetDailyDataset 接口
+        交易类型    预买入日期      买入日期    卖出日期
+        已完成      有效日期       有效日期     有效日期
+        未开始      有效日期        0          0
+        未完成      有效日期        有效日期    0
+
+5. wave_kernel 中加入成交量的判断，对比测试：
+        不判断成交量：平均每次收益：1.41
+        最近5日平均成交量/前5日最近成交量>1.2：平均每次收益：3.9
+
+6. wave 数据集的采集，在pre_on_date 后采集n天的dateset，天数通过 wave_kernel.trade_collect_dataset_num 控制
+
+7. wave_test_daily 有bug，持有数量和 wave_test 的数量不一致。
+
+8. 优化 wave_test 交易频率和收益率的关系
+    数据源：dataset
+    获取交易日列表，计算每个交易日的 
+        1.持有数量，
+        2.当天 pre_on 的交易平均收益率，
+        3.计算未来3天 pre_on 的交易平均收益率
+            
 

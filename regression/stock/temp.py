@@ -254,7 +254,47 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # df = pro.moneyflow(ts_code='002149.SZ', start_date='20190115', end_date='20190315')
 
-for iloop in range(0,10):
-    iloop += 1
-    print(iloop)
+# data_set_list = []
+# for iloop in range(0,10):
+#     data_unit = []
+#     for kloop in range(0,10):
+#         data_unit.append(iloop * 10 + kloop)
+#     data_set_list.append(data_unit)
+# data_set = np.array(data_set_list)
 
+# pos1 = data_set[:,5]> 30
+# pos2 = data_set[:,5]< 50
+# pos3 = pos1 & pos2
+
+# print(pos1)
+# print(pos2)
+# print(pos3)
+
+date_list = tushare_data.TradeDateListRange('20170101', '20180201')
+print(date_list)
+
+# a = [1,2,3,4]
+# b = [10,20,30,40]
+
+# na = np.array(a)
+# nb = np.array(b)
+# nc = np.append(na, nb, axis = 0)
+# print('nc:')
+# print(nc)
+# na = na.reshape((4,1))
+# nb = nb.reshape((4,1))
+# print("na: {}".format(na.shape))
+
+# print('na:')
+# print(na)
+
+# print('nb:')
+# print(nb)
+
+# nc = np.append(na, nb, axis = 0)
+# print('nc:')
+# print(nc)
+
+# nd = np.append(na, nb, axis = 1)
+# print('nd:')
+# print(nd)

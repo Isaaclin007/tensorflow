@@ -21,10 +21,9 @@ sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
 # 配置信息
-start_date = '20190101'
-# end_date = '20170101'
-end_date = tushare_data.CurrentDate()
-stocks_list_end_date = '20100101'
+start_date = '20180101'
+end_date = '20190411'
+# end_date = tushare_data.CurrentDate()
 code_list = tushare_data.StockCodes()
 
 
@@ -51,10 +50,9 @@ def GetDownloadMergeData():
 
 # 生成 preprocessed 集合
 def GetPreprocessedMergeData():
-    file_name = './data/temp/daily_data_merge_pp_data_%s_%s_%s.csv' % \
+    file_name = './data/temp/daily_data_merge_pp_data_%s_%s.csv' % \
                 (start_date, \
-                end_date, \
-                stocks_list_end_date)
+                end_date)
     if os.path.exists(file_name):
         merge_pp_data = pd.read_csv(file_name)
     else:
@@ -64,8 +62,9 @@ def GetPreprocessedMergeData():
             stock_code = code_list[code_index]
             stock_df = download_merge_data[download_merge_data['ts_code'] == stock_code]
             stock_pp_data = tushare_data.StockDataPreProcess(stock_df, False)
-            merge_pp_data = merge_pp_data.append(stock_pp_data)
-            print("%-4d : %s 100%% preprocessed" % (code_index, stock_code))
+            if len(stock_pp_data) > 0:
+                merge_pp_data = merge_pp_data.append(stock_pp_data)
+                print("%-4d : %s 100%% preprocessed" % (code_index, stock_code))
         merge_pp_data.to_csv(file_name)
     return merge_pp_data
 
@@ -82,7 +81,13 @@ def GetPreprocessedData(merge_pp_data, ts_code):
     return pp_data_copy
 
 
-
+if __name__ == "__main__":
+    df = GetDownloadMergeData()
+    stock_df = GetDownloadData(df, '002070.SZ')
+    # df = GetPreprocessedMergeData()
+    # stock_df = GetPreprocessedData(df, '002070.SZ')
+    print(stock_df)
+    stock_df.to_csv('./temp.csv')
         
 
 

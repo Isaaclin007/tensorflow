@@ -19,7 +19,7 @@ preprocess_ref_days = 200
 reload(sys)
 sys.setdefaultencoding('utf-8')
 max_predict_day_count = 30  # 决定train_data 和 test_data 的predict_day_count
-predict_day_count = 2  # 预测未来几日的数据
+predict_day_count = 1  # 预测未来几日的数据
 referfence_feature_count = 1
 test_acture_data_with_feature = False
 train_a_stock_min_data_num = 400
@@ -41,44 +41,80 @@ FEATURE_G0_10W5_TO_100_AVG = 8
 FEATURE_G0_100D5_TO_100_AVG = 9
 FEATURE_G0_100D2_TO_100_AVG = 10
 FEATURE_G0_10D14_TO_100_AVG = 11
+FEATURE_G0_10D10 = 12
+FEATURE_G0_10D11_AVG = 13
 
-feature_type = FEATURE_G0_10D14_TO_100_AVG
+feature_type = FEATURE_G0_10D11_AVG
 if feature_type == FEATURE_G7_10D8:
     feature_size = 7 + (8 * 10)
     feature_relate_days = 10
+    use_daily_basic = True
+    use_money_flow = False
 elif feature_type == FEATURE_G2_10D2:
     feature_size = 2 + (2 * 10)
     feature_relate_days = 10
+    use_daily_basic = True
+    use_money_flow = False
 elif feature_type == FEATURE_G0_10D2:
     feature_size = 0 + (2 * 10)
     feature_relate_days = 10
+    use_daily_basic = True
+    use_money_flow = False
 elif feature_type == FEATURE_G2_10D8:
     feature_size = 2 + (8 * 10)
     feature_relate_days = 10
+    use_daily_basic = True
+    use_money_flow = False
 elif feature_type == FEATURE_G7_10AVG102_10D8:
     feature_size = 7 + (2 * 10) + (8 * 10)
     feature_relate_days = 100
+    use_daily_basic = True
+    use_money_flow = False
 elif feature_type == FEATURE_G0_10D5:
     feature_size = (5 * 10)
     feature_relate_days = 10
+    use_daily_basic = True
+    use_money_flow = False
 elif feature_type == FEATURE_G0_10D5_TO_30_AVG:
     feature_size = (5 * 10)
     feature_relate_days = 10
+    use_daily_basic = True
+    use_money_flow = False
 elif feature_type == FEATURE_G0_10D5_TO_100_AVG:
     feature_size = (5 * 10)
     feature_relate_days = 10
+    use_daily_basic = False
+    use_money_flow = False
 elif feature_type == FEATURE_G0_10W5_TO_100_AVG:
     feature_size = (5 * 10)
     feature_relate_days = 5 * 10
+    use_daily_basic = False
+    use_money_flow = False
 elif feature_type == FEATURE_G0_100D5_TO_100_AVG:
     feature_size = (5 * 100)
     feature_relate_days = 100
+    use_daily_basic = False
+    use_money_flow = False
 elif feature_type == FEATURE_G0_100D2_TO_100_AVG:
     feature_size = (2 * 100)
     feature_relate_days = 100
+    use_daily_basic = False
+    use_money_flow = False
 elif feature_type == FEATURE_G0_10D14_TO_100_AVG:
     feature_size = (14 * 10)
     feature_relate_days = 100
+    use_daily_basic = False
+    use_money_flow = True
+elif feature_type == FEATURE_G0_10D10:
+    feature_size = (10 * 10)
+    feature_relate_days = 10
+    use_daily_basic = False
+    use_money_flow = False
+elif feature_type == FEATURE_G0_10D11_AVG:
+    feature_size = (11 * 10)
+    feature_relate_days = 10
+    use_daily_basic = False
+    use_money_flow = False
 
 LABEL_PRE_CLOSE_2_TD_CLOSE = 0
 LABEL_T1_OPEN_2_TD_CLOSE = 1
@@ -108,14 +144,14 @@ def CurrentDate():
 # train_test_date = '20190111'
 # predict_date = '20190111'
 
-pp_data_start_date = '20120101'
-stocks_list_end_date = '20090101'
+pp_data_start_date = '20000101'
+stocks_list_end_date = '20160101'
 train_data_start_date = '20120101'
 train_data_end_date = '20170101'
 test_data_start_date = '20170101'
 test_data_end_date = '20190414'
-# train_test_date = '20190414'
-train_test_date = '20190513'
+train_test_date = '20190414'
+# train_test_date = '20190513'
 # train_test_date = CurrentDate()
 predict_date = '20181225'
 
@@ -136,6 +172,7 @@ predict_date = '20181225'
 # predict_date = '20190127'
 
 code_filter = ''
+
 # 软件服务 wave_test 20180101前测试数据前十
 # code_filter = '000938.SZ,600446.SH,600570.SH,000662.SZ,002195.SZ,600556.SH,000555.SZ,600536.SH,600571.SH'
 # wave_test 20180101前测试数据前20
@@ -168,7 +205,7 @@ code_filter = ''
 # industry_filter = '半导体,电脑设备'
 industry_filter = ''
 # industry_filter = 'hk'
-industry_filter = '软件服务'
+# industry_filter = '软件服务'
 # industry_filter = '百货'
 # industry_filter = '半导体'
 # industry_filter = '保险'
@@ -356,7 +393,12 @@ def FileNameTradeDayDownloadDataMoneyFlow(trade_date):
 
 # 对于PP data，只关注stock code、结束时间
 def FileNameStockPreprocessedData(stock_code):
-    temp_file_name = './data/preprocessed/' + stock_code + '_' + pp_data_start_date + '_' + train_test_date + '.csv'
+    temp_file_name = './data/preprocessed/%s_%s_%s_%u_%u.csv' %(\
+        stock_code, \
+        pp_data_start_date, \
+        train_test_date, \
+        int(use_daily_basic), \
+        int(use_money_flow))
     return temp_file_name
 
 def DownloadAStocksDataDaily(ts_code):
@@ -401,8 +443,10 @@ def DownloadAStocksDataMoneyFlow(ts_code):
 
 def DownloadAStocksData(ts_code):
     DownloadAStocksDataDaily(ts_code)
-    DownloadAStocksDataDailyBasic(ts_code)
-    DownloadAStocksDataMoneyFlow(ts_code)
+    if use_daily_basic:
+        DownloadAStocksDataDailyBasic(ts_code)
+    if use_money_flow:
+        DownloadAStocksDataMoneyFlow(ts_code)
 
 def DownloadATradeDayDataDailyBasic(input_trade_date):
     pro = ts.pro_api()
@@ -574,6 +618,8 @@ def StockDataPreProcess(stock_data_df, use_money_flow = True, use_turnover_rate_
         src_df_2['turnover_rate_f_5']=0.0
     src_df_2['vol_5']=0.0
     src_df=src_df_2.copy()
+    if len(src_df) < preprocess_ref_days:
+        return src_df[0:0]
 
     for day_loop in range(0, len(src_df)):
         for col_name in src_float_col_names:
@@ -765,6 +811,13 @@ def AppendFeature( src_df, feature_day_pointer, data_unit):
         temp_index = feature_day_pointer
         base_close = src_df['close_100_avg'][feature_day_pointer]
         base_vol = src_df['vol_100_avg'][feature_day_pointer]
+        if base_close == 0.0 or base_vol == 0.0:
+            # print(src_df)
+            print("feature_day_pointer: %u" % feature_day_pointer)
+            print("ts_code: %s" % src_df['ts_code'][feature_day_pointer])
+            print("trade_date: %s" % src_df['trade_date'][feature_day_pointer])
+            print("close_100_avg: %f" % src_df['close_100_avg'][feature_day_pointer])
+            print("vol_100_avg: %f" % src_df['vol_100_avg'][feature_day_pointer])
         for iloop in range(0, 10):                
             temp_index=feature_day_pointer+iloop
             data_unit.append(src_df['open'][temp_index] / base_close)
@@ -782,6 +835,35 @@ def AppendFeature( src_df, feature_day_pointer, data_unit):
             data_unit.append(src_df['buy_elg_vol'][temp_index] / temp_vol)
             data_unit.append(src_df['sell_elg_vol'][temp_index] / temp_vol)
             data_unit.append(src_df['net_mf_vol'][temp_index] / temp_vol)
+    elif feature_type == FEATURE_G0_10D10:
+        for iloop in range(0, 10):                
+            temp_index=feature_day_pointer+iloop
+            data_unit.append(src_df['open'][temp_index])
+            data_unit.append(src_df['close'][temp_index])
+            data_unit.append(src_df['high'][temp_index])
+            data_unit.append(src_df['low'][temp_index])
+            data_unit.append(src_df['vol'][temp_index])
+            data_unit.append(src_df['close_5_avg'][temp_index])
+            data_unit.append(src_df['close_10_avg'][temp_index])
+            data_unit.append(src_df['close_30_avg'][temp_index])
+            data_unit.append(src_df['close_100_avg'][temp_index])
+            data_unit.append(src_df['close_200_avg'][temp_index])
+    elif feature_type == FEATURE_G0_10D11_AVG:
+        base_close = src_df['close_100_avg'][feature_day_pointer]
+        base_vol = src_df['vol_100_avg'][feature_day_pointer]
+        for iloop in range(0, 10):                
+            temp_index=feature_day_pointer+iloop
+            data_unit.append(src_df['open'][temp_index] / base_close)
+            data_unit.append(src_df['close'][temp_index] / base_close)
+            data_unit.append(src_df['high'][temp_index] / base_close)
+            data_unit.append(src_df['low'][temp_index] / base_close)
+            data_unit.append(src_df['vol'][temp_index] / base_vol)
+            data_unit.append(src_df['vol_5_avg'][temp_index] / base_vol)
+            data_unit.append(src_df['vol_10_avg'][temp_index] / base_vol)
+            data_unit.append(src_df['vol_30_avg'][temp_index] / base_vol)
+            data_unit.append(src_df['close_5_avg'][temp_index] / base_close)
+            data_unit.append(src_df['close_10_avg'][temp_index] / base_close)
+            data_unit.append(src_df['close_30_avg'][temp_index] / base_close)
         
 def AppendLabel( src_df, day_index, data_unit):
     feature_day_pointer = day_index + max_predict_day_count
@@ -1102,30 +1184,38 @@ def OffsetTradeDate(ref_date, day_offset):
     return temp_list[day_offset]
 
 def UpdatePreprocessDataAStock(code_index, stock_code):
-    file_name_daily = FileNameStockDownloadDataDaily(stock_code)
-    file_name_daily_basic = FileNameStockDownloadDataDailyBasic(stock_code)
-    file_name_money_flow = FileNameStockDownloadDataMoneyFlow(stock_code)
     stock_pp_file_name = FileNameStockPreprocessedData(stock_code)
-    if os.path.exists(file_name_daily) and \
-       os.path.exists(file_name_daily_basic) and \
-       os.path.exists(file_name_money_flow):
-        if not os.path.exists(stock_pp_file_name):
-            df_daily = pd.read_csv(file_name_daily)
+    if not os.path.exists(stock_pp_file_name):
+        file_name_daily = FileNameStockDownloadDataDaily(stock_code)
+        if not os.path.exists(file_name_daily):
+            return
+        merge_df = pd.read_csv(file_name_daily)
+        if use_daily_basic:
+            file_name_daily_basic = FileNameStockDownloadDataDailyBasic(stock_code)
+            if not os.path.exists(file_name_daily_basic):
+                return
             df_daily_basic = pd.read_csv(file_name_daily_basic)
-            df_money_flow = pd.read_csv(file_name_money_flow)
             df_daily_basic.drop(['close'],axis=1,inplace=True)
-            merge_df = StockDataMerge(df_daily, df_daily_basic)
+            merge_df = StockDataMerge(merge_df, df_daily_basic)
+        if use_money_flow:
+            file_name_money_flow = FileNameStockDownloadDataMoneyFlow(stock_code)
+            if not os.path.exists(file_name_money_flow):
+                return
+            df_money_flow = pd.read_csv(file_name_money_flow)
             merge_df = StockDataMerge(merge_df, df_money_flow)
-            # print(merge_df.dtypes)
-            merge_df = merge_df[merge_df['trade_date'] >= int(pp_data_start_date)]
-            pp_data = StockDataPreProcess(merge_df)
-            if len(pp_data) > 0:
-                pp_data.to_csv(stock_pp_file_name)
-                if code_index > 0:
-                    print("%-4d : %s 100%%" % (code_index, stock_code))
-            else:
-                if code_index > 0:
-                    print("%-4d : %s error" % (code_index, stock_code))
+        
+        merge_df = merge_df[merge_df['trade_date'] >= int(pp_data_start_date)]
+        pp_data = StockDataPreProcess(merge_df, use_daily_basic, use_money_flow)
+        if len(pp_data) > 0:
+            pp_data.to_csv(stock_pp_file_name)
+            if code_index > 0:
+                print("%-4d : %s 100%%" % (code_index, stock_code))
+        else:
+            if code_index > 0:
+                print("%-4d : %s error" % (code_index, stock_code))
+    else:
+        if code_index > 0:
+            print("%-4d : %s 100%%" % (code_index, stock_code))
 
 def UpdatePreprocessData():
     code_list = StockCodes()
@@ -1359,29 +1449,29 @@ def GetTestData():
 
     return test_data
 
-def GetAStockFeatures(ts_code, input_date):
-    pro = ts.pro_api()
-    temp_file_name = './download_data/' + ts_code + '_' + input_date + '.csv'
-    if os.path.exists(temp_file_name):
-        df_merge = pd.read_csv(temp_file_name)
-    else:
-        start_date = '19000101'
-        df_basic=pro.daily_basic(ts_code = ts_code, start_date = start_date, end_date = input_date)
-        df = pro.daily(ts_code = ts_code, start_date = start_date, end_date = input_date)
-        if len(df_basic) != len(df) :
-            print("DownloadAStocksData.error.1")
-            return
-        df.drop(['close','ts_code'],axis=1,inplace=True)
-        df_merge = pd.merge(df_basic, df, left_on='trade_date', right_on='trade_date')
-        df_merge.to_csv(temp_file_name)
+# def GetAStockFeatures(ts_code, input_date):
+#     pro = ts.pro_api()
+#     temp_file_name = './download_data/' + ts_code + '_' + input_date + '.csv'
+#     if os.path.exists(temp_file_name):
+#         df_merge = pd.read_csv(temp_file_name)
+#     else:
+#         start_date = '19000101'
+#         df_basic=pro.daily_basic(ts_code = ts_code, start_date = start_date, end_date = input_date)
+#         df = pro.daily(ts_code = ts_code, start_date = start_date, end_date = input_date)
+#         if len(df_basic) != len(df) :
+#             print("DownloadAStocksData.error.1")
+#             return
+#         df.drop(['close','ts_code'],axis=1,inplace=True)
+#         df_merge = pd.merge(df_basic, df, left_on='trade_date', right_on='trade_date')
+#         df_merge.to_csv(temp_file_name)
 
-    pp_data = StockDataPreProcess(df_merge)
-    test_data_list = []
-    for day_loop in range(0, 20):
-        data_unit = GetAFeature(pp_data, day_loop, FEATURE_TYPE_PREDICT)
-        test_data_list.append(data_unit)
-    np_data = np.array(test_data_list)
-    return np_data
+#     pp_data = StockDataPreProcess(df_merge)
+#     test_data_list = []
+#     for day_loop in range(0, 20):
+#         data_unit = GetAFeature(pp_data, day_loop, FEATURE_TYPE_PREDICT)
+#         test_data_list.append(data_unit)
+#     np_data = np.array(test_data_list)
+#     return np_data
 
 
 
@@ -1511,6 +1601,16 @@ def UpdateFutTrainTestData():
     np.save(FileNameTrainData(), train_data)
     print("test_data: {}".format(test_data.shape))
     np.save(FileNameTestData(), test_data)
+
+def Features10D14To10D5(features):
+    for iloop in range(0, 10):
+        temp_offset = iloop * 14
+        temp_featrue = features[:,  temp_offset: temp_offset + 5]
+        if iloop == 0:
+            output_features = temp_featrue
+        else:
+            output_features = np.append(output_features, temp_featrue, axis=1)
+    return output_features
 
 def Test():
     # pro = ts.pro_api()

@@ -173,6 +173,10 @@ def TestAllStocks():
 if __name__ == "__main__":
     # TestAStock('600104.SH')
     # TestAStock(sys.argv[1])
-    TestAllStocks()
+    if len(sys.argv) > 1:
+        TestAStock(sys.argv[1])
+    else:
+        # TestAllStocksDailyData(False)
+        TestAllStocks()
 
 

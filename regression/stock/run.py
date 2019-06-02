@@ -12,24 +12,11 @@ import sys
 import tushare_data
 import train
 import test
+import wave_test
+import wave_test_regression
+import wave_kernel
 
-
-tushare_data.UpdateTrainTestData()
-print("\n")
-
-# test_capital_increase = []
-# for iloop in range(0, 1):
-#     train.train()
-#     test_capital_increase.append(test.TestEntry(0, 1, False))
-# print('\ntest_capital_increase:')
-# for iloop in range(0, len(test_capital_increase)):
-#     print('capital_increase[%d]: %.2f' % (iloop, test_capital_increase[iloop]))
-
-# print('\nmean: %.2f' % np.mean(test_capital_increase))
-
-# print('\nvar: %.2f' % np.var(test_capital_increase))
-
-train.train()
-test.TestEntry(0, 1, True)
+tushare_data.UpdatePreprocessData()
+wave_test.TestAllStocks()
 
 

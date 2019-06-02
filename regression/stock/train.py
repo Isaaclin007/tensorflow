@@ -11,6 +11,7 @@ import time
 import sys
 import tushare_data
 import math
+import wave_kernel
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -98,26 +99,29 @@ def build_model(input_layer_shape):
         # keras.layers.Dense(128, activation=tf.nn.relu),
         # keras.layers.Dense(64, activation=tf.nn.relu),
         # keras.layers.Dense(32, activation=tf.nn.relu),
-        # keras.layers.Dense(16, activation=tf.nn.relu),
+        # keras.layers.Dense(8, activation=tf.nn.relu),
+        # keras.layers.Dense(4, activation=tf.nn.relu),
         keras.layers.Dense(1)
     ])
 
-    optimizer = tf.train.RMSPropOptimizer(0.001)
+    optimizer = tf.train.RMSPropOptimizer(0.01)
 
-    # model.compile(loss='mse',
-    #                 optimizer=optimizer,
-    #                 metrics=['mae'])
+    model.compile(loss='mse',
+                    optimizer=optimizer,
+                    metrics=['mae'])
     # model.compile(loss='mae',
     #                 optimizer=optimizer,
     #                 metrics=['mae'])
-    model.compile(loss=mystockloss,
-                    optimizer=optimizer,
-                    metrics=[mystockloss])
-                    # metrics=['mae'])
+    # model.compile(loss=mystockloss,
+    #                 optimizer=optimizer,
+    #                 metrics=[mystockloss])
+    #                 # metrics=['mae'])
     return model
 
 def train():
-    train_features, train_labels = tushare_data.GetTrainData()
+    train_features, train_labels = wave_kernel.GetTrainData()
+    # train_features = tushare_data.Features10D14To10D5(train_features)
+    print("train_features: {}".format(train_features.shape))
 
     mean = train_features.mean(axis=0)
     std = train_features.std(axis=0)
@@ -125,9 +129,9 @@ def train():
     # print("std: {}".format(std.shape))
     train_features = (train_features - mean) / std
 
-    max_label_value = tushare_data.predict_day_count * 10.0
-    temp_mask = train_labels >= max_label_value
-    train_labels[temp_mask] = max_label_value
+    # max_label_value = tushare_data.predict_day_count * 10.0
+    # temp_mask = train_labels >= max_label_value
+    # train_labels[temp_mask] = max_label_value
 
     model = build_model((train_features.shape[1],))
     model.summary()
@@ -144,7 +148,7 @@ def train():
             #print('.')
 
     # The patience parameter is the amount of epochs to check for improvement.
-    early_stop = keras.callbacks.EarlyStopping(monitor='loss', patience=20)
+    early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=20)
 
     where_are_nan = np.isnan(train_features)
     where_are_inf = np.isinf(train_features)
@@ -152,8 +156,8 @@ def train():
     train_features[where_are_inf] = 0.0
     history = model.fit(train_features, train_labels, epochs=EPOCHS,
                         validation_split=0.1, verbose=0,
-                        callbacks=[early_stop, PrintDot()])
-                        # callbacks=[PrintDot()])
+                        # callbacks=[early_stop, PrintDot()])
+                        callbacks=[PrintDot()])
 
 
     # print("%-12s%-12s%-12s" %('epoch', 'train_err', 'val_err'))
@@ -170,8 +174,8 @@ def train():
         plt.ylabel('loss')
         plt.plot(history.epoch, np.array(history.history['loss']), 
                 label='Train Loss')
-        # plt.plot(history.epoch, np.array(history.history['val_loss']),
-        #         label = 'Val loss')
+        plt.plot(history.epoch, np.array(history.history['val_loss']),
+                label = 'Val loss')
         plt.legend()
         #plt.ylim([0,5])
         plt.show()
