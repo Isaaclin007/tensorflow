@@ -127,7 +127,9 @@ def GetTrainDataUnit(pp_data, pre_on_day_index, on_date_index, off_date_index, h
         return
     data_unit=[]
     # feature
-    tushare_data.AppendFeature(pp_data, pre_on_day_index, data_unit)
+    result = tushare_data.AppendFeature(pp_data, pre_on_day_index, data_unit)
+    if not result:
+        return
     # label
     data_unit.append(increase)
     # ts_code

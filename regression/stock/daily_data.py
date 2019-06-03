@@ -21,8 +21,8 @@ sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
 # 配置信息
-start_date = '20180101'
-end_date = '20190411'
+start_date = '20170101'
+end_date = '20190225'
 # end_date = tushare_data.CurrentDate()
 code_list = tushare_data.StockCodes()
 

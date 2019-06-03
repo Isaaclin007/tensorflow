@@ -23,7 +23,7 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
-predict_threshold = 5
+predict_threshold = 10
 
 model=keras.models.load_model("./model/model.h5")
 mean=np.load('./model/mean.npy')
@@ -61,6 +61,8 @@ def RegressionTest(test_data):
     trade_count = 0
     increase_sum = 0.0
     holding_days_sum = 0
+    max_drawdown = 0.0
+    max_increase_sum = 0.0
     for iloop in range(0, len(test_data)):
         if predictions[iloop] > predict_threshold:
         # if True:
@@ -79,6 +81,11 @@ def RegressionTest(test_data):
                 increase_sum += labels[iloop]
                 holding_days_sum += holding_days[iloop]
                 trade_count += 1
+                if max_increase_sum < increase_sum:
+                    max_increase_sum = increase_sum.copy()
+                temp_drawdown = max_increase_sum - increase_sum
+                if max_drawdown < temp_drawdown:
+                    max_drawdown = temp_drawdown.copy()
             print("%-6u%06u    %-10.0f%-10.0f%-10.0f%-10.0f%-10.2f%-10.2f%-10.2f%-10.2f%-10.2f" %( \
                 trade_count, \
                 int(ts_codes[iloop]), \
@@ -91,9 +98,10 @@ def RegressionTest(test_data):
                 increase_sum, \
                 AvgValue(increase_sum, trade_count), \
                 AvgValue(increase_sum, holding_days_sum)))
-    print("trade_count:%u, increase_sum:%-10.2f" %( \
+    print("trade_count:%u, increase_sum:%-10.2f, max_drawdown:%.2f" %( \
         trade_count, \
-        increase_sum))
+        increase_sum, \
+        max_drawdown))
     return
 
     # 显示持有数量和平均收益率的关系

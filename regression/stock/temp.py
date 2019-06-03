@@ -270,8 +270,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # print(pos2)
 # print(pos3)
 
-date_list = tushare_data.TradeDateListRange('20170101', '20180201')
-print(date_list)
+# date_list = tushare_data.TradeDateListRange('20170101', '20180201')
+# print(date_list)
 
 # a = [1,2,3,4]
 # b = [10,20,30,40]
@@ -298,3 +298,19 @@ print(date_list)
 # nd = np.append(na, nb, axis = 1)
 # print('nd:')
 # print(nd)
+
+# def GetAvg():
+#     avg_value = 100.0
+#     return True, avg_value
+
+# temp_value = 0.0
+# result, temp_value = GetAvg()
+# print('temp_value:%f' % temp_value)
+
+# temp_df = pd.read_csv('./breakup_filter_result.csv')
+# caption_list = temp_df.columns.values.tolist()
+# print(caption_list)
+# print('ts_code' in temp_df.columns.values.tolist())
+# print('aaa' in temp_df.columns.values.tolist())
+
+print("\a")

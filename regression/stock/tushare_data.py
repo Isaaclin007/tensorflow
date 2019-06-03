@@ -686,6 +686,22 @@ def StockDataPreProcess(stock_data_df, use_money_flow = True, use_turnover_rate_
 
     return src_df[:len(src_df)-preprocess_ref_days]
 
+# 返回 result, avg_value
+def GetAvg(src_df, day_pointer, target_name, avg_period):
+    if (len(src_df) - day_pointer) < avg_period:
+        return False, 0.0
+    sum_value = 0.0
+    for iloop in range(0, avg_period):
+        day_index = day_pointer + iloop
+        temp_value = src_df.loc[day_index, target_name]
+        if math.isnan(temp_value) or temp_value <= 0.0:
+            ts_code = src_df.loc[0, 'ts_code']
+            print('Error, GetAvg(%s, %u, %u, %s), isnan' % (ts_code, day_pointer, iloop, target_name))
+            return False, 0.0
+        sum_value += temp_value
+    avg_value = sum_value / avg_period
+    return True, avg_value
+
 def AppendFeature( src_df, feature_day_pointer, data_unit):
     if feature_type == FEATURE_G7_10D8:
         temp_index = feature_day_pointer
@@ -849,21 +865,50 @@ def AppendFeature( src_df, feature_day_pointer, data_unit):
             data_unit.append(src_df['close_100_avg'][temp_index])
             data_unit.append(src_df['close_200_avg'][temp_index])
     elif feature_type == FEATURE_G0_10D11_AVG:
-        base_close = src_df['close_100_avg'][feature_day_pointer]
-        base_vol = src_df['vol_100_avg'][feature_day_pointer]
-        for iloop in range(0, 10):                
-            temp_index=feature_day_pointer+iloop
-            data_unit.append(src_df['open'][temp_index] / base_close)
-            data_unit.append(src_df['close'][temp_index] / base_close)
-            data_unit.append(src_df['high'][temp_index] / base_close)
-            data_unit.append(src_df['low'][temp_index] / base_close)
-            data_unit.append(src_df['vol'][temp_index] / base_vol)
-            data_unit.append(src_df['vol_5_avg'][temp_index] / base_vol)
-            data_unit.append(src_df['vol_10_avg'][temp_index] / base_vol)
-            data_unit.append(src_df['vol_30_avg'][temp_index] / base_vol)
-            data_unit.append(src_df['close_5_avg'][temp_index] / base_close)
-            data_unit.append(src_df['close_10_avg'][temp_index] / base_close)
-            data_unit.append(src_df['close_30_avg'][temp_index] / base_close)
+        avg_exist = 'close_100_avg' in src_df.columns.values.tolist()
+        if avg_exist:
+            base_close = src_df['close_100_avg'][feature_day_pointer]
+            base_vol = src_df['vol_100_avg'][feature_day_pointer]
+            for iloop in range(0, 10):                
+                temp_index=feature_day_pointer+iloop
+                data_unit.append(src_df['open'][temp_index] / base_close)
+                data_unit.append(src_df['close'][temp_index] / base_close)
+                data_unit.append(src_df['high'][temp_index] / base_close)
+                data_unit.append(src_df['low'][temp_index] / base_close)
+                data_unit.append(src_df['vol'][temp_index] / base_vol)
+                data_unit.append(src_df['vol_5_avg'][temp_index] / base_vol)
+                data_unit.append(src_df['vol_10_avg'][temp_index] / base_vol)
+                data_unit.append(src_df['vol_30_avg'][temp_index] / base_vol)
+                data_unit.append(src_df['close_5_avg'][temp_index] / base_close)
+                data_unit.append(src_df['close_10_avg'][temp_index] / base_close)
+                data_unit.append(src_df['close_30_avg'][temp_index] / base_close)
+        else:
+            result, base_close = GetAvg(src_df, feature_day_pointer, 'close', 100)
+            if not result:
+                return False
+            result, base_vol = GetAvg(src_df, feature_day_pointer, 'vol', 100)
+            if not result:
+                return False
+            for iloop in range(0, 10):                
+                temp_index=feature_day_pointer+iloop
+                data_unit.append(src_df['open'][temp_index] / base_close)
+                data_unit.append(src_df['close'][temp_index] / base_close)
+                data_unit.append(src_df['high'][temp_index] / base_close)
+                data_unit.append(src_df['low'][temp_index] / base_close)
+                data_unit.append(src_df['vol'][temp_index] / base_vol)
+                result, vol_5_avg = GetAvg(src_df, temp_index, 'vol', 5)
+                result, vol_10_avg = GetAvg(src_df, temp_index, 'vol', 10)
+                result, vol_30_avg = GetAvg(src_df, temp_index, 'vol', 30)
+                result, close_5_avg = GetAvg(src_df, temp_index, 'close', 5)
+                result, close_10_avg = GetAvg(src_df, temp_index, 'close', 10)
+                result, close_30_avg = GetAvg(src_df, temp_index, 'close', 30)
+                data_unit.append(vol_5_avg / base_vol)
+                data_unit.append(vol_10_avg / base_vol)
+                data_unit.append(vol_30_avg / base_vol)
+                data_unit.append(close_5_avg / base_close)
+                data_unit.append(close_10_avg / base_close)
+                data_unit.append(close_30_avg / base_close)
+    return True
         
 def AppendLabel( src_df, day_index, data_unit):
     feature_day_pointer = day_index + max_predict_day_count

@@ -55,8 +55,9 @@ def mystockloss(y_true, y_pred, e=0.1):
     # max_y = K.max([y_true, y_pred]) / 10.0  # predict_day_count
     # return (1-e) * abs(y_true - y_pred) * tf.where(tf.greater(max_y, 5.0), max_y / 5.0, K.pow(1.584893, max_y) / 10.0)
 
-    max_y = K.max([y_true, y_pred]) / 10.0  # predict_day_count
-    return (1-e) * abs(y_true - y_pred) * K.pow(2.0, max_y) / 10.0
+    # max_y = K.max([y_true, y_pred]) / 10.0  # predict_day_count
+    # return (1-e) * abs(y_true - y_pred) * K.pow(2.0, max_y) / 10.0
+    return abs(y_true - y_pred) / 10.0 * K.max([y_true, y_pred, y_true*0.0])
 
     # return (1-e) * abs(y_true - y_pred) * K.pow(1.1, y_true)
 
@@ -85,7 +86,7 @@ def lossTest():
 
 def build_model(input_layer_shape):
     model = keras.Sequential([
-        keras.layers.Dense(4, activation=tf.nn.relu, input_shape=input_layer_shape),
+        keras.layers.Dense(8, activation=tf.nn.relu, input_shape=input_layer_shape),
         # keras.layers.Dense(128, activation=tf.nn.relu),
         # keras.layers.Dense(128, activation=tf.nn.relu),
         # keras.layers.Dense(128, activation=tf.nn.relu),
@@ -100,22 +101,22 @@ def build_model(input_layer_shape):
         # keras.layers.Dense(64, activation=tf.nn.relu),
         # keras.layers.Dense(32, activation=tf.nn.relu),
         # keras.layers.Dense(8, activation=tf.nn.relu),
-        # keras.layers.Dense(4, activation=tf.nn.relu),
+        keras.layers.Dense(4, activation=tf.nn.relu),
         keras.layers.Dense(1)
     ])
 
     optimizer = tf.train.RMSPropOptimizer(0.01)
 
-    model.compile(loss='mse',
-                    optimizer=optimizer,
-                    metrics=['mae'])
+    # model.compile(loss='mse',
+    #                 optimizer=optimizer,
+    #                 metrics=['mae'])
     # model.compile(loss='mae',
     #                 optimizer=optimizer,
     #                 metrics=['mae'])
-    # model.compile(loss=mystockloss,
-    #                 optimizer=optimizer,
-    #                 metrics=[mystockloss])
-    #                 # metrics=['mae'])
+    model.compile(loss=mystockloss,
+                    optimizer=optimizer,
+                    metrics=[mystockloss])
+                    # metrics=['mae'])
     return model
 
 def train():
@@ -136,7 +137,7 @@ def train():
     model = build_model((train_features.shape[1],))
     model.summary()
 
-    EPOCHS = 500
+    EPOCHS = 100
 
     # Display training progress by printing a single dot for each completed epoch.
     class PrintDot(keras.callbacks.Callback):
