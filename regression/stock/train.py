@@ -98,14 +98,14 @@ def build_model(input_layer_shape):
         # keras.layers.Dense(128, activation=tf.nn.relu),
         # keras.layers.Dense(128, activation=tf.nn.relu),
         # keras.layers.Dense(128, activation=tf.nn.relu),
-        # keras.layers.Dense(64, activation=tf.nn.relu),
-        # keras.layers.Dense(32, activation=tf.nn.relu),
         # keras.layers.Dense(8, activation=tf.nn.relu),
+        # keras.layers.Dense(8, activation=tf.nn.relu),
+        keras.layers.Dense(8, activation=tf.nn.relu),
         keras.layers.Dense(4, activation=tf.nn.relu),
         keras.layers.Dense(1)
     ])
 
-    optimizer = tf.train.RMSPropOptimizer(0.01)
+    optimizer = tf.train.RMSPropOptimizer(0.002)
 
     # model.compile(loss='mse',
     #                 optimizer=optimizer,
@@ -120,7 +120,7 @@ def build_model(input_layer_shape):
     return model
 
 def train():
-    train_features, train_labels = wave_kernel.GetTrainData()
+    train_features, train_labels = wave_kernel.GetTrainDataOriginal()
     # train_features = tushare_data.Features10D14To10D5(train_features)
     print("train_features: {}".format(train_features.shape))
 

@@ -401,6 +401,24 @@ def FileNameStockPreprocessedData(stock_code):
         int(use_money_flow))
     return temp_file_name
 
+def FileNameMergePPDataOriginal():
+    file_name = './data/preprocessed/merge_%s_%s_%s_%s_%s.npy' % ( \
+        stocks_list_end_date, \
+        pp_data_start_date, \
+        train_test_date, \
+        industry_filter, \
+        code_filter)
+    return file_name
+
+def FileNameMergePPData(input_date):
+    file_name = './data/preprocessed/merge_%s_%s_%s_%s_%s.npy' % ( \
+        stocks_list_end_date, \
+        pp_data_start_date, \
+        input_date, \
+        industry_filter, \
+        code_filter)
+    return file_name
+
 def DownloadAStocksDataDaily(ts_code):
     pro = ts.pro_api()
     start_date = '19000101'
@@ -1682,13 +1700,14 @@ if __name__ == "__main__":
     # print("\n\n\n")
     # Test()
 
-    # stock_code = '000119.HK'
-    # stock_download_file_name = FileNameStockDownloadData(stock_code)
-    # stock_pp_file_name = FileNameStockPreprocessedData(stock_code)
-    # download_df = pd.read_csv(stock_download_file_name)
-    # pp_data = StockDataPreProcess(download_df)
-    # print('len(pp_data) : %d' % len(pp_data))
-    # if len(pp_data) > 0:
-    #     pp_data.to_csv(stock_pp_file_name)
+    stock_code = '000119.HK'
+    stock_download_file_name = FileNameStockDownloadData(stock_code)
+    stock_pp_file_name = FileNameStockPreprocessedData(stock_code)
+    download_df = pd.read_csv(stock_download_file_name)
+    pp_data = StockDataPreProcess(download_df)
+    print('len(pp_data) : %d' % len(pp_data))
+    if len(pp_data) > 0:
+        pp_data.to_csv(stock_pp_file_name)
 
-    DownloadAStocksDataMoneyFlow('600050.SH')
+    # DownloadAStocksDataMoneyFlow('600050.SH')
+

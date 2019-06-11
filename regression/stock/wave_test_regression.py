@@ -23,7 +23,7 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
-predict_threshold = 10
+predict_threshold = 2
 
 model=keras.models.load_model("./model/model.h5")
 mean=np.load('./model/mean.npy')
@@ -66,7 +66,7 @@ def RegressionTest(test_data):
     for iloop in range(0, len(test_data)):
         if predictions[iloop] > predict_threshold:
         # if True:
-        # if labels[iloop] > 50:
+        # if labels[iloop] > 10:
         # vol_sum = 0.0
         # for dloop in range(0, 10):
         #     vol_sum += test_data[iloop][5 + dloop * 10]
@@ -182,9 +182,94 @@ def RegressionTest(test_data):
     plt.legend()
     plt.show()
 
+
+def TestMaxTradeOneDay(data_set, predictions, max_trade_one_day):
+    trade_count = 0
+    increase_sum = 0.0
+    holding_days_sum = 0
+    max_drawdown = 0.0
+    max_increase_sum = 0.0
+    
+    # 获取 data_set 的最大和最小 pre_on 时间，生成date_list列表
+    on_pretrade_dates = data_set[:, wave_kernel.COL_ON_PRETRADE_DATE()]
+    start_date = '%.0f' % np.min(on_pretrade_dates)
+    end_date = '%.0f' % np.max(on_pretrade_dates)
+    date_list = tushare_data.TradeDateListRange(start_date, end_date)
+    
+    for iloop in reversed(range(0, len(date_list))):
+        temp_date = int(date_list[iloop])
+        pos = (on_pretrade_dates == temp_date)
+        if np.sum(pos) > 0:
+            temp_data_set = data_set[pos].copy()
+            temp_predictions = predictions[pos].copy()
+            sort_index = np.argsort(-temp_predictions[:,0])
+            temp_data_set = temp_data_set[sort_index]
+            temp_predictions = temp_predictions[sort_index]
+            temp_data_set = temp_data_set[: max_trade_one_day]
+            temp_predictions = temp_predictions[: max_trade_one_day]
+            # print(temp_data_set)
+
+            temp_ts_codes = temp_data_set[:, wave_kernel.COL_TS_CODE()]
+            temp_on_pretrade_dates = temp_data_set[:, wave_kernel.COL_ON_PRETRADE_DATE()]
+            temp_on_dates = temp_data_set[:, wave_kernel.COL_ON_DATE()]
+            temp_off_dates = temp_data_set[:, wave_kernel.COL_OFF_DATE()]
+            temp_holding_days = temp_data_set[:, wave_kernel.COL_HOLDING_DAYS()]
+            temp_labels = temp_data_set[:, wave_kernel.COL_INCREASE()]
+            
+            for iloop in range(0, len(temp_data_set)):
+                if temp_predictions[iloop] > predict_threshold:
+                    if temp_off_dates[iloop] < 20990101.0:
+                        increase_sum += temp_labels[iloop]
+                        holding_days_sum += temp_holding_days[iloop]
+                        trade_count += 1
+                        if max_increase_sum < increase_sum:
+                            max_increase_sum = increase_sum.copy()
+                        temp_drawdown = max_increase_sum - increase_sum
+                        if max_drawdown < temp_drawdown:
+                            max_drawdown = temp_drawdown.copy()
+                    print("%-6u%06u    %-10.0f%-10.0f%-10.0f%-10.0f%-10.2f%-10.2f%-10.2f%-10.2f%-10.2f" %( \
+                        trade_count, \
+                        int(temp_ts_codes[iloop]), \
+                        temp_on_pretrade_dates[iloop], \
+                        temp_on_dates[iloop], \
+                        temp_off_dates[iloop], \
+                        temp_holding_days[iloop], \
+                        temp_predictions[iloop], \
+                        temp_labels[iloop], \
+                        increase_sum, \
+                        AvgValue(increase_sum, trade_count), \
+                        AvgValue(increase_sum, holding_days_sum)))
+
+def RegressionTestMaxTradeOneDay(test_data, max_trade_one_day):
+    predict_features = test_data[:, 0: tushare_data.feature_size]
+    print("predict_features: {}".format(predict_features.shape))
+    col_index = tushare_data.feature_size
+    labels = test_data[:, col_index: col_index + 1]
+
+    col_index += 1
+    ts_codes = test_data[:, col_index: col_index + 1]
+
+    col_index += 1
+    on_pretrade_dates = test_data[:, col_index: col_index + 1]
+
+    col_index += 1
+    on_dates = test_data[:, col_index: col_index + 1]
+
+    col_index += 1
+    off_dates = test_data[:, col_index: col_index + 1]
+
+    col_index += 1
+    holding_days = test_data[:, col_index: col_index + 1]
+
+    predict_features = (predict_features - mean) / std
+    predictions = model.predict(predict_features)
+    TestMaxTradeOneDay(test_data, predictions, max_trade_one_day)
+
+
 if __name__ == "__main__":
-    test_data = wave_kernel.GetTestData()
+    test_data = wave_kernel.GetTestDataOriginal()
     RegressionTest(test_data)
+    # RegressionTestMaxTradeOneDay(test_data, 5)
 
 
 

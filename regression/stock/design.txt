@@ -257,3 +257,19 @@ V1.0.13
 V1.0.14
 2019-06-03
 1. 性能最优模型，平均每次交易收益率11.20，日平均收益率0.72，最大回撤28.92
+
+V1.0.15
+2019-06-03
+1. 增加 RegressionTestMaxTradeOneDay（已完成）
+2. 对每个 wave_test 交易多次采样，on_date 后采样多条数据加入dataset，通过 wave_test_dataset_sample_num 控制
+3. 使用 daily data 更新 PPMergeData 
+    获取最近100条date list，查找最近的 PPMergeData 的 date_index ，如果没有找到，返回错误
+    遍历 reversed(range(0,date_index)),更新每一天的PPMergeData
+
+V1.0.16
+1. 增加特征，过去10天，每天的:
+    pre_trade_stock_num，
+    holding_num，
+    avg_100_up_num
+2. dataset 相关数据中删除跌幅超过40%的数据，在 wave_kernel.GetTrainDataUnit() 中处理
+

@@ -33,6 +33,8 @@ STATUS_UP = 1
 STATUS_DOWN = 2
 
 train_data_end_date = 20180101
+test_data_end_date = 20190501
+wave_test_dataset_sample_num = 5
 
 def FillWaveData(input_pp_data, wave_status, start_day_index):
     for day_loop in range(start_day_index, len(input_pp_data)):
@@ -178,7 +180,7 @@ def Predict(pp_data, day_index):
 
 
 def FileNameDataSet():
-    file_name = './data/dataset/dataset_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u.npy' % ( \
+    file_name = './data/dataset/dataset_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u.npy' % ( \
         tushare_data.feature_type, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
@@ -189,11 +191,12 @@ def FileNameDataSet():
         min_wave_width_right, \
         trade_off_threshold, \
         int(up_100avg_condition), \
-        int(up_200avg_condition))
+        int(up_200avg_condition), \
+        wave_test_dataset_sample_num)
     return file_name
 
 def FileNameDataSetOriginal():
-    file_name = './data/dataset/dataset_original_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u.npy' % ( \
+    file_name = './data/dataset/dataset_original_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u.npy' % ( \
         tushare_data.feature_type, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
@@ -204,11 +207,12 @@ def FileNameDataSetOriginal():
         min_wave_width_right, \
         trade_off_threshold, \
         int(up_100avg_condition), \
-        int(up_200avg_condition))
+        int(up_200avg_condition), \
+        wave_test_dataset_sample_num)
     return file_name
 
 def FileNameDailyDataSet():
-    file_name = './data/dataset/daily_dataset_%u_%s_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u.npy' % ( \
+    file_name = './data/dataset/daily_dataset_%u_%s_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
         tushare_data.feature_type, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
@@ -221,11 +225,12 @@ def FileNameDailyDataSet():
         trade_off_threshold, \
         int(up_100avg_condition), \
         int(up_200avg_condition), \
-        int(wave_test_daily.pridect_mode))
+        int(wave_test_daily.pridect_mode), \
+        wave_test_dataset_sample_num)
     return file_name
 
 def FileNameDailyDataSetOriginal():
-    file_name = './data/dataset/daily_dataset_original_%u_%s_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u.npy' % ( \
+    file_name = './data/dataset/daily_dataset_original_%u_%s_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
         tushare_data.feature_type, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
@@ -238,7 +243,8 @@ def FileNameDailyDataSetOriginal():
         trade_off_threshold, \
         int(up_100avg_condition), \
         int(up_200avg_condition), \
-        int(wave_test_daily.pridect_mode))
+        int(wave_test_daily.pridect_mode), \
+        wave_test_dataset_sample_num)
     return file_name
 
 def AppendPreTradeStockNums(data_set):
@@ -355,6 +361,32 @@ def GetTrainData():
 
     return train_features, train_labels
 
+def GetTrainDataOriginal():
+    train_data = np.load(FileNameDataSetOriginal())
+    print("data_set: {}".format(train_data.shape))
+
+    pos = (train_data[:,COL_ON_PRETRADE_DATE()] < train_data_end_date) & (train_data[:,COL_OFF_DATE()] != 20990101.0)
+    train_data = train_data[pos].copy()
+    print("train_data: {}".format(train_data.shape))
+
+    print("reorder...")
+    order=np.argsort(np.random.random(len(train_data)))
+    train_data=train_data[order]
+    train_data=train_data[:2000000]
+
+    label_index = tushare_data.feature_size
+    print("get feature ...")
+    train_features = train_data[:, 0:tushare_data.feature_size].copy()
+    # raw_input("Enter ...")
+
+    print("get label...")
+    train_labels = train_data[:, label_index:label_index+1].copy()
+    # raw_input("Enter ...")
+    print("train_features: {}".format(train_features.shape))
+    print("train_labels: {}".format(train_labels.shape))
+
+    return train_features, train_labels
+
 def GetTestData():
     data_set = np.load(FileNameDataSet())
 
@@ -380,7 +412,8 @@ def GetTestData():
 
     tushare_data.feature_size += 1
     print("data_set: {}".format(data_set.shape))
-    data_set = data_set[np.where(data_set[:,tushare_data.feature_size + 2] >= train_data_end_date)]
+    pos = (data_set[:,COL_ON_PRETRADE_DATE()] >= train_data_end_date) & (data_set[:,COL_ON_PRETRADE_DATE()] < test_data_end_date)
+    data_set = data_set[pos]
     print("test_data: {}".format(data_set.shape))
 
     captions = []
@@ -409,6 +442,26 @@ def GetTestData():
 
     data_set = data_set[np.argsort(data_set[:,tushare_data.feature_size + 2])]
     return data_set
+
+def GetTestDataOriginal():
+    data_set = np.load(FileNameDataSet())
+    data_set = data_set[:,1:]
+    print("data_set: {}".format(data_set.shape))
+    pos = (data_set[:,COL_ON_PRETRADE_DATE()] >= train_data_end_date) & (data_set[:,COL_ON_PRETRADE_DATE()] < test_data_end_date)
+    data_set = data_set[pos]
+    print("test_data: {}".format(data_set.shape))
+    captions = []
+    for iloop in range(0, tushare_data.feature_size):
+        captions.append('f_%u' % iloop)
+    captions.append('label')
+    captions.append('ts_code')
+    captions.append('pre_on_date')
+    captions.append('on_date')
+    captions.append('off_date')
+    captions.append('holding_days')
+    data_df = pd.DataFrame(data_set, columns=captions)
+    data_df = data_df.sort_values(by=['pre_on_date', 'ts_code'], ascending=(True, True))
+    return data_df.values
 
 def SaveDailyDataSet():
     train_data = np.array(train_data_list)
@@ -509,12 +562,19 @@ def TradeTestFinishedHandel(trade_count, \
             on_price, \
             off_price)
     if save_data_set:
-        GetTrainDataUnit(input_pp_data, \
-            pre_on_day_index, \
-            on_day_index, \
-            off_day_index, \
-            holding_days, \
-            increase)
+        if holding_days > wave_test_dataset_sample_num:
+            temp_sample_num = wave_test_dataset_sample_num
+        else:
+            temp_sample_num = holding_days
+        for iloop in range(0, temp_sample_num):
+            temp_on_price = input_pp_data.loc[on_day_index - iloop, 'open']
+            temp_increase = ((off_price / temp_on_price) - 1.0) * 100.0
+            GetTrainDataUnit(input_pp_data, \
+                pre_on_day_index - iloop, \
+                on_day_index - iloop, \
+                off_day_index, \
+                holding_days - iloop, \
+                temp_increase)
     return increase, holding_days
     
 def TradeTestUnfinishedPreOnHandel(trade_count, \
@@ -579,7 +639,7 @@ def TradeTestUnfinishedHandel(trade_count, \
     ts_code = input_pp_data.loc[0, 'ts_code']
     on_price = input_pp_data.loc[on_day_index, 'open']
     on_date = input_pp_data.loc[on_day_index,'trade_date']
-    holding_days = on_day_index - 0
+    holding_days = on_day_index - 0 + 1
     if print_record:
         PrintRecord(trade_count, \
             ts_code, \
@@ -589,12 +649,17 @@ def TradeTestUnfinishedHandel(trade_count, \
             on_price, \
             -1)
     if save_data_set:
-        GetTrainDataUnit(input_pp_data, \
-            pre_on_day_index, \
-            on_day_index, \
-            -1, \
-            holding_days, \
-            0.0)
+        if holding_days > wave_test_dataset_sample_num:
+            temp_sample_num = wave_test_dataset_sample_num
+        else:
+            temp_sample_num = holding_days
+        for iloop in range(0, temp_sample_num):
+            GetTrainDataUnit(input_pp_data, \
+                pre_on_day_index - iloop, \
+                on_day_index -iloop, \
+                -1, \
+                holding_days -iloop, \
+                0.0)
 
 
 def TradeTest(input_pp_data, \
