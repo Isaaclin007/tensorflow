@@ -267,6 +267,9 @@ V1.0.15
     遍历 reversed(range(0,date_index)),更新每一天的PPMergeData
 
 V1.0.16
+1. 优化 pp_daily_update, 支持多天数据一次update
+
+V1.0.17
 1. 增加特征，过去10天，每天的:
     pre_trade_stock_num，
     holding_num，

@@ -23,7 +23,7 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
-predict_threshold = 2
+predict_threshold = 5
 
 model=keras.models.load_model("./model/model.h5")
 mean=np.load('./model/mean.npy')
@@ -267,7 +267,7 @@ def RegressionTestMaxTradeOneDay(test_data, max_trade_one_day):
 
 
 if __name__ == "__main__":
-    test_data = wave_kernel.GetTestDataOriginal()
+    test_data = wave_kernel.GetTestData()
     RegressionTest(test_data)
     # RegressionTestMaxTradeOneDay(test_data, 5)
 

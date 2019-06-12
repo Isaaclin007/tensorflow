@@ -13,6 +13,7 @@ import wave_kernel
 import random
 import daily_data
 import wave_test_regression
+import pp_daily_update
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -31,10 +32,10 @@ def TestAllStocksDailyData():
         trade_count_sum = 0.0
         trade_count_profitable_sum = 0.0
         code_list = tushare_data.StockCodes()
-        pp_merge_data = daily_data.GetPreprocessedMergeData()
+        pp_merge_data = pp_daily_update.GetPreprocessedMergeData()
         for code_index in range(0, len(code_list)):
             stock_code = code_list[code_index]
-            pp_data = daily_data.GetPreprocessedData(pp_merge_data, stock_code)
+            pp_data = pp_daily_update.GetPreprocessedData(pp_merge_data, stock_code)
             if len(pp_data) == 0:
                 continue
             wave_kernel.AppendWaveData(pp_data)

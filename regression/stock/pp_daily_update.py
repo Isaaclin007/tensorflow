@@ -20,6 +20,8 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
+# update_date = tushare_data.CurrentDate()
+update_date = '20190611'
 code_list = tushare_data.StockCodes()
 
 def CreatePPMergeDataOriginal():
@@ -70,9 +72,9 @@ def CleanCols(df_data):
 def Increase(dynamic_value, basic_value):
     return ((dynamic_value / basic_value) - 1.0) * 100.0
 
-def UpdatePPMergeData(merge_pp_data, daily_download_data):
+def UpdatePPMergeData(merge_pp_data, merge_daily_data):
     merge_pp_data = CleanCols(merge_pp_data)
-    daily_download_data = CleanCols(daily_download_data)
+    merge_daily_data = CleanCols(merge_daily_data)
     update_merge_pp_data = pd.DataFrame()
     for code_index in range(0, len(code_list)):
         ts_code = code_list[code_index]
@@ -85,19 +87,20 @@ def UpdatePPMergeData(merge_pp_data, daily_download_data):
         stock_pp_data = stock_pp_data[:400].copy()
 
         # 提取 daily_download_data 中的匹配数据
-        add_row_data = daily_download_data[daily_download_data['ts_code'] == ts_code].copy().reset_index(drop=True)
-        # add_row_data.reset_index(drop=True)
-        if len(add_row_data) > 1:
-            print('UpdatePPMergeData.Error, len(add_row_data):%u' % len(add_row_data))
-            return
-        if len(add_row_data) == 1:
+        daily_data = merge_daily_data[merge_daily_data['ts_code'] == ts_code].copy()
+        daily_data = daily_data.sort_values(by=['trade_date'], ascending=(False))
+        daily_data = daily_data.reset_index(drop=True)
+        # print(daily_data)
+        for iloop in reversed(range(0, len(daily_data))):
+            add_row_data = daily_data[iloop:iloop+1].copy().reset_index(drop=True)
+
             # 添加 preprocess 数据
             # if add_row_data.loc[0,'pre_close'] != stock_pp_data.loc[0,'close']:
             #     print(stock_pp_data)
             #     print(add_row_data)
             #     print('UpdatePPMergeData.Error, pre_close:%f|%f' % (add_row_data.loc[0,'pre_close'], stock_pp_data.loc[0,'close']))
             #     return
-            add_row_data.loc[0,'pre_close'] = stock_pp_data.loc[0,'close']
+            add_row_data['pre_close'] = stock_pp_data.loc[0,'close']
             add_row_data['open_increase'] = Increase(add_row_data.loc[0,'open'], add_row_data.loc[0,'pre_close'])
             add_row_data['close_increase'] = Increase(add_row_data.loc[0,'close'], add_row_data.loc[0,'pre_close'])
             add_row_data['high_increase'] = Increase(add_row_data.loc[0,'high'], add_row_data.loc[0,'pre_close'])
@@ -129,30 +132,48 @@ def UpdatePPMergeData(merge_pp_data, daily_download_data):
             # print(stock_pp_data.dtypes)
             # print(stock_pp_data)
             stock_pp_data = add_row_data.append(stock_pp_data, ignore_index=True, sort=False)
+        # print(stock_pp_data)
         update_merge_pp_data = update_merge_pp_data.append(stock_pp_data, sort=False)
+        print("%-4d : %s 100%% updated" % (code_index, ts_code))
     return update_merge_pp_data
 
+def GetPreprocessedMergeData():
+    date_list = tushare_data.TradeDateList(update_date, 100)
+    pp_merge_file_name = tushare_data.FileNameMergePPData(date_list[0])
+    if os.path.exists(pp_merge_file_name):
+        return pd.read_csv(pp_merge_file_name)
+    else:
+        date_index = 0
+        for iloop in range(0, len(date_list)):
+            file_name = tushare_data.FileNameMergePPData(date_list[iloop])
+            # print(file_name)
+            if os.path.exists(file_name):
+                date_index = iloop
+                break
+        if date_index > 0:
+            merge_daily_data = pd.DataFrame()
+            merge_pp_data = pd.read_csv(file_name)
+            for iloop in reversed(range(0, date_index)):
+                tushare_data.DownloadATradeDayData(date_list[iloop])
+                daily_data = tushare_data.LoadATradeDayData(date_list[iloop])
+                merge_daily_data = merge_daily_data.append(daily_data, sort=False)
+            merge_pp_data = UpdatePPMergeData(merge_pp_data, merge_daily_data)
+            merge_pp_data.to_csv(file_name)
+            return merge_pp_data
+        else:
+            return pd.DataFrame()
+
+def GetPreprocessedData(merge_pp_data, ts_code):
+    processed_df = merge_pp_data[merge_pp_data['ts_code'] == ts_code]
+    pp_data_copy = processed_df.copy()
+    pp_data_copy = pp_data_copy.sort_values(by=['trade_date'], ascending=(False))
+    pp_data_copy = pp_data_copy.reset_index(drop=True)
+    return pp_data_copy
 
 if __name__ == "__main__":
     # CreatePPMergeDataOriginal()
-    date_list = tushare_data.TradeDateList(tushare_data.CurrentDate(), 100)
-    date_index = 0
-    for iloop in range(0, len(date_list)):
-        file_name = tushare_data.FileNameMergePPData(date_list[iloop])
-        # print(file_name)
-        if os.path.exists(file_name):
-            date_index = iloop
-            break
-    if date_index > 0:
-        merge_pp_data = pd.read_csv(file_name)
-        for iloop in reversed(range(0, date_index)):
-            tushare_data.DownloadATradeDayData(date_list[iloop])
-            daily_data = tushare_data.LoadATradeDayData(date_list[iloop])
-            merge_pp_data = UpdatePPMergeData(merge_pp_data, daily_data)
-            print("%-4d : %s 100%% update" % (iloop, date_list[iloop]))
-        file_name = tushare_data.FileNameMergePPData(date_list[0])
-        print(merge_pp_data)
-        merge_pp_data.to_csv(file_name)
+    GetPreprocessedMergeData()
+    
 
 
         
