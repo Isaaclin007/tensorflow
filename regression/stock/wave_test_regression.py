@@ -23,7 +23,7 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
-predict_threshold = 5
+predict_threshold = 0
 
 model=keras.models.load_model("./model/model.h5")
 mean=np.load('./model/mean.npy')

@@ -84,8 +84,8 @@ def TestAStocksDailyData(stock_code):
     holding_days_sum = 0
     trade_count_sum = 0.0
     trade_count_profitable_sum = 0.0
-    pp_merge_data = daily_data.GetPreprocessedMergeData()
-    pp_data = daily_data.GetPreprocessedData(pp_merge_data, stock_code)
+    pp_merge_data = pp_daily_update.GetPreprocessedMergeData()
+    pp_data = pp_daily_update.GetPreprocessedData(pp_merge_data, stock_code)
     print(pp_data)
     pp_data.to_csv('./temp.csv')
     if len(pp_data) == 0:

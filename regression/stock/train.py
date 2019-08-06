@@ -12,6 +12,7 @@ import sys
 import tushare_data
 import math
 import wave_kernel
+from tensorflow.python.keras.callbacks import LearningRateScheduler
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -84,9 +85,28 @@ def lossTest():
     printLoss(-100.0, 0.0)
     printLoss(-100.0, 0.0)
 
+def scheduler(epoch): 
+    lr = K.get_value(model.optimizer.lr) 
+    K.set_value(model.optimizer.lr, lr * 0.98) 
+    print("lr changed to {}".format(lr * 0.98))
+    return K.get_value(model.optimizer.lr)
+
+reduce_lr = LearningRateScheduler(scheduler)
+
+LEARNING_RATE_BASE = 0.1  # 最初学习率
+LEARNING_RATE_DECAY = 0.99  # 学习率的衰减率
+LEARNING_RATE_STEP = 1  # 喂入多少轮BATCH-SIZE以后，更新一次学习率。一般为总样本数量/BATCH_SIZE
+gloabl_steps = tf.Variable(0, trainable=False)  # 计数器，用来记录运行了几轮的BATCH_SIZE，初始为0，设置为不可训练
+learning_rate = tf.train.exponential_decay(LEARNING_RATE_BASE
+                                           , gloabl_steps,
+                                           LEARNING_RATE_STEP,
+                                           LEARNING_RATE_DECAY,
+                                           staircase=True)
+
+
 def build_model(input_layer_shape):
     model = keras.Sequential([
-        keras.layers.Dense(8, activation=tf.nn.relu, input_shape=input_layer_shape),
+        keras.layers.Dense(4, activation=tf.nn.relu, input_shape=input_layer_shape),
         # keras.layers.Dense(128, activation=tf.nn.relu),
         # keras.layers.Dense(128, activation=tf.nn.relu),
         # keras.layers.Dense(128, activation=tf.nn.relu),
@@ -101,11 +121,12 @@ def build_model(input_layer_shape):
         # keras.layers.Dense(8, activation=tf.nn.relu),
         # keras.layers.Dense(8, activation=tf.nn.relu),
         # keras.layers.Dense(8, activation=tf.nn.relu),
-        keras.layers.Dense(4, activation=tf.nn.relu),
+        # keras.layers.Dense(4, activation=tf.nn.relu),
         keras.layers.Dense(1)
     ])
 
-    optimizer = tf.train.RMSPropOptimizer(0.002)
+    optimizer = tf.train.RMSPropOptimizer(0.008)
+    # optimizer = keras.optimizers.SGD(lr=0.01, momentum=0.0, decay=0.98, nesterov=False)
 
     # model.compile(loss='mse',
     #                 optimizer=optimizer,

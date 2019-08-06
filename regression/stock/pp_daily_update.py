@@ -21,7 +21,7 @@ sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
 # update_date = tushare_data.CurrentDate()
-update_date = '20190611'
+update_date = '20190624'
 code_list = tushare_data.StockCodes()
 
 def CreatePPMergeDataOriginal():
@@ -39,6 +39,25 @@ def CreatePPMergeDataOriginal():
                     merge_pp_data = merge_pp_data.append(stock_pp_data)
                     print("%-4d : %s 100%% merged" % (code_index, stock_code))
         merge_pp_data.to_csv(merge_file_name)
+
+def GetPPMergeDataOriginalSimplify():
+    merge_file_name = tushare_data.FileNameMergePPDataOriginalSimplify()
+    if not os.path.exists(merge_file_name):
+        retained_cols = ["trade_date", "close", "close_100_avg"]
+        merge_pp_data = pd.DataFrame()
+        for code_index in range(0, len(code_list)):
+            stock_code = code_list[code_index]
+            file_name = tushare_data.FileNameStockPreprocessedData(stock_code)
+            if os.path.exists(file_name):
+                stock_pp_data = pd.read_csv(file_name)
+                if len(stock_pp_data) >= 200:
+                    stock_pp_data_s = stock_pp_data[retained_cols].copy()
+                    merge_pp_data = merge_pp_data.append(stock_pp_data_s)
+                    print("%-4d : %s 100%% merged" % (code_index, stock_code))
+        merge_pp_data.to_csv(merge_file_name)
+    else:
+        merge_pp_data = pd.read_csv(merge_file_name)
+    return merge_pp_data
 
 def GetPPMergeDataOriginal():
     merge_file_name = tushare_data.FileNameMergePPDataOriginal()
@@ -158,7 +177,7 @@ def GetPreprocessedMergeData():
                 daily_data = tushare_data.LoadATradeDayData(date_list[iloop])
                 merge_daily_data = merge_daily_data.append(daily_data, sort=False)
             merge_pp_data = UpdatePPMergeData(merge_pp_data, merge_daily_data)
-            merge_pp_data.to_csv(file_name)
+            merge_pp_data.to_csv(pp_merge_file_name)
             return merge_pp_data
         else:
             return pd.DataFrame()
@@ -170,9 +189,20 @@ def GetPreprocessedData(merge_pp_data, ts_code):
     pp_data_copy = pp_data_copy.reset_index(drop=True)
     return pp_data_copy
 
+def GetPreprocessedDataExt(ts_code):
+    merge_pp_data = GetPreprocessedMergeData()
+    processed_df = merge_pp_data[merge_pp_data['ts_code'] == ts_code]
+    pp_data_copy = processed_df.copy()
+    pp_data_copy = pp_data_copy.sort_values(by=['trade_date'], ascending=(False))
+    pp_data_copy = pp_data_copy.reset_index(drop=True)
+    return pp_data_copy
+
 if __name__ == "__main__":
     # CreatePPMergeDataOriginal()
-    GetPreprocessedMergeData()
+    merge_data = GetPreprocessedMergeData()
+    stock_data = GetPreprocessedData(merge_data, '000544.SZ')
+    stock_data = CleanCols(stock_data)
+    stock_data.to_csv('./temp.csv')
     
 
 

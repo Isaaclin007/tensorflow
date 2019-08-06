@@ -17,6 +17,7 @@ from datetime import datetime
 import matplotlib.dates as mdate
 from matplotlib.font_manager import FontProperties
 zhfont = FontProperties(fname=r"/usr/share/fonts/truetype/wqy/wqy-microhei.ttc", size=15)
+import pp_daily_update
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -33,10 +34,11 @@ def GetProprocessedData(ts_code):
 
 
 def ShowAStock(ts_code):
-    tushare_data.train_test_date = tushare_data.CurrentDate()
-    tushare_data.DownloadAStocksData(ts_code)
-    tushare_data.UpdatePreprocessDataAStock(0, ts_code)
-    pp_data = GetProprocessedData(ts_code)
+    # tushare_data.train_test_date = tushare_data.CurrentDate()
+    # tushare_data.DownloadAStocksData(ts_code)
+    # tushare_data.UpdatePreprocessDataAStock(0, ts_code)
+    # pp_data = GetProprocessedData(ts_code)
+    pp_data = pp_daily_update.GetPreprocessedDataExt(ts_code)
     stock_name = tushare_data.StockName(ts_code)
     title = "%s - %s" % (ts_code, stock_name)
     title = unicode(title, "utf-8")
@@ -77,14 +79,14 @@ def ShowAStock(ts_code):
     # plt.plot(xs, pp_data['vol_200_avg'].values, label='v_200', linewidth=1)
     # plt.plot(xs, pp_data['sell_elg_vol_30_avg'].values, label='ssm_vol', linewidth=1)
 
-    # wave_kernel.AppendWaveData(pp_data)
-    # peak_data = pp_data[pp_data['wave_extreme'] == wave_kernel.EXTREME_PEAK]
-    # xs = [datetime.strptime(d, '%Y%m%d').date() for d in peak_data['trade_date'].astype(str).values]
-    # plt.plot(xs, peak_data[wave_kernel.wave_index].values, label='peak', linewidth=1)
+    wave_kernel.AppendWaveData(pp_data)
+    peak_data = pp_data[pp_data['wave_extreme'] == wave_kernel.EXTREME_PEAK]
+    xs = [datetime.strptime(d, '%Y%m%d').date() for d in peak_data['trade_date'].astype(str).values]
+    plt.plot(xs, peak_data[wave_kernel.wave_index].values, label='peak', linewidth=1)
 
-    # valley_data = pp_data[pp_data['wave_extreme'] == wave_kernel.EXTREME_VALLEY]
-    # xs = [datetime.strptime(d, '%Y%m%d').date() for d in valley_data['trade_date'].astype(str).values]
-    # plt.plot(xs, valley_data[wave_kernel.wave_index].values, label='valley', linewidth=1)
+    valley_data = pp_data[pp_data['wave_extreme'] == wave_kernel.EXTREME_VALLEY]
+    xs = [datetime.strptime(d, '%Y%m%d').date() for d in valley_data['trade_date'].astype(str).values]
+    plt.plot(xs, valley_data[wave_kernel.wave_index].values, label='valley', linewidth=1)
 
     plt.gcf().autofmt_xdate()
     plt.legend()
