@@ -33,9 +33,10 @@ STATUS_NONE = 0
 STATUS_UP = 1
 STATUS_DOWN = 2
 
+start_date = 20120101
 train_data_end_date = 20180101
 test_data_end_date = 20190501
-wave_test_dataset_sample_num = 1
+wave_test_dataset_sample_num = 5
 
 def FillWaveData(input_pp_data, wave_status, start_day_index):
     for day_loop in range(start_day_index, len(input_pp_data)):
@@ -109,6 +110,7 @@ TRADE_OFF = 2
 TRADE_PRE_ON = 3
 TRADE_PRE_OFF = 4
 train_data_list = []
+g_data_set = np.array(train_data_list)
 
 def COL_INCREASE():
     return tushare_data.feature_size
@@ -129,6 +131,7 @@ def COL_HOLDING_DAYS():
     return tushare_data.feature_size + 5
 
 def GetTrainDataUnit(pp_data, pre_on_day_index, on_date_index, off_date_index, holding_days, increase):
+    global train_data_list
     if (len(pp_data) - pre_on_day_index) < 10:
         return
     data_unit=[]
@@ -166,6 +169,22 @@ def GetTrainDataUnit(pp_data, pre_on_day_index, on_date_index, off_date_index, h
     # 添加到数据集列表
     train_data_list.append(data_unit)
 
+g_data_set_init_flag = True
+def MergeDataUnitsToDataSet():
+    global g_data_set_init_flag
+    global g_data_set
+    global train_data_list
+    if len(train_data_list) > 0:
+        temp_data_set = np.array(train_data_list)
+        if g_data_set_init_flag:
+            g_data_set = temp_data_set
+            g_data_set_init_flag = False
+        else:
+            g_data_set = np.vstack((g_data_set, temp_data_set))
+        train_data_list = []
+    print("len(g_data_set): %u" % len(g_data_set))
+
+
 model=keras.models.load_model("./model/model.h5")
 mean=np.load('./model/mean.npy')
 std=np.load('./model/std.npy')
@@ -184,8 +203,9 @@ def Predict(pp_data, day_index):
 
 
 def FileNameDataSet():
-    file_name = './data/dataset/dataset_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u.npy' % ( \
+    file_name = './data/dataset/dataset_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u.npy' % ( \
         tushare_data.feature_type, \
+        start_date, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
         tushare_data.train_test_date, \
@@ -200,8 +220,9 @@ def FileNameDataSet():
     return file_name
 
 def FileNameDataSetOriginal():
-    file_name = './data/dataset/dataset_original_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u.npy' % ( \
+    file_name = './data/dataset/dataset_original_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u.npy' % ( \
         tushare_data.feature_type, \
+        start_date, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
         tushare_data.train_test_date, \
@@ -216,8 +237,9 @@ def FileNameDataSetOriginal():
     return file_name
 
 def FileNameDailyDataSet():
-    file_name = './data/dataset/daily_dataset_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
+    file_name = './data/dataset/daily_dataset_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
         tushare_data.feature_type, \
+        start_date, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
         tushare_data.industry_filter, \
@@ -233,8 +255,9 @@ def FileNameDailyDataSet():
     return file_name
 
 def FileNameDailyDataSetOriginal():
-    file_name = './data/dataset/daily_dataset_original_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
+    file_name = './data/dataset/daily_dataset_original_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
         tushare_data.feature_type, \
+        start_date, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
         tushare_data.industry_filter, \
@@ -352,7 +375,9 @@ def AppendGlobalFeatures(data_set):
     return
 
 def SaveDataSet():
-    train_data = np.array(train_data_list)
+    global g_data_set
+    # train_data = np.array(train_data_list)
+    train_data = g_data_set
     np.save(FileNameDataSetOriginal(), train_data)
     train_data = AppendGlobalFeatures(train_data)
     np.save(FileNameDataSet(), train_data)
@@ -579,10 +604,10 @@ def TradeTestFinishedHandel(trade_count, \
             on_price, \
             off_price)
     if save_data_set:
-        if (holding_days + 1) > wave_test_dataset_sample_num:
+        if holding_days >= wave_test_dataset_sample_num:
             temp_sample_num = wave_test_dataset_sample_num
         else:
-            temp_sample_num = (holding_days + 1)
+            temp_sample_num = holding_days
         for iloop in range(0, temp_sample_num):
             temp_on_price = input_pp_data.loc[on_day_index - iloop, 'open']
             temp_increase = ((off_price / temp_on_price) - 1.0) * 100.0
@@ -638,10 +663,10 @@ def TradeTestUnfinishedPreOffHandel(trade_count, \
             on_price, \
             -1)
     if save_data_set:
-        if (holding_days + 1) > wave_test_dataset_sample_num:
+        if holding_days >= wave_test_dataset_sample_num:
             temp_sample_num = wave_test_dataset_sample_num
         else:
-            temp_sample_num = (holding_days + 1)
+            temp_sample_num = holding_days
         for iloop in range(0, temp_sample_num):
             temp_on_price = input_pp_data.loc[on_day_index - iloop, 'open']
             GetTrainDataUnit(input_pp_data, \
@@ -670,10 +695,10 @@ def TradeTestUnfinishedHandel(trade_count, \
             on_price, \
             -1)
     if save_data_set:
-        if (holding_days + 1) > wave_test_dataset_sample_num:
+        if holding_days >= wave_test_dataset_sample_num:
             temp_sample_num = wave_test_dataset_sample_num
         else:
-            temp_sample_num = (holding_days + 1)
+            temp_sample_num = holding_days
         for iloop in range(0, temp_sample_num):
             GetTrainDataUnit(input_pp_data, \
                 pre_on_day_index - iloop, \
@@ -819,6 +844,7 @@ def TradeTest(input_pp_data, \
                             save_unfinished_dataset)
     if print_summary:
         print("test_days: %u, holding_days_sum: %u, increase: %.2f" % (test_days, sum_holding_days, sum_increase))
+    MergeDataUnitsToDataSet()
     return sum_increase, sum_holding_days, trade_count, trade_count_profitable
     
 

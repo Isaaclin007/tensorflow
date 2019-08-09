@@ -23,7 +23,7 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
-predict_threshold = 0
+predict_threshold = 10
 
 model=keras.models.load_model("./model/model.h5")
 mean=np.load('./model/mean.npy')
@@ -36,7 +36,7 @@ def AvgValue(sum_value, sample_num):
         return sum_value / sample_num
 
 def RegressionTest(test_data):
-    predict_features = test_data[:, 0: tushare_data.feature_size]
+    predict_features = test_data[:, 1: tushare_data.feature_size]
     print("predict_features: {}".format(predict_features.shape))
     col_index = tushare_data.feature_size
     labels = test_data[:, col_index: col_index + 1]
@@ -57,6 +57,7 @@ def RegressionTest(test_data):
     holding_days = test_data[:, col_index: col_index + 1]
 
     predict_features = (predict_features - mean) / std
+    predict_features = tushare_data.ReshapeRnnFeatures(predict_features)
     predictions = model.predict(predict_features)
     trade_count = 0
     increase_sum = 0.0

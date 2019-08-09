@@ -32,6 +32,7 @@ def Predict(feature_size, acture_size, test_data):
     temp_index = tushare_data.TestDataLastPredictFeatureOffset()
     predict_features = test_data[:, temp_index: temp_index + feature_size]
     predict_features = (predict_features - mean) / std
+    predict_features = tushare_data.ReshapeRnnFeatures(predict_features)
     predictions = model.predict(predict_features)
     predictions_df = pd.DataFrame(predictions, columns=['pred'])
     if tushare_data.test_acture_data_with_feature:

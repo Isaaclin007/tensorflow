@@ -21,6 +21,8 @@ def GetProprocessedData(ts_code):
     stock_pp_file_name = tushare_data.FileNameStockPreprocessedData(ts_code)
     if os.path.exists(stock_pp_file_name):
         pp_data = pd.read_csv(stock_pp_file_name)
+        pp_data = pp_data[pp_data['trade_date'] >= wave_kernel.start_date].copy().reset_index(drop=True)
+        # print(pp_data)
         return pp_data
     else:
         return pd.DataFrame()

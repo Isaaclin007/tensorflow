@@ -313,4 +313,18 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # print('ts_code' in temp_df.columns.values.tolist())
 # print('aaa' in temp_df.columns.values.tolist())
 
-print("\a")
+# print("\a")
+
+import numpy as np
+from numpy import random as nr
+r=nr.randint(0,10,size=(5,4))
+print("r:")
+print(r)
+
+r1 = r.reshape(5,2,2)
+print("r1:")
+print(r1)
+
+print("train_data: {}".format(r1.shape))
+
+print(r1.shape[1:])

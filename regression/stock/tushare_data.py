@@ -14,12 +14,12 @@ from llvmlite.ir.types import LabelType
 import hk_2_tu_data
 import math
 
-preprocess_ref_days = 200
+preprocess_ref_days = 100
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
 max_predict_day_count = 30  # 决定train_data 和 test_data 的predict_day_count
-predict_day_count = 1  # 预测未来几日的数据
+predict_day_count = 2  # 预测未来几日的数据
 referfence_feature_count = 1
 test_acture_data_with_feature = False
 train_a_stock_min_data_num = 400
@@ -111,8 +111,9 @@ elif feature_type == FEATURE_G0_10D10:
     use_daily_basic = False
     use_money_flow = False
 elif feature_type == FEATURE_G0_10D11_AVG:
-    feature_size = (11 * 10)
     feature_relate_days = 10
+    feature_size_one_day = 11
+    feature_size = feature_size_one_day * feature_relate_days
     use_daily_basic = False
     use_money_flow = False
 
@@ -624,27 +625,6 @@ def StockDataPreProcess(stock_data_df, use_money_flow = True, use_turnover_rate_
     src_df_2['close_increase']=0.0
     src_df_2['high_increase']=0.0
     src_df_2['low_increase']=0.0
-    src_df_2['close_5_avg']=0.0
-    src_df_2['close_10_avg']=0.0
-    src_df_2['close_30_avg']=0.0
-    src_df_2['close_100_avg']=0.0
-    src_df_2['close_200_avg']=0.0
-    if use_turnover_rate_f:
-        src_df_2['turnover_rate_f_5_avg']=0.0
-        src_df_2['turnover_rate_f_10_avg']=0.0
-        src_df_2['turnover_rate_f_30_avg']=0.0
-        src_df_2['turnover_rate_f_100_avg']=0.0
-        src_df_2['turnover_rate_f_200_avg']=0.0
-    src_df_2['vol_5_avg']=0.0
-    src_df_2['vol_10_avg']=0.0
-    src_df_2['vol_30_avg']=0.0
-    src_df_2['vol_100_avg']=0.0
-    src_df_2['vol_200_avg']=0.0
-    src_df_2['close_increase_to_5_avg']=0.0
-    src_df_2['close_increase_to_10_avg']=0.0
-    src_df_2['close_increase_to_30_avg']=0.0
-    src_df_2['close_increase_to_100_avg']=0.0
-    src_df_2['close_increase_to_200_avg']=0.0
     src_df_2['open_5']=0.0
     src_df_2['close_5']=0.0
     src_df_2['high_5']=0.0
@@ -678,7 +658,7 @@ def StockDataPreProcess(stock_data_df, use_money_flow = True, use_turnover_rate_
         StockDataPreProcess_AddAvg(src_df, col_name, 10)
         StockDataPreProcess_AddAvg(src_df, col_name, 30)
         StockDataPreProcess_AddAvg(src_df, col_name, 100)
-        StockDataPreProcess_AddAvg(src_df, col_name, 200)
+        # StockDataPreProcess_AddAvg(src_df, col_name, 200)
 
     loop_count = 0
     for day_loop in reversed(range(0, len(src_df))):
@@ -904,7 +884,7 @@ def AppendFeature( src_df, feature_day_pointer, data_unit):
         if avg_exist:
             base_close = src_df['close_100_avg'][feature_day_pointer]
             base_vol = src_df['vol_100_avg'][feature_day_pointer]
-            for iloop in range(0, 10):                
+            for iloop in reversed(range(0, 10)):
                 temp_index=feature_day_pointer+iloop
                 data_unit.append(src_df['open'][temp_index] / base_close)
                 data_unit.append(src_df['close'][temp_index] / base_close)
@@ -924,7 +904,7 @@ def AppendFeature( src_df, feature_day_pointer, data_unit):
             result, base_vol = GetAvg(src_df, feature_day_pointer, 'vol', 100)
             if not result:
                 return False
-            for iloop in range(0, 10):                
+            for iloop in reversed(range(0, 10)):
                 temp_index=feature_day_pointer+iloop
                 data_unit.append(src_df['open'][temp_index] / base_close)
                 data_unit.append(src_df['close'][temp_index] / base_close)
@@ -1454,6 +1434,9 @@ def GetTrainData():
     # sample_train_data_df = pd.DataFrame(sample_train_data, columns=caption)
     # sample_train_data_df.to_csv('./sample_train_data_df.csv')
     return train_features, train_labels
+
+def ReshapeRnnFeatures(train_features):
+    return train_features.reshape(train_features.shape[0], feature_relate_days, feature_size_one_day)
 
 def GetTrainDataBalance(label_threshold, neg_ratio):
     train_data = np.load(FileNameTrainData())
