@@ -329,13 +329,13 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # print(r1.shape[1:])
 
-data_set = np.load("./data/dataset/dataset_original_14_20120101_20100101_20000101_20190414___2_2_0_1_0_5.npy")
-print("dataset_original: {}".format(data_set.shape))
-print(data_set)
+# data_set = np.load("./data/dataset/dataset_original_14_20120101_20100101_20000101_20190414___2_2_0_1_0_5.npy")
+# print("dataset_original: {}".format(data_set.shape))
+# print(data_set)
 
-data_set = np.load("./data/dataset/dataset_14_20120101_20100101_20000101_20190414___2_2_0_1_0_5.npy")
-print("data_set: {}".format(data_set.shape))
-print(data_set)
+# data_set = np.load("./data/dataset/dataset_14_20120101_20100101_20000101_20190414___2_2_0_1_0_5.npy")
+# print("data_set: {}".format(data_set.shape))
+# print(data_set)
 
 # x2 = np.arange(10).reshape(2, 5)
 # print(x2)
@@ -348,3 +348,38 @@ print(data_set)
 # print("-------------------")
 # print(x2[1][2])
 # print("-------------------")
+
+temp_list = [[1.0, 8.1], [3.0, 7.3], [2.0, 5.2], [4.0, 1.4], [1.0, 3.1]]
+np_data = np.array(temp_list)
+
+print(type(temp_list))
+print(type(np_data))
+
+print('\nnp_data:')
+print(np_data)
+
+sort_order = np_data[:,0].argsort()
+print('\nsort_order:')
+print(sort_order)
+
+sort_data = np_data[sort_order]
+print('\nsort_data:')
+print(sort_data)
+
+sort_order = sort_order[::-1]
+print('\nsort_order:')
+print(sort_order)
+
+sort_data = np_data[sort_order]
+print('\nsort_data:')
+print(sort_data)
+
+c0 = np_data[:,0]
+print(c0)
+c0_unique = np.unique(np_data)
+print(c0_unique)
+print(type(c0_unique))
+
+c0_list = c0_unique.tolist()
+print(c0_list)
+print(type(c0_list))

@@ -13,6 +13,8 @@ import tushare_data
 import math
 import wave_kernel
 from tensorflow.python.keras.callbacks import LearningRateScheduler
+import fix_dataset
+import feature
 
 HIDDEN_SIZE = 36
 BATCH_SIZE = 10240
@@ -44,7 +46,7 @@ def build_model(input_layer_shape):
 
 def ModelFileNames(train_mode):
     if train_mode == "fix":
-        temp_path_name = "./model/fix/%s_%u_%u_%f" % (tushare_data.SettingName(), HIDDEN_SIZE, BATCH_SIZE, LEANING_RATE)
+        temp_path_name = "./model/fix/%s_%u_%u_%f" % (fix_dataset.TrainSettingName(), HIDDEN_SIZE, BATCH_SIZE, LEANING_RATE)
     else:
         temp_path_name = "./model/wave/%s_%u_%u_%f" % (tushare_data.SettingName(), HIDDEN_SIZE, BATCH_SIZE, LEANING_RATE)
     model_name = "%s/model.h5" % temp_path_name
@@ -67,9 +69,17 @@ def LoadModel(train_mode):
     std = np.load(std_name)
     return model, mean, std
 
+def ReshapeRnnFeatures(features):
+    return features.reshape(features.shape[0], feature.feature_days, feature.feature_unit_size)
+
+def FeaturesPretreat(features, mean, std):
+    features = (features - mean) / std
+    features = ReshapeRnnFeatures(features)
+    return features
+
 def train(train_mode):
     if train_mode == "fix":
-        train_features, train_labels = tushare_data.GetTrainData()
+        train_features, train_labels = fix_dataset.GetTrainData()
     else:
         train_features, train_labels = wave_kernel.GetTrainData()
     # train_features = tushare_data.Features10D14To10D5(train_features)
@@ -79,8 +89,7 @@ def train(train_mode):
     std = train_features.std(axis=0)
     # print("mean: {}".format(mean.shape))
     # print("std: {}".format(std.shape))
-    train_features = (train_features - mean) / std
-    train_features = tushare_data.ReshapeRnnFeatures(train_features)
+    train_features = FeaturesPretreat(train_features, mean, std)
     print("train_features: {}".format(train_features.shape))
 
     # max_label_value = tushare_data.predict_day_count * 10.0

@@ -295,9 +295,19 @@ V1.0.19
 
 V1.0.20
 1. test.py 和 predict.py 统一核心算法
+    添加文件 features.py  AppendFeature AppendLabel AppendActureData 转移到此文件中
+    train test predict 统一数据格式，都包括 feature label acture_data, dataset 不区分 train 和 test
+    只区分 fix_dataset 和 fix_dataset_daily，从 fix_dataset 提取训练集和测试集，通过 acture_data 的日期分割训练集和测试集
+
+    添加文件 dataset.py 生成 fix_dataset 和 fix_dataset_daily
+
     predict.py 生成 test_data_daily_...npy，添加 label 和 acture_data 时 将未来的数据设置为无效值
     （label 和 price都设置为0，日期设置为20990101），遍历日期列表不使用tushare获取的日期列表，改为使用
     test_data 中提取的日期列表
 
-V1.0.12
+V1.0.21
+    抽查训练数据。
+    对比fix_dataset 和 tushare_data的结果
+
+V1.0.22
 1. 根据预测结果决定卖出时间
