@@ -17,6 +17,7 @@ import matplotlib as mpl
 from datetime import datetime 
 import matplotlib.dates as mdate
 from matplotlib.font_manager import FontProperties
+import train_rnn
 zhfont = FontProperties(fname=r"/usr/share/fonts/truetype/wqy/wqy-microhei.ttc", size=15)
 
 reload(sys)
@@ -25,10 +26,6 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 predict_threshold = 10
 
-model=keras.models.load_model("./model/model.h5")
-mean=np.load('./model/mean.npy')
-std=np.load('./model/std.npy')
-
 def AvgValue(sum_value, sample_num):
     if sample_num == 0:
         return 0.0
@@ -36,7 +33,8 @@ def AvgValue(sum_value, sample_num):
         return sum_value / sample_num
 
 def RegressionTest(test_data):
-    predict_features = test_data[:, 1: tushare_data.feature_size]
+    model, mean, std = train_rnn.LoadModel('wave')
+    predict_features = test_data[:, 0: tushare_data.feature_size]
     print("predict_features: {}".format(predict_features.shape))
     col_index = tushare_data.feature_size
     labels = test_data[:, col_index: col_index + 1]
@@ -242,6 +240,9 @@ def TestMaxTradeOneDay(data_set, predictions, max_trade_one_day):
                         AvgValue(increase_sum, holding_days_sum)))
 
 def RegressionTestMaxTradeOneDay(test_data, max_trade_one_day):
+    model=keras.models.load_model("./model/model_.h5")
+    mean=np.load('./model/mean_.npy')
+    std=np.load('./model/std_.npy')
     predict_features = test_data[:, 0: tushare_data.feature_size]
     print("predict_features: {}".format(predict_features.shape))
     col_index = tushare_data.feature_size

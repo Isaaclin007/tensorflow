@@ -59,13 +59,14 @@ print(Y.shape)
 
 HIDDEN_SIZE = 128
 BATCH_SIZE = 128
-NUM_ITERATIONS = 1
+NUM_ITERATIONS = 10
 NUM_EPOCHS_PER_ITERATION = 1
 NUM_PREDS_PER_EPOCH = 100
 
 model = Sequential()
-model.add(SimpleRNN(HIDDEN_SIZE, return_sequences=False,
-                    input_shape=(SEQLEN, chars_count),unroll=True))
+model.add(SimpleRNN(HIDDEN_SIZE, return_sequences=False, input_shape=(SEQLEN, chars_count),unroll=True))
+# model.add(keras.layers.LSTM(HIDDEN_SIZE, input_shape=(SEQLEN, chars_count), return_sequences=True))
+# model.add(keras.layers.LSTM(HIDDEN_SIZE))
 model.add(Dense(chars_count))
 model.add(Activation("softmax"))
 model.compile(loss="categorical_crossentropy", optimizer="rmsprop")

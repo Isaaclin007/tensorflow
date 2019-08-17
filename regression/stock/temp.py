@@ -315,16 +315,36 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # print("\a")
 
-import numpy as np
-from numpy import random as nr
-r=nr.randint(0,10,size=(5,4))
-print("r:")
-print(r)
+# import numpy as np
+# from numpy import random as nr
+# r=nr.randint(0,10,size=(5,4))
+# print("r:")
+# print(r)
 
-r1 = r.reshape(5,2,2)
-print("r1:")
-print(r1)
+# r1 = r.reshape(5,2,2)
+# print("r1:")
+# print(r1)
 
-print("train_data: {}".format(r1.shape))
+# print("train_data: {}".format(r1.shape))
 
-print(r1.shape[1:])
+# print(r1.shape[1:])
+
+data_set = np.load("./data/dataset/dataset_original_14_20120101_20100101_20000101_20190414___2_2_0_1_0_5.npy")
+print("dataset_original: {}".format(data_set.shape))
+print(data_set)
+
+data_set = np.load("./data/dataset/dataset_14_20120101_20100101_20000101_20190414___2_2_0_1_0_5.npy")
+print("data_set: {}".format(data_set.shape))
+print(data_set)
+
+# x2 = np.arange(10).reshape(2, 5)
+# print(x2)
+# print("-------------------")
+# print(x2[0])
+# print("-------------------")
+# print(x2[0, :2])
+# print("-------------------")
+# print(x2[1,2])
+# print("-------------------")
+# print(x2[1][2])
+# print("-------------------")

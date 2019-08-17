@@ -18,7 +18,7 @@ preprocess_ref_days = 100
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
-max_predict_day_count = 30  # 决定train_data 和 test_data 的predict_day_count
+max_predict_day_count = 10  # 决定train_data 和 test_data 的predict_day_count
 predict_day_count = 2  # 预测未来几日的数据
 referfence_feature_count = 1
 test_acture_data_with_feature = False
@@ -43,8 +43,12 @@ FEATURE_G0_100D2_TO_100_AVG = 10
 FEATURE_G0_10D14_TO_100_AVG = 11
 FEATURE_G0_10D10 = 12
 FEATURE_G0_10D11_AVG = 13
+FEATURE_G0_10D11_AVG_WITH_DATE = 14
+FEATURE_G0_30D5_AVG = 15
+FEATURE_G0_30D11_AVG = 16
+FEATURE_G0_30D17_AVG = 17
 
-feature_type = FEATURE_G0_10D11_AVG
+feature_type = FEATURE_G0_30D5_AVG
 if feature_type == FEATURE_G7_10D8:
     feature_size = 7 + (8 * 10)
     feature_relate_days = 10
@@ -116,6 +120,30 @@ elif feature_type == FEATURE_G0_10D11_AVG:
     feature_size = feature_size_one_day * feature_relate_days
     use_daily_basic = False
     use_money_flow = False
+elif feature_type == FEATURE_G0_10D11_AVG_WITH_DATE:
+    feature_relate_days = 10
+    feature_size_one_day = 12
+    feature_size = feature_size_one_day * feature_relate_days
+    use_daily_basic = False
+    use_money_flow = False
+elif feature_type == FEATURE_G0_30D5_AVG:
+    feature_relate_days = 30
+    feature_size_one_day = 5
+    feature_size = feature_size_one_day * feature_relate_days
+    use_daily_basic = False
+    use_money_flow = False
+elif feature_type == FEATURE_G0_30D11_AVG:
+    feature_relate_days = 30
+    feature_size_one_day = 11
+    feature_size = feature_size_one_day * feature_relate_days
+    use_daily_basic = False
+    use_money_flow = False
+elif feature_type == FEATURE_G0_30D17_AVG:
+    feature_relate_days = 30
+    feature_size_one_day = 17
+    feature_size = feature_size_one_day * feature_relate_days
+    use_daily_basic = False
+    use_money_flow = False
 
 LABEL_PRE_CLOSE_2_TD_CLOSE = 0
 LABEL_T1_OPEN_2_TD_CLOSE = 1
@@ -146,7 +174,7 @@ def CurrentDate():
 # predict_date = '20190111'
 
 pp_data_start_date = '20000101'
-stocks_list_end_date = '20160101'
+stocks_list_end_date = '20000101'
 train_data_start_date = '20120101'
 train_data_end_date = '20170101'
 test_data_start_date = '20170101'
@@ -254,7 +282,7 @@ max_circ_mv = 0
 ts.set_token('230c446ae448ec95357d0f7e804ddeebc7a51ff340b4e6e0913ea2fa')
 
 pd.set_option('display.width', 150)  # 设置字符显示宽度
-pd.set_option('display.max_rows', 100)  # 设置显示最大行
+pd.set_option('display.max_rows', 20)  # 设置显示最大行
 
 def TradeDateList(input_end_date, trade_day_num):
     pro = ts.pro_api()
@@ -879,13 +907,15 @@ def AppendFeature( src_df, feature_day_pointer, data_unit):
             data_unit.append(src_df['close_30_avg'][temp_index])
             data_unit.append(src_df['close_100_avg'][temp_index])
             data_unit.append(src_df['close_200_avg'][temp_index])
-    elif feature_type == FEATURE_G0_10D11_AVG:
+    elif (feature_type == FEATURE_G0_10D11_AVG) or (feature_type == FEATURE_G0_10D11_AVG_WITH_DATE):
         avg_exist = 'close_100_avg' in src_df.columns.values.tolist()
         if avg_exist:
             base_close = src_df['close_100_avg'][feature_day_pointer]
             base_vol = src_df['vol_100_avg'][feature_day_pointer]
             for iloop in reversed(range(0, 10)):
                 temp_index=feature_day_pointer+iloop
+                if feature_type == FEATURE_G0_10D11_AVG_WITH_DATE:
+                    data_unit.append(float(src_df['trade_date'][temp_index]))
                 data_unit.append(src_df['open'][temp_index] / base_close)
                 data_unit.append(src_df['close'][temp_index] / base_close)
                 data_unit.append(src_df['high'][temp_index] / base_close)
@@ -906,6 +936,8 @@ def AppendFeature( src_df, feature_day_pointer, data_unit):
                 return False
             for iloop in reversed(range(0, 10)):
                 temp_index=feature_day_pointer+iloop
+                if feature_type == FEATURE_G0_10D11_AVG_WITH_DATE:
+                    data_unit.append(float(src_df['trade_date'][temp_index]))
                 data_unit.append(src_df['open'][temp_index] / base_close)
                 data_unit.append(src_df['close'][temp_index] / base_close)
                 data_unit.append(src_df['high'][temp_index] / base_close)
@@ -923,6 +955,56 @@ def AppendFeature( src_df, feature_day_pointer, data_unit):
                 data_unit.append(close_5_avg / base_close)
                 data_unit.append(close_10_avg / base_close)
                 data_unit.append(close_30_avg / base_close)
+    elif feature_type == FEATURE_G0_30D5_AVG:
+        base_close = src_df['close_100_avg'][feature_day_pointer]
+        base_vol = src_df['vol_100_avg'][feature_day_pointer]
+        for iloop in reversed(range(0, feature_relate_days)):
+            temp_index=feature_day_pointer+iloop
+            data_unit.append(src_df['open'][temp_index] / base_close)
+            data_unit.append(src_df['close'][temp_index] / base_close)
+            data_unit.append(src_df['high'][temp_index] / base_close)
+            data_unit.append(src_df['low'][temp_index] / base_close)
+            data_unit.append(src_df['vol'][temp_index] / base_vol)
+    elif feature_type == FEATURE_G0_30D11_AVG:
+        base_close = src_df['close_100_avg'][feature_day_pointer]
+        base_vol = src_df['vol_100_avg'][feature_day_pointer]
+        for iloop in reversed(range(0, feature_relate_days)):
+            temp_index=feature_day_pointer+iloop
+            data_unit.append(src_df['open'][temp_index] / base_close)
+            data_unit.append(src_df['close'][temp_index] / base_close)
+            data_unit.append(src_df['high'][temp_index] / base_close)
+            data_unit.append(src_df['low'][temp_index] / base_close)
+            data_unit.append(src_df['vol'][temp_index] / base_vol)
+            data_unit.append(src_df['vol_5_avg'][temp_index] / base_vol)
+            data_unit.append(src_df['vol_10_avg'][temp_index] / base_vol)
+            data_unit.append(src_df['vol_30_avg'][temp_index] / base_vol)
+            data_unit.append(src_df['close_5_avg'][temp_index] / base_close)
+            data_unit.append(src_df['close_10_avg'][temp_index] / base_close)
+            data_unit.append(src_df['close_30_avg'][temp_index] / base_close)
+    elif feature_type == FEATURE_G0_30D17_AVG:
+        base_close = src_df['close_100_avg'][feature_day_pointer]
+        base_vol = src_df['vol_100_avg'][feature_day_pointer]
+        for iloop in reversed(range(0, feature_relate_days)):
+            temp_index=feature_day_pointer+iloop
+            temp_close = src_df['close'][temp_index]
+            temp_vol = src_df['vol'][temp_index]
+            data_unit.append(src_df['open'][temp_index] / base_close)
+            data_unit.append(temp_close / base_close)
+            data_unit.append(src_df['high'][temp_index] / base_close)
+            data_unit.append(src_df['low'][temp_index] / base_close)
+            data_unit.append(temp_vol / base_vol)
+            data_unit.append(src_df['vol_5_avg'][temp_index] / base_vol)
+            data_unit.append(src_df['vol_10_avg'][temp_index] / base_vol)
+            data_unit.append(src_df['vol_30_avg'][temp_index] / base_vol)
+            data_unit.append(src_df['close_5_avg'][temp_index] / base_close)
+            data_unit.append(src_df['close_10_avg'][temp_index] / base_close)
+            data_unit.append(src_df['close_30_avg'][temp_index] / base_close)
+            data_unit.append(temp_vol / src_df['vol_5_avg'][temp_index])
+            data_unit.append(temp_vol / src_df['vol_10_avg'][temp_index])
+            data_unit.append(temp_vol / src_df['vol_30_avg'][temp_index])
+            data_unit.append(temp_close / src_df['close_5_avg'][temp_index])
+            data_unit.append(temp_close / src_df['close_10_avg'][temp_index])
+            data_unit.append(temp_close / src_df['close_30_avg'][temp_index])
     return True
         
 def AppendLabel( src_df, day_index, data_unit):
@@ -1203,6 +1285,21 @@ def FileNameTrainData():
         industry_filter, \
         code_filter)
     return file_name
+
+def SettingName():
+    temp_name = '%u_%u_%u_%u_%s_%s_%s_%u_%u_%s%s' % ( \
+        feature_type, \
+        label_type, \
+        max_predict_day_count, \
+        predict_day_count, \
+        stocks_list_end_date, \
+        train_data_start_date, \
+        train_data_end_date, \
+        train_a_stock_min_data_num, \
+        train_a_stock_max_data_num, \
+        industry_filter, \
+        code_filter)
+    return temp_name
 
 # 对于整体测试数据，关注
 # feature size

@@ -38,6 +38,12 @@ train_data_end_date = 20180101
 test_data_end_date = 20190501
 wave_test_dataset_sample_num = 5
 
+GLOBAL_FEATURE_NONE = 0
+GLOBAL_FEATURE_PRETRADE_NUM = 1
+GLOBAL_FEATURE_PRETRADE_NUM_EACH_DAY = 2
+
+global_feature = GLOBAL_FEATURE_NONE
+
 def FillWaveData(input_pp_data, wave_status, start_day_index):
     for day_loop in range(start_day_index, len(input_pp_data)):
         input_pp_data.loc[day_loop,'wave_extreme'] = EXTREME_NONE
@@ -132,7 +138,7 @@ def COL_HOLDING_DAYS():
 
 def GetTrainDataUnit(pp_data, pre_on_day_index, on_date_index, off_date_index, holding_days, increase):
     global train_data_list
-    if (len(pp_data) - pre_on_day_index) < 10:
+    if (len(pp_data) - pre_on_day_index) < tushare_data.feature_relate_days:
         return
     data_unit=[]
     # feature
@@ -184,12 +190,10 @@ def MergeDataUnitsToDataSet():
         train_data_list = []
     print("len(g_data_set): %u" % len(g_data_set))
 
-
-model=keras.models.load_model("./model/model.h5")
-mean=np.load('./model/mean.npy')
-std=np.load('./model/std.npy')
-
 def Predict(pp_data, day_index):
+    model=keras.models.load_model("./model/model_.h5")
+    mean=np.load('./model/mean_.npy')
+    std=np.load('./model/std_.npy')
     if (len(pp_data) - day_index) < 10:
         return 0.0
     data_unit=[]
@@ -203,7 +207,7 @@ def Predict(pp_data, day_index):
 
 
 def FileNameDataSet():
-    file_name = './data/dataset/dataset_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u.npy' % ( \
+    file_name = './data/dataset/dataset_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
         tushare_data.feature_type, \
         start_date, \
         tushare_data.stocks_list_end_date, \
@@ -216,7 +220,8 @@ def FileNameDataSet():
         trade_off_threshold, \
         int(up_100avg_condition), \
         int(up_200avg_condition), \
-        wave_test_dataset_sample_num)
+        wave_test_dataset_sample_num, \
+        global_feature)
     return file_name
 
 def FileNameDataSetOriginal():
@@ -237,7 +242,7 @@ def FileNameDataSetOriginal():
     return file_name
 
 def FileNameDailyDataSet():
-    file_name = './data/dataset/daily_dataset_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
+    file_name = './data/dataset/daily_dataset_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
         tushare_data.feature_type, \
         start_date, \
         tushare_data.stocks_list_end_date, \
@@ -251,7 +256,8 @@ def FileNameDailyDataSet():
         int(up_100avg_condition), \
         int(up_200avg_condition), \
         int(wave_test_daily.pridect_mode), \
-        wave_test_dataset_sample_num)
+        wave_test_dataset_sample_num, \
+        global_feature)
     return file_name
 
 def FileNameDailyDataSetOriginal():
@@ -271,6 +277,48 @@ def FileNameDailyDataSetOriginal():
         int(wave_test_daily.pridect_mode), \
         wave_test_dataset_sample_num)
     return file_name
+
+def SetPreTradeStockNums(data_set):
+    print('SetPreTradeStockNums.Start')
+    data_set = data_set[np.where(data_set[:,COL_TS_CODE()] != 000029.0)].copy()
+    # 获取 data_set 的最大和最小 pre_on 时间，生成date_list列表
+    on_pretrade_dates = data_set[:, COL_ON_PRETRADE_DATE()]
+    start_date = '%.0f' % np.min(on_pretrade_dates)
+    end_date = '%.0f' % np.max(on_pretrade_dates)
+    date_list = tushare_data.TradeDateListRange(start_date, end_date)
+    
+    # 生成 np_date_holding_num，二列表格
+    holding_nums_list = []
+    avg_sample_num = 5
+    for iloop in range(0, len(date_list) - avg_sample_num):
+        temp_date = int(date_list[iloop])
+        temp_date_range_b = int(date_list[iloop + avg_sample_num])
+        pos = (on_pretrade_dates > temp_date_range_b) & (on_pretrade_dates <= temp_date)
+        # if temp_date == 20190327:
+        #     temp_data_set = data_set[pos].copy()
+        #     for sloop in range(0, len(temp_data_set)):
+        #         print('%u, %u, %u' % (sloop, int(temp_data_set[sloop, COL_TS_CODE()]), int(temp_data_set[sloop, COL_ON_PRETRADE_DATE()])))
+        holding_nums = np.sum(pos)
+        temp_unit = []
+        temp_unit.append(temp_date)
+        temp_unit.append(holding_nums)
+        holding_nums_list.append(temp_unit)
+    np_date_holding_num = np.array(holding_nums_list)
+
+    # 设置每条记录的 holding_nums 
+    for iloop in range(0, len(data_set)):
+        for dloop in range(0, tushare_data.feature_relate_days):
+            temp_col_index = dloop * tushare_data.feature_size_one_day
+            temp_date = int(data_set[iloop][temp_col_index])
+            temp_record = np_date_holding_num[np_date_holding_num[:, 0] == temp_date]
+            if len(temp_record) != 1:
+                # print('Error, AppendPreTradeStockNums, len(temp_record) != 1')
+                data_set[iloop][0] = -1.0
+                break
+            data_set[iloop][temp_col_index] = float(temp_record[0][1])
+    data_set = data_set[np.where(data_set[:,0] != -1.0)].copy()
+    return data_set
+
 
 def AppendPreTradeStockNums(data_set):
     print('AppendPreTradeStockNums.Start')
@@ -359,20 +407,26 @@ def AppendHoldStockNums(data_set):
 
 
 def AppendGlobalFeatures(data_set):
-    return AppendPreTradeStockNums(data_set)
-    # 未完成，暂时使用旧版本global features
-    print('AppendGlobalFeatures.Start')
-    pp_merge_data = pp_daily_update.GetPPMergeDataOriginalSimplify()
-    print(pp_merge_data.dtypes)
-    temp_date_col = pp_merge_data['trade_date'].values
-    start_date = np.min(temp_date_col)
-    end_date = np.max(temp_date_col)
-    date_list = tushare_data.TradeDateListRange(start_date, end_date)
-    for iloop in range(0, len(date_list)):
-        temp_date = int(date_list[iloop])
-        pos = (temp_date_col == temp_date)
-        print('%u, %u' % (temp_date, np.sum(pos)))
-    return
+    if GLOBAL_FEATURE_PRETRADE_NUM == global_feature:
+        return AppendPreTradeStockNums(data_set)
+    elif GLOBAL_FEATURE_PRETRADE_NUM_EACH_DAY == global_feature:
+        return SetPreTradeStockNums(data_set)
+    elif GLOBAL_FEATURE_NONE == global_feature:
+        return data_set
+    # 
+    # # 未完成，暂时使用旧版本global features
+    # print('AppendGlobalFeatures.Start')
+    # pp_merge_data = pp_daily_update.GetPPMergeDataOriginalSimplify()
+    # print(pp_merge_data.dtypes)
+    # temp_date_col = pp_merge_data['trade_date'].values
+    # start_date = np.min(temp_date_col)
+    # end_date = np.max(temp_date_col)
+    # date_list = tushare_data.TradeDateListRange(start_date, end_date)
+    # for iloop in range(0, len(date_list)):
+    #     temp_date = int(date_list[iloop])
+    #     pos = (temp_date_col == temp_date)
+    #     print('%u, %u' % (temp_date, np.sum(pos)))
+    # return
 
 def SaveDataSet():
     global g_data_set
@@ -384,7 +438,8 @@ def SaveDataSet():
 
 def GetTrainData():
     train_data = np.load(FileNameDataSet())
-    tushare_data.feature_size += 1
+    if GLOBAL_FEATURE_PRETRADE_NUM == global_feature:
+        tushare_data.feature_size += 1
     print("data_set: {}".format(train_data.shape))
 
     pos = (train_data[:,COL_ON_PRETRADE_DATE()] < train_data_end_date) & (train_data[:,COL_OFF_DATE()] != 20990101.0)
@@ -458,7 +513,8 @@ def GetTestData():
     # print(debug_df)
     # return debug_df
 
-    tushare_data.feature_size += 1
+    if GLOBAL_FEATURE_PRETRADE_NUM == global_feature:
+        tushare_data.feature_size += 1
     print("data_set: {}".format(data_set.shape))
     pos = (data_set[:,COL_ON_PRETRADE_DATE()] >= train_data_end_date) & (data_set[:,COL_ON_PRETRADE_DATE()] < test_data_end_date)
     data_set = data_set[pos]
@@ -486,8 +542,7 @@ def GetTestData():
     return data_set
 
 def GetTestDataOriginal():
-    data_set = np.load(FileNameDataSet())
-    data_set = data_set[:,1:]
+    data_set = np.load(FileNameDataSetOriginal())
     print("data_set: {}".format(data_set.shape))
     pos = (data_set[:,COL_ON_PRETRADE_DATE()] >= train_data_end_date) & (data_set[:,COL_ON_PRETRADE_DATE()] < test_data_end_date)
     data_set = data_set[pos]
@@ -506,14 +561,16 @@ def GetTestDataOriginal():
     return data_df.values
 
 def SaveDailyDataSet():
-    train_data = np.array(train_data_list)
+    global g_data_set
+    # train_data = np.array(train_data_list)
+    train_data = g_data_set
     np.save(FileNameDailyDataSetOriginal(), train_data)
     train_data = AppendGlobalFeatures(train_data)
     np.save(FileNameDailyDataSet(), train_data)
 
 def GetDailyDataSet():
     data_set = np.load(FileNameDailyDataSet())
-    tushare_data.feature_size += 1
+    # tushare_data.feature_size += 1
     print("data_set: {}".format(data_set.shape))
     data_set = data_set[np.where(data_set[:,tushare_data.feature_size + 2] >= train_data_end_date)]
     print("data_set from train_data_end_date: {}".format(data_set.shape))
@@ -535,7 +592,8 @@ def GetDailyDataSet():
     data_df = data_df.sort_values(by=['pre_on_date', 'ts_code'], ascending=(True, True))
 
     # debug_df = data_df[(data_df['pre_on_date'] == 20190327.0) & (data_df['ts_code'] == 002605.0)]
-    # print(debug_df)
+    debug_df = data_df[(data_df['ts_code'] == 600198.0)]
+    print(debug_df)
     # return debug_df.values
 
     return data_df.values
@@ -698,7 +756,8 @@ def TradeTestUnfinishedHandel(trade_count, \
         if holding_days >= wave_test_dataset_sample_num:
             temp_sample_num = wave_test_dataset_sample_num
         else:
-            temp_sample_num = holding_days
+            # +1 的原因是添加 pre_on 日数据
+            temp_sample_num = holding_days + 1
         for iloop in range(0, temp_sample_num):
             GetTrainDataUnit(input_pp_data, \
                 pre_on_day_index - iloop, \

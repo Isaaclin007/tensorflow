@@ -131,13 +131,13 @@ def build_model(input_layer_shape):
     # model.compile(loss='mse',
     #                 optimizer=optimizer,
     #                 metrics=['mae'])
-    # model.compile(loss='mae',
-    #                 optimizer=optimizer,
-    #                 metrics=['mae'])
-    model.compile(loss=mystockloss,
+    model.compile(loss='mae',
                     optimizer=optimizer,
-                    metrics=[mystockloss])
-                    # metrics=['mae'])
+                    metrics=['mae'])
+    # model.compile(loss=mystockloss,
+    #                 optimizer=optimizer,
+    #                 metrics=[mystockloss])
+    #                 # metrics=['mae'])
     return model
 
 def train():
@@ -158,7 +158,7 @@ def train():
     model = build_model((train_features.shape[1],))
     model.summary()
 
-    EPOCHS = 100
+    EPOCHS = 200
 
     # Display training progress by printing a single dot for each completed epoch.
     class PrintDot(keras.callbacks.Callback):
@@ -205,9 +205,9 @@ def train():
     plot_history(history)
     # # 显示 >>>>>>>>>>>>
 
-    model.save("./model/model.h5")
-    np.save('./model/mean.npy', mean)
-    np.save('./model/std.npy', std)
+    model.save("./model/model_.h5")
+    np.save('./model/mean_.npy', mean)
+    np.save('./model/std_.npy', std)
 
 if __name__ == "__main__":
     train()

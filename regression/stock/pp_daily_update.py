@@ -20,8 +20,8 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
-# update_date = tushare_data.CurrentDate()
-update_date = '20190624'
+update_date = tushare_data.CurrentDate()
+# update_date = '20190604'
 code_list = tushare_data.StockCodes()
 
 def CreatePPMergeDataOriginal():
@@ -200,7 +200,7 @@ def GetPreprocessedDataExt(ts_code):
 if __name__ == "__main__":
     # CreatePPMergeDataOriginal()
     merge_data = GetPreprocessedMergeData()
-    stock_data = GetPreprocessedData(merge_data, '000544.SZ')
+    stock_data = GetPreprocessedData(merge_data, '000720.SZ')
     stock_data = CleanCols(stock_data)
     stock_data.to_csv('./temp.csv')
     

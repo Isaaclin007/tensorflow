@@ -273,9 +273,31 @@ V1.0.17
 1.修复 wave test daily 数据和个股 pp 数据测试结果不一致的问题
 
 V1.0.18
+1.支持RNN网络
+
+V1.0.19
 1. 增加特征，过去10天，每天的:
     pre_trade_stock_num 比例，
     holding_num 比例，
     avg_100_up_num 比例
-2. dataset 相关数据中删除跌幅超过40%的数据，在 wave_kernel.GetTrainDataUnit() 中处理
+    方案：
+        A.
+            1.在生成 dataset 特征时插入每天的日期（已完成），
+            2.AppendGlobalFeatures 时通过此日期查找全局特征（已完成 pre_trade_stock_num）
+                生成 date ~ xx_num 映射列表
+                遍历每1条记录的每个日期，从映射列表中查找此日期，如果没有找到则删除这条记录
+        B（暂不实现）.删除不连续的 dataset 记录，AppendGlobalFeatures 时通过一个日期连续插入10条连续的记录
+            删除 不连续的 dataset 记录 的方案：在全局 date_list 中找到特征的最近日期，
+            判断最远日期是否与 date_list 中前 feature_relate_days 的值相等
+    pre_trade_stock_num 比例（未完成），计算比例需要获取每天的正常交易的个股数量，无法实现，
+        因此需要将 stocks_list_end_date 设置为 wave_kernel.start_date 之前，以保证 dataset中的 pre_trade_stock_num 在时间维度均衡
+2. （暂不实现）dataset 相关数据中删除跌幅超过40%的数据，在 wave_kernel.GetTrainDataUnit() 中处理
 
+V1.0.20
+1. test.py 和 predict.py 统一核心算法
+    predict.py 生成 test_data_daily_...npy，添加 label 和 acture_data 时 将未来的数据设置为无效值
+    （label 和 price都设置为0，日期设置为20990101），遍历日期列表不使用tushare获取的日期列表，改为使用
+    test_data 中提取的日期列表
+
+V1.0.12
+1. 根据预测结果决定卖出时间

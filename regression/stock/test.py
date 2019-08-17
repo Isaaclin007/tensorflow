@@ -10,10 +10,13 @@ import time
 import sys
 import tushare_data
 import random
+import train_rnn
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
+
+predict_threshold = 4
 
 test_date_list = tushare_data.TestTradeDateList()
 # test_date_list = test_date_list[0:100]
@@ -22,13 +25,8 @@ test_date_list = tushare_data.TestTradeDateList()
 # load_data = np.load('./temp_data/test_data_20090101_20190104_100_1_1_0.npy')
 
 def Predict(feature_size, acture_size, test_data):
-    model=keras.models.load_model("./model/model.h5")
-    mean=np.load('./model/mean.npy')
-    print('mean:')
-    print(mean)
-    std=np.load('./model/std.npy')
-    print('std:')
-    print(std)
+    model, mean, std = train_rnn.LoadModel('fix')
+
     temp_index = tushare_data.TestDataLastPredictFeatureOffset()
     predict_features = test_data[:, temp_index: temp_index + feature_size]
     predict_features = (predict_features - mean) / std
@@ -184,13 +182,13 @@ def TestEntry(predict_trade_threshold, max_trade_count_1_day, print_msg):
                             #             out_price = temp_close
                             #             break
 
-                            temp_increase = ((out_price / buying_price) - 1.0) *100.0
+                            temp_increase = ((out_price / buying_price) - 1.0 - 0.001) *100.0
                             increase_sum += temp_increase
 
                             day_trade_count += 1
                             trade_count += 1
                             # print("%f, %f, %f" % (capital_value, capital_ratio, temp_increase))
-                            capital_value += capital_ratio / float(tushare_data.predict_day_count) / float(max_trade_count_1_day) * ((out_price / buying_price) - 1.0)
+                            capital_value += capital_ratio / float(tushare_data.predict_day_count) / float(max_trade_count_1_day) * (temp_increase / 100.0)
 
                             if capital_value > 1.0:
                                 capital_ratio = int(capital_value)  # 每增加1倍更新一次
@@ -265,6 +263,6 @@ if __name__ == "__main__":
     #             max_capital_increase_max_trade_count_1_day = temp_count
     # print("max:")
     # TestEntry(max_capital_increase_threshold, max_capital_increase_max_trade_count_1_day, True)
-    TestEntry(0, 1, True)
+    TestEntry(predict_threshold, 1, True)
 
 
