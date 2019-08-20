@@ -90,7 +90,8 @@ def UpdateFixDataSet(is_daily_data, save_unfinished_record):
             if valid_data_num > 0:
                 for day_loop in range(start_index, start_index + valid_data_num):
                     data_unit = feature.GetDataUnit(pp_data, day_loop)
-                    data_list.append(data_unit)
+                    if len(data_unit) > 0:
+                        data_list.append(data_unit)
                 temp_np_data = np.array(data_list)
                 if init_flag:
                     data_set = temp_np_data
@@ -202,6 +203,15 @@ def GetTestData():
     print("test_data: {}".format(test_data.shape))
     return test_data
 
+def Debug(test_data):
+    t0_date_index = feature.COL_TRADE_DATE(0)
+    t0_tscode_index = feature.COL_ACTURE_OFFSET(0) + feature.ACTURE_DATA_INDEX_TSCODE
+    sample_data = test_data[test_data[:,t0_date_index] == 20170103.0].copy()
+    print("sample_data: {}".format(sample_data.shape))
+    print("\n")
+    for iloop in range(0, len(sample_data)):
+        print("%f" % sample_data[iloop, t0_tscode_index])
+
 def GetDailyDataSet():
     dataset = np.load(FileNameFixDataSetDaily())
     print("dataset: {}".format(dataset.shape))
@@ -213,6 +223,13 @@ def GetDailyDataSet():
 
 
 if __name__ == "__main__":
+    # 生成测试集和训练集数据
     UpdateFixDataSet(False, False)
     CheckFixDataSet()
+
+    # 生成 daily dataset 用于预测
+    UpdateFixDataSet(True, True)
+    # test_data = GetTestData()
+    # Debug(test_data)
+
 

@@ -18,6 +18,7 @@ from datetime import datetime
 import matplotlib.dates as mdate
 from matplotlib.font_manager import FontProperties
 import train_rnn
+import feature
 zhfont = FontProperties(fname=r"/usr/share/fonts/truetype/wqy/wqy-microhei.ttc", size=15)
 
 reload(sys)
@@ -34,9 +35,9 @@ def AvgValue(sum_value, sample_num):
 
 def RegressionTest(test_data):
     model, mean, std = train_rnn.LoadModel('wave')
-    predict_features = test_data[:, 0: tushare_data.feature_size]
+    predict_features = test_data[:, 0: feature.feature_size]
     print("predict_features: {}".format(predict_features.shape))
-    col_index = tushare_data.feature_size
+    col_index = feature.feature_size
     labels = test_data[:, col_index: col_index + 1]
 
     col_index += 1
@@ -55,7 +56,7 @@ def RegressionTest(test_data):
     holding_days = test_data[:, col_index: col_index + 1]
 
     predict_features = (predict_features - mean) / std
-    predict_features = tushare_data.ReshapeRnnFeatures(predict_features)
+    predict_features = train_rnn.ReshapeRnnFeatures(predict_features)
     predictions = model.predict(predict_features)
     trade_count = 0
     increase_sum = 0.0
@@ -243,9 +244,9 @@ def RegressionTestMaxTradeOneDay(test_data, max_trade_one_day):
     model=keras.models.load_model("./model/model_.h5")
     mean=np.load('./model/mean_.npy')
     std=np.load('./model/std_.npy')
-    predict_features = test_data[:, 0: tushare_data.feature_size]
+    predict_features = test_data[:, 0: feature.feature_size]
     print("predict_features: {}".format(predict_features.shape))
-    col_index = tushare_data.feature_size
+    col_index = feature.feature_size
     labels = test_data[:, col_index: col_index + 1]
 
     col_index += 1

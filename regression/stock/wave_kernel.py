@@ -13,6 +13,7 @@ import random
 import daily_data
 import wave_test_daily
 import pp_daily_update
+import feature
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -119,30 +120,30 @@ train_data_list = []
 g_data_set = np.array(train_data_list)
 
 def COL_INCREASE():
-    return tushare_data.feature_size
+    return feature.feature_size
 
 def COL_TS_CODE():
-    return tushare_data.feature_size + 1
+    return feature.feature_size + 1
 
 def COL_ON_PRETRADE_DATE():
-    return tushare_data.feature_size + 2
+    return feature.feature_size + 2
 
 def COL_ON_DATE():
-    return tushare_data.feature_size + 3
+    return feature.feature_size + 3
 
 def COL_OFF_DATE():
-    return tushare_data.feature_size + 4
+    return feature.feature_size + 4
 
 def COL_HOLDING_DAYS():
-    return tushare_data.feature_size + 5
+    return feature.feature_size + 5
 
 def GetTrainDataUnit(pp_data, pre_on_day_index, on_date_index, off_date_index, holding_days, increase):
     global train_data_list
-    if (len(pp_data) - pre_on_day_index) < tushare_data.feature_relate_days:
+    if (len(pp_data) - pre_on_day_index) < feature.feature_days:
         return
     data_unit=[]
     # feature
-    result = tushare_data.AppendFeature(pp_data, pre_on_day_index, data_unit)
+    result = feature.AppendFeature(pp_data, pre_on_day_index, data_unit)
     if not result:
         return
     # label
@@ -208,7 +209,7 @@ def Predict(pp_data, day_index):
 
 def FileNameDataSet():
     file_name = './data/dataset/dataset_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
-        tushare_data.feature_type, \
+        feature.feature_type, \
         start_date, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
@@ -226,7 +227,7 @@ def FileNameDataSet():
 
 def FileNameDataSetOriginal():
     file_name = './data/dataset/dataset_original_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u.npy' % ( \
-        tushare_data.feature_type, \
+        feature.feature_type, \
         start_date, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
@@ -243,7 +244,7 @@ def FileNameDataSetOriginal():
 
 def FileNameDailyDataSet():
     file_name = './data/dataset/daily_dataset_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
-        tushare_data.feature_type, \
+        feature.feature_type, \
         start_date, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
@@ -262,7 +263,7 @@ def FileNameDailyDataSet():
 
 def FileNameDailyDataSetOriginal():
     file_name = './data/dataset/daily_dataset_original_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
-        tushare_data.feature_type, \
+        feature.feature_type, \
         start_date, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
@@ -308,7 +309,7 @@ def SetPreTradeStockNums(data_set):
     # 设置每条记录的 holding_nums 
     for iloop in range(0, len(data_set)):
         for dloop in range(0, tushare_data.feature_relate_days):
-            temp_col_index = dloop * tushare_data.feature_size_one_day
+            temp_col_index = dloop * feature.feature_unit_size
             temp_date = int(data_set[iloop][temp_col_index])
             temp_record = np_date_holding_num[np_date_holding_num[:, 0] == temp_date]
             if len(temp_record) != 1:
@@ -439,7 +440,7 @@ def SaveDataSet():
 def GetTrainData():
     train_data = np.load(FileNameDataSet())
     if GLOBAL_FEATURE_PRETRADE_NUM == global_feature:
-        tushare_data.feature_size += 1
+        feature.feature_size += 1
     print("data_set: {}".format(train_data.shape))
 
     pos = (train_data[:,COL_ON_PRETRADE_DATE()] < train_data_end_date) & (train_data[:,COL_OFF_DATE()] != 20990101.0)
@@ -451,9 +452,9 @@ def GetTrainData():
     train_data=train_data[order]
     train_data=train_data[:2000000]
 
-    label_index = tushare_data.feature_size
+    label_index = feature.feature_size
     print("get feature ...")
-    train_features = train_data[:, 0:tushare_data.feature_size].copy()
+    train_features = train_data[:, 0:feature.feature_size].copy()
     # raw_input("Enter ...")
 
     print("get label...")
@@ -477,9 +478,9 @@ def GetTrainDataOriginal():
     train_data=train_data[order]
     train_data=train_data[:2000000]
 
-    label_index = tushare_data.feature_size
+    label_index = feature.feature_size
     print("get feature ...")
-    train_features = train_data[:, 0:tushare_data.feature_size].copy()
+    train_features = train_data[:, 0:feature.feature_size].copy()
     # raw_input("Enter ...")
 
     print("get label...")
@@ -494,9 +495,9 @@ def GetTestData():
     data_set = np.load(FileNameDataSet())
 
     # debug
-    # tushare_data.feature_size += 1
+    # feature.feature_size += 1
     # captions = []
-    # for iloop in range(0, tushare_data.feature_size):
+    # for iloop in range(0, feature.feature_size):
     #     captions.append('f_%u' % iloop)
     # captions.append('label')
     # captions.append('ts_code')
@@ -514,14 +515,14 @@ def GetTestData():
     # return debug_df
 
     if GLOBAL_FEATURE_PRETRADE_NUM == global_feature:
-        tushare_data.feature_size += 1
+        feature.feature_size += 1
     print("data_set: {}".format(data_set.shape))
     pos = (data_set[:,COL_ON_PRETRADE_DATE()] >= train_data_end_date) & (data_set[:,COL_ON_PRETRADE_DATE()] < test_data_end_date)
     data_set = data_set[pos]
     print("test_data: {}".format(data_set.shape))
 
     captions = []
-    for iloop in range(0, tushare_data.feature_size):
+    for iloop in range(0, feature.feature_size):
         captions.append('f_%u' % iloop)
     captions.append('label')
     captions.append('ts_code')
@@ -538,7 +539,7 @@ def GetTestData():
 
     return data_df.values
 
-    data_set = data_set[np.argsort(data_set[:,tushare_data.feature_size + 2])]
+    data_set = data_set[np.argsort(data_set[:,feature.feature_size + 2])]
     return data_set
 
 def GetTestDataOriginal():
@@ -548,7 +549,7 @@ def GetTestDataOriginal():
     data_set = data_set[pos]
     print("test_data: {}".format(data_set.shape))
     captions = []
-    for iloop in range(0, tushare_data.feature_size):
+    for iloop in range(0, feature.feature_size):
         captions.append('f_%u' % iloop)
     captions.append('label')
     captions.append('ts_code')
@@ -570,17 +571,17 @@ def SaveDailyDataSet():
 
 def GetDailyDataSet():
     data_set = np.load(FileNameDailyDataSet())
-    # tushare_data.feature_size += 1
+    # feature.feature_size += 1
     print("data_set: {}".format(data_set.shape))
-    data_set = data_set[np.where(data_set[:,tushare_data.feature_size + 2] >= train_data_end_date)]
+    data_set = data_set[np.where(data_set[:,feature.feature_size + 2] >= train_data_end_date)]
     print("data_set from train_data_end_date: {}".format(data_set.shape))
 
-    # temp_data = data_set[data_set[:, tushare_data.feature_size + 1] == 000012.0]
+    # temp_data = data_set[data_set[:, feature.feature_size + 1] == 000012.0]
     # print[temp_data]
     # return temp_data
 
     captions = []
-    for iloop in range(0, tushare_data.feature_size):
+    for iloop in range(0, feature.feature_size):
         captions.append('f_%u' % iloop)
     captions.append('label')
     captions.append('ts_code')
@@ -598,7 +599,7 @@ def GetDailyDataSet():
 
     return data_df.values
 
-    # data_set = data_set[np.argsort(data_set[:,tushare_data.feature_size + 2])]
+    # data_set = data_set[np.argsort(data_set[:,feature.feature_size + 2])]
     # return data_set
 
 def PrintRecord(trade_count, \
@@ -942,7 +943,7 @@ if __name__ == "__main__":
 
 
             # captions = []
-            # for iloop in range(0, tushare_data.feature_size):
+            # for iloop in range(0, feature.feature_size):
             #     captions.append('f_%u' % iloop)
             # captions.append('label')
             # captions.append('ts_code')

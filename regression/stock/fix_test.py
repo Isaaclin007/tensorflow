@@ -18,7 +18,7 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
-predict_threshold = 4
+predict_threshold = 6
 
 def Predict(test_data):
     model, mean, std = train_rnn.LoadModel('fix')
@@ -56,8 +56,11 @@ def Predict(test_data):
     result_all = pd.merge(result_all, acture_data_df, left_index=True, right_index=True)
     return result_all
 
-def TestEntry(predict_trade_threshold, max_trade_count_1_day, print_msg):
-    test_data = fix_dataset.GetTestData()
+def TestEntry(dataset_name, predict_trade_threshold, max_trade_count_1_day, print_msg):
+    if dataset_name == 'daily':
+        test_data = fix_dataset.GetDailyDataSet()
+    else:
+        test_data = fix_dataset.GetTestData()
     result_all = Predict(test_data)
     trade_count = 0
     capital_ratio = 1.0
@@ -109,7 +112,7 @@ def TestEntry(predict_trade_threshold, max_trade_count_1_day, print_msg):
                     td_close = result.iloc[iloop]['Td_close']
                     td_open = result.iloc[iloop]['Td_open']
                     pre_close = t0_open / (t0_open_increase / 100.0 + 1.0)
-                    if tushare_data.label_type == tushare_data.LABEL_PRE_CLOSE_2_TD_CLOSE:
+                    if feature.label_type == feature.LABEL_PRE_CLOSE_2_TD_CLOSE:
                         buying_threshold = pred - 5.0
                         if buying_threshold > 9.0 :
                             buying_threshold = 9.0
@@ -123,7 +126,7 @@ def TestEntry(predict_trade_threshold, max_trade_count_1_day, print_msg):
                             else:
                                 buying_price = pre_close * ((buying_threshold / 100.0) + 1.0)
                             
-                            if tushare_data.label_type == tushare_data.LABEL_T1_OPEN_2_TD_OPEN:
+                            if feature.label_type == feature.LABEL_T1_OPEN_2_TD_OPEN:
                                 out_price = td_open
                             else:
                                 out_price = td_close
@@ -229,6 +232,9 @@ if __name__ == "__main__":
     #             max_capital_increase_max_trade_count_1_day = temp_count
     # print("max:")
     # TestEntry(max_capital_increase_threshold, max_capital_increase_max_trade_count_1_day, True)
-    TestEntry(predict_threshold, 1, True)
+    if len(sys.argv) > 1:
+        TestEntry(sys.argv[1], predict_threshold, 1, True)
+    else:
+        TestEntry('', predict_threshold, 1, True)
 
 

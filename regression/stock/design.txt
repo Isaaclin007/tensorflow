@@ -307,7 +307,17 @@ V1.0.20
 
 V1.0.21
     抽查训练数据。
-    对比fix_dataset 和 tushare_data的结果
+    对比fix_dataset 和 tushare_data的结果，找到不同的日期
+    调取测试集中预测结果不同的一天的数据，对比数量，如果数量相同则对比feature
+    fix_dataset 和 tushare_data 的测试结果不同的原因分析：
+        1. tushare_data 过滤了一部分 feature 和 label 区间内停牌的数据
+        2. tushare_data 对test区间的pp_data丢弃了第一条数据
+    解决方案，fix_dataset 过滤 feature 和 label 区间内停牌数据：
+        1. tushare_data 增加函数 AppendSuspendBorder() 对 pp_data 添加一列 bool 型停牌边界数据
+           实现方案：
+        2. feature.GetDataUnit 判断使用的数据区间内是否包含停牌的边界数据，如果包含则返回空list，
+           fix_dataset GetDataUnit 后判断 data_unit是否为空
+    fix_test 已支持测试和预测，预测通过daily测试实现
 
 V1.0.22
 1. 根据预测结果决定卖出时间

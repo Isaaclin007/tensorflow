@@ -48,7 +48,7 @@ def ModelFileNames(train_mode):
     if train_mode == "fix":
         temp_path_name = "./model/fix/%s_%u_%u_%f" % (fix_dataset.TrainSettingName(), HIDDEN_SIZE, BATCH_SIZE, LEANING_RATE)
     else:
-        temp_path_name = "./model/wave/%s_%u_%u_%f" % (tushare_data.SettingName(), HIDDEN_SIZE, BATCH_SIZE, LEANING_RATE)
+        temp_path_name = "./model/wave/%s_%u_%u_%f" % (fix_dataset.SettingName(), HIDDEN_SIZE, BATCH_SIZE, LEANING_RATE)
     model_name = "%s/model.h5" % temp_path_name
     mean_name = "%s/mean.npy" % temp_path_name
     std_name = "%s/std.npy" % temp_path_name
@@ -111,7 +111,7 @@ def train(train_mode):
             #print('.')
 
     # The patience parameter is the amount of epochs to check for improvement.
-    early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
+    early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50)
 
     where_are_nan = np.isnan(train_features)
     where_are_inf = np.isinf(train_features)

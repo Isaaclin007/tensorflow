@@ -68,6 +68,8 @@ def AppendFeature(pp_data, day_index, data_unit):
         base_vol = pp_data['vol_100_avg'][day_index]
         for iloop in reversed(range(0, feature_days)):
             temp_index = day_index + iloop
+            if (pp_data['suspend'][temp_index] != 0) or (pp_data['adj_flag'][temp_index] != 0):
+                return False
             data_unit.append(pp_data['open'][temp_index] / base_close)
             data_unit.append(pp_data['close'][temp_index] / base_close)
             data_unit.append(pp_data['high'][temp_index] / base_close)
@@ -78,6 +80,11 @@ def AppendFeature(pp_data, day_index, data_unit):
 # 从 day_index-1 开始的后 label_days 天的数据，不包含 day_index
 def AppendLabel(pp_data, day_index, data_unit):
     start_day_index = day_index - 1
+    for iloop in range(0, label_days):
+        temp_index = start_day_index - iloop
+        if temp_index >= 0:
+            if (pp_data['suspend'][temp_index] != 0) or (pp_data['adj_flag'][temp_index] != 0):
+                return False
     if label_type == LABEL_PRE_CLOSE_2_TD_CLOSE:
         start_price = pp_data['close'][day_index]
         for iloop in range(0, label_days):
@@ -131,6 +138,7 @@ def AppendLabel(pp_data, day_index, data_unit):
                 if sum_score < 0.0:
                     sum_score = 0.0
                 data_unit.append(sum_score)
+    return True
 
 # 从 day_index-1 开始的后 label_days 天的数据，不包含 day_index
 def AppendActureData(pp_data, day_index, data_unit):
@@ -157,12 +165,16 @@ def AppendActureData(pp_data, day_index, data_unit):
             data_unit.append(float(temp_str[0:6]))
             temp_str = pp_data['trade_date'][temp_index]
             data_unit.append(float(temp_str))
+    return True
 
 def GetDataUnit(pp_data, day_index):
     data_unit=[]
-    AppendFeature(pp_data, day_index, data_unit)
-    AppendLabel(pp_data, day_index, data_unit)
-    AppendActureData(pp_data, day_index, data_unit)
+    if not AppendFeature(pp_data, day_index, data_unit):
+        return []
+    if not AppendLabel(pp_data, day_index, data_unit):
+        return []
+    if not AppendActureData(pp_data, day_index, data_unit):
+        return []
     return data_unit
 
 if __name__ == "__main__":

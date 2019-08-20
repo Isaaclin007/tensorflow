@@ -349,37 +349,54 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # print(x2[1][2])
 # print("-------------------")
 
-temp_list = [[1.0, 8.1], [3.0, 7.3], [2.0, 5.2], [4.0, 1.4], [1.0, 3.1]]
-np_data = np.array(temp_list)
+# temp_list = [[1.0, 8.1], [3.0, 7.3], [2.0, 5.2], [4.0, 1.4], [1.0, 3.1]]
+# np_data = np.array(temp_list)
 
-print(type(temp_list))
-print(type(np_data))
+# print(type(temp_list))
+# print(type(np_data))
 
-print('\nnp_data:')
-print(np_data)
+# print('\nnp_data:')
+# print(np_data)
 
-sort_order = np_data[:,0].argsort()
-print('\nsort_order:')
-print(sort_order)
+# sort_order = np_data[:,0].argsort()
+# print('\nsort_order:')
+# print(sort_order)
 
-sort_data = np_data[sort_order]
-print('\nsort_data:')
-print(sort_data)
+# sort_data = np_data[sort_order]
+# print('\nsort_data:')
+# print(sort_data)
 
-sort_order = sort_order[::-1]
-print('\nsort_order:')
-print(sort_order)
+# sort_order = sort_order[::-1]
+# print('\nsort_order:')
+# print(sort_order)
 
-sort_data = np_data[sort_order]
-print('\nsort_data:')
-print(sort_data)
+# sort_data = np_data[sort_order]
+# print('\nsort_data:')
+# print(sort_data)
 
-c0 = np_data[:,0]
-print(c0)
-c0_unique = np.unique(np_data)
-print(c0_unique)
-print(type(c0_unique))
+# c0 = np_data[:,0]
+# print(c0)
+# c0_unique = np.unique(np_data)
+# print(c0_unique)
+# print(type(c0_unique))
 
-c0_list = c0_unique.tolist()
-print(c0_list)
-print(type(c0_list))
+# c0_list = c0_unique.tolist()
+# print(c0_list)
+# print(type(c0_list))
+
+# for iloop in range(0, 1):
+#     trade_list = tushare_data.TradeDateLowLevel('20200414')
+#     print('len(trade_list): %u' % len(trade_list))
+# print(trade_list)
+# trade_list = trade_list.astype(np.int64)
+# print(type(trade_list[0]))
+
+# print(tushare_data.TradeDateList('20190414', 10))
+# print(tushare_data.TradeDateListRange('20180414', '20190414'))
+
+tup2 = (1, 2, 3, 4, 5 )
+temp = tup2[2]
+print(temp)
+temp += 1
+print(temp)
+print(tup2)
