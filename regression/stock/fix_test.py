@@ -18,11 +18,11 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
-predict_threshold = 6
+predict_trade_threshold = 4
+max_trade_count_1_day = 1
+test_data_start_date = 20190414
 
-def Predict(test_data):
-    model, mean, std = train_rnn.LoadModel('fix')
-
+def Predict(test_data, model, mean, std):
     predict_features = test_data[:, feature.COL_FEATURE_OFFSET(): feature.COL_FEATURE_OFFSET() + feature.FEATURE_SIZE()]
     predict_features = train_rnn.FeaturesPretreat(predict_features, mean, std)
     predictions = model.predict(predict_features)
@@ -56,12 +56,8 @@ def Predict(test_data):
     result_all = pd.merge(result_all, acture_data_df, left_index=True, right_index=True)
     return result_all
 
-def TestEntry(dataset_name, predict_trade_threshold, max_trade_count_1_day, print_msg):
-    if dataset_name == 'daily':
-        test_data = fix_dataset.GetDailyDataSet()
-    else:
-        test_data = fix_dataset.GetTestData()
-    result_all = Predict(test_data)
+def TestEntry(test_data, print_msg, model, mean, std):
+    result_all = Predict(test_data, model, mean, std)
     trade_count = 0
     capital_ratio = 1.0
     capital_value = 1.0
@@ -185,8 +181,9 @@ def TestEntry(dataset_name, predict_trade_threshold, max_trade_count_1_day, prin
     else:
         avg_increase = 0.0
     capital_increase = (capital_value - 1.0) * 100.0
-    print("%16u%16u%16u%16.2f%16.2f" % \
-        (predict_trade_threshold, max_trade_count_1_day, trade_count, avg_increase, capital_increase))
+    if print_msg:
+        print("%16u%16u%16u%16.2f%16.2f" % \
+            (predict_trade_threshold, max_trade_count_1_day, trade_count, avg_increase, capital_increase))
     return capital_increase
 
 
@@ -213,9 +210,9 @@ def TestEntry(dataset_name, predict_trade_threshold, max_trade_count_1_day, prin
     # result_sum.to_csv('./test_result_sum_sort.csv')
 
 if __name__ == "__main__":
-    max_capital_increase = -10000
-    max_capital_increase_threshold = 0
-    max_capital_increase_max_trade_count_1_day = 0
+    # max_capital_increase = -10000
+    # max_capital_increase_threshold = 0
+    # max_capital_increase_max_trade_count_1_day = 0
     print("%16s%16s%16s%16s%16s" %(
                 "in_thre", \
                 "trade_1_day", \
@@ -232,9 +229,18 @@ if __name__ == "__main__":
     #             max_capital_increase_max_trade_count_1_day = temp_count
     # print("max:")
     # TestEntry(max_capital_increase_threshold, max_capital_increase_max_trade_count_1_day, True)
+    dataset_name = 'fix'
+    model_epoch = -1
     if len(sys.argv) > 1:
-        TestEntry(sys.argv[1], predict_threshold, 1, True)
+        dataset_name = sys.argv[1]
+    if len(sys.argv) > 2:
+        model_epoch = int(sys.argv[2])
+
+    if dataset_name == 'daily':
+        test_data = fix_dataset.GetDailyDataSet(test_data_start_date)
     else:
-        TestEntry('', predict_threshold, 1, True)
+        test_data = fix_dataset.GetTestData()
+    model, mean, std = train_rnn.LoadModel('fix', model_epoch)
+    TestEntry(test_data, True, model, mean, std)
 
 

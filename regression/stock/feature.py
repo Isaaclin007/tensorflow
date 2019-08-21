@@ -86,7 +86,8 @@ def AppendLabel(pp_data, day_index, data_unit):
             if (pp_data['suspend'][temp_index] != 0) or (pp_data['adj_flag'][temp_index] != 0):
                 return False
     if label_type == LABEL_PRE_CLOSE_2_TD_CLOSE:
-        start_price = pp_data['close'][day_index]
+        if day_index >= 0:
+            start_price = pp_data['close'][day_index]
         for iloop in range(0, label_days):
             temp_index = start_day_index - iloop
             if temp_index < 0:
@@ -95,7 +96,8 @@ def AppendLabel(pp_data, day_index, data_unit):
                 temp_increase_per = ((pp_data['close'][temp_index] / start_price) - 1.0) * 100.0
                 data_unit.append(temp_increase_per)
     elif label_type == LABEL_T1_OPEN_2_TD_CLOSE:
-        start_price = pp_data['open'][start_day_index]
+        if start_day_index >= 0:
+            start_price = pp_data['open'][start_day_index]
         for iloop in range(0, label_days):
             temp_index = start_day_index - iloop
             if temp_index < 0:
@@ -104,7 +106,8 @@ def AppendLabel(pp_data, day_index, data_unit):
                 temp_increase_per = ((pp_data['close'][temp_index] / start_price) - 1.0) * 100.0
                 data_unit.append(temp_increase_per)
     elif label_type == LABEL_T1_OPEN_2_TD_OPEN:
-        start_price = pp_data['open'][start_day_index]
+        if start_day_index >= 0:
+            start_price = pp_data['open'][start_day_index]
         for iloop in range(0, label_days):
             temp_index = start_day_index - iloop
             if temp_index < 0:

@@ -14,7 +14,7 @@ import feature
 import pp_daily_update
 
 dataset_start_date = 20120101
-dataset_train_test_split_date = 20170101
+dataset_train_test_split_date = 20200101
 
 def SettingName():
     temp_name = '%u_%u_%u_%u_%s_%s_%s_%u' % ( \
@@ -199,7 +199,8 @@ def GetTestData():
     # raw_input("Enter ...")
 
     pos = dataset[:,feature.COL_TRADE_DATE(0)] >= dataset_train_test_split_date
-    test_data = dataset[pos].copy()
+    # pos = dataset[:,feature.COL_TRADE_DATE(0)] >= 20170101
+    test_data = dataset[pos]
     print("test_data: {}".format(test_data.shape))
     return test_data
 
@@ -212,9 +213,11 @@ def Debug(test_data):
     for iloop in range(0, len(sample_data)):
         print("%f" % sample_data[iloop, t0_tscode_index])
 
-def GetDailyDataSet():
+def GetDailyDataSet(start_date):
     dataset = np.load(FileNameFixDataSetDaily())
-    print("dataset: {}".format(dataset.shape))
+    pos = dataset[:,feature.COL_TRADE_DATE(0)] >= start_date
+    dataset = dataset[pos]
+    print("test_data: {}".format(dataset.shape))
     # raw_input("Enter ...")
 
     pos = dataset[:,feature.COL_TRADE_DATE(feature.active_label_day)] == feature.INVALID_DATE
@@ -229,6 +232,7 @@ if __name__ == "__main__":
 
     # 生成 daily dataset 用于预测
     UpdateFixDataSet(True, True)
+    
     # test_data = GetTestData()
     # Debug(test_data)
 

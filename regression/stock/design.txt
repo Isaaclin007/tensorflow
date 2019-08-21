@@ -320,4 +320,16 @@ V1.0.21
     fix_test 已支持测试和预测，预测通过daily测试实现
 
 V1.0.22
+1. 训练过程
+    每个 epoch 保存模型，每个 epoch 模型文件路径不同（增加索引），最终模型无索引
+    每个 epoch 计算测试集 loss
+    每个 epoch 计算调用 test 接口测试 increase，
+    每个 epoch 覆盖保存 loss, val_loss, test_loss, test_increase 的 pandas 数据
+    每个 epoch 根据 pandas 数据绘制图，每个 epoch 覆盖保存图
+    validation_split 改为 validation_data，显示切分验证集
+    
+    
+
+
+V----
 1. 根据预测结果决定卖出时间

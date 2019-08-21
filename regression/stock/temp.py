@@ -394,9 +394,29 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # print(tushare_data.TradeDateList('20190414', 10))
 # print(tushare_data.TradeDateListRange('20180414', '20190414'))
 
-tup2 = (1, 2, 3, 4, 5 )
-temp = tup2[2]
-print(temp)
-temp += 1
-print(temp)
-print(tup2)
+# tup2 = (1, 2, 3, 4, 5 )
+# temp = tup2[2]
+# print(temp)
+# temp += 1
+# print(temp)
+# print(tup2)
+
+import matplotlib.pyplot as plt
+for iloop in range(0, 10):
+    plt.ion()
+    x = np.linspace(-1, iloop, iloop)
+    
+    # 绘制普通图像
+    y = x**2
+    plt.cla()
+    plt.figure(dpi=70,figsize=(32,10))
+    plt.plot(x, y, label = "y")
+    plt.plot(x, y, label = "y2")
+    plt.plot(x, y, label = "y3")
+    plt.legend()
+    plt.show()
+    plt.pause(0.001)
+    print(iloop)
+    plt.savefig('./temp.png')
+
+# plt.pause(0.001)
