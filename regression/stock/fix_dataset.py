@@ -14,7 +14,7 @@ import feature
 import pp_daily_update
 
 dataset_start_date = 20120101
-dataset_train_test_split_date = 20200101
+dataset_train_test_split_date = 20170101
 
 def SettingName():
     temp_name = '%u_%u_%u_%u_%s_%s_%s_%u' % ( \
@@ -38,6 +38,18 @@ def FileNameFixDataSet():
         tushare_data.train_test_date)
     return file_name
 
+def FileNameFixDataSetPath():
+    file_name = './data/dataset/fix_dataset_%s_%s' % ( \
+        SettingName(), \
+        tushare_data.train_test_date)
+    return file_name
+
+def FileNameFixDataSetStock(ts_code):
+    file_name = '%s/%s.npy' % ( \
+        FileNameFixDataSetPath(), \
+        ts_code)
+    return file_name
+
 def FileNameFixDataSetDaily():
     file_name = './data/dataset/fix_dataset_daily_%s_%s.npy' % ( \
         SettingName(), \
@@ -57,19 +69,29 @@ def AppendFeature(pp_data, day_index, data_unit):
             data_unit.append(pp_data['vol'][temp_index] / base_vol)
     return True
 
-def UpdateFixDataSet(is_daily_data, save_unfinished_record):
-    if is_daily_data:
-        dataset_file_name = FileNameFixDataSetDaily()
-        pp_merge_data = pp_daily_update.GetPreprocessedMergeData()
+def UpdateFixDataSet(is_daily_data, save_unfinished_record, dataset_merge=True):
+    if dataset_merge:
+        if is_daily_data:
+            dataset_file_name = FileNameFixDataSetDaily()
+            pp_merge_data = pp_daily_update.GetPreprocessedMergeData()
+        else:
+            dataset_file_name = FileNameFixDataSet()
+        if os.path.exists(dataset_file_name):
+            print('dataset already exist: %s' % dataset_file_name)
+            return
     else:
-        dataset_file_name = FileNameFixDataSet()
-    if os.path.exists(dataset_file_name):
-        print('dataset already exist: %s' % dataset_file_name)
-        return
+        path_name = FileNameFixDataSetPath()
+        if not os.path.exists(path_name):
+            os.makedirs(path_name)
     code_list = tushare_data.StockCodes()
     init_flag = True
     for code_index in range(0, len(code_list)):
         stock_code = code_list[code_index]
+        if not dataset_merge:
+            stock_dataset_file_name = FileNameFixDataSetStock(stock_code)
+            if os.path.exists(stock_dataset_file_name):
+                print("%-4d : %s 100%%" % (code_index, stock_code))
+                continue
         if is_daily_data:
             pp_data = pp_daily_update.GetPreprocessedData(pp_merge_data, stock_code)
         else:
@@ -93,19 +115,23 @@ def UpdateFixDataSet(is_daily_data, save_unfinished_record):
                     if len(data_unit) > 0:
                         data_list.append(data_unit)
                 temp_np_data = np.array(data_list)
-                if init_flag:
-                    data_set = temp_np_data
-                    init_flag = False
+                if dataset_merge:
+                    if init_flag:
+                        data_set = temp_np_data
+                        init_flag = False
+                    else:
+                        data_set = np.vstack((data_set, temp_np_data))
                 else:
-                    data_set = np.vstack((data_set, temp_np_data))
+                    np.save(stock_dataset_file_name, temp_np_data)
             print("%-4d : %s 100%%" % (code_index, stock_code))
             # print("train_data: {}".format(train_data.shape))
             # print(train_data)
         # if (code_index > 0) and ((code_index % 100) == 0):
         #     print("dataset: {}".format(data_set.shape))
         #     np.save(dataset_file_name, data_set)
-    print("dataset: {}".format(data_set.shape))
-    np.save(dataset_file_name, data_set)
+    if dataset_merge:
+        print("dataset: {}".format(data_set.shape))
+        np.save(dataset_file_name, data_set)
 
 def CheckFixDataSet():
     dataset = np.load(FileNameFixDataSet())
@@ -150,7 +176,7 @@ def GetTrainData():
     # raw_input("Enter ...")
 
     print("get label...")
-    train_labels = train_data[:, feature.FEATURE_SIZE():feature.FEATURE_SIZE()+1].copy()
+    train_labels = train_data[:, feature.COL_ACTIVE_LABEL():feature.COL_ACTIVE_LABEL()+1].copy()
     # raw_input("Enter ...")
     print("train_features: {}".format(train_features.shape))
     print("train_labels: {}".format(train_labels.shape))
@@ -198,11 +224,66 @@ def GetTestData():
     print("dataset: {}".format(dataset.shape))
     # raw_input("Enter ...")
 
-    pos = dataset[:,feature.COL_TRADE_DATE(0)] >= dataset_train_test_split_date
-    # pos = dataset[:,feature.COL_TRADE_DATE(0)] >= 20170101
+    #pos = dataset[:,feature.COL_TRADE_DATE(0)] >= dataset_train_test_split_date
+    pos = dataset[:,feature.COL_TRADE_DATE(0)] >= 20170101
     test_data = dataset[pos]
     print("test_data: {}".format(test_data.shape))
     return test_data
+
+def GetTrainTestDataSampleByDate(test_ratio):
+    sample_num = int(1.0/test_ratio + 0.0001)
+    dataset = np.load(FileNameFixDataSet())
+    print("dataset: {}".format(dataset.shape))
+    pos = ((dataset[:,feature.COL_TRADE_DATE(0)].astype(int) % 100) % sample_num) == 0
+    test_data = dataset[pos]
+    train_data = dataset[~pos]
+    print("train: {}".format(train_data.shape))
+    print("test: {}".format(test_data.shape))
+
+    train_features = train_data[:, 0:feature.FEATURE_SIZE()]
+    train_labels = train_data[:, feature.COL_ACTIVE_LABEL():feature.COL_ACTIVE_LABEL()+1]
+
+    test_features = test_data[:, 0:feature.FEATURE_SIZE()]
+    test_labels = test_data[:, feature.COL_ACTIVE_LABEL():feature.COL_ACTIVE_LABEL()+1]
+
+    return train_features, train_labels, test_features, test_labels, test_data
+
+def GetTrainTestDataRandom(test_ratio):
+    sample_num = int(1.0/test_ratio + 0.0001)
+    dataset = np.load(FileNameFixDataSet())
+    print("dataset: {}".format(dataset.shape))
+    print('sample_num:%u' % sample_num)
+    # 生成数值范围在 0-（sample_num-1）的随机数组，pos是值为0的位置
+    pos = (np.random.randint(0, sample_num, size=len(dataset)) == 0)
+    test_data = dataset[pos]
+    train_data = dataset[~pos]
+    print("train: {}".format(train_data.shape))
+    print("test: {}".format(test_data.shape))
+
+    train_features = train_data[:, 0:feature.FEATURE_SIZE()]
+    train_labels = train_data[:, feature.COL_ACTIVE_LABEL():feature.COL_ACTIVE_LABEL()+1]
+
+    test_features = test_data[:, 0:feature.FEATURE_SIZE()]
+    test_labels = test_data[:, feature.COL_ACTIVE_LABEL():feature.COL_ACTIVE_LABEL()+1]
+
+    return train_features, train_labels, test_features, test_labels, test_data
+
+def GetTrainTestDataSplitByDate():
+    dataset = np.load(FileNameFixDataSet())
+    print("dataset: {}".format(dataset.shape))
+    pos = dataset[:,feature.COL_TRADE_DATE(0)] < dataset_train_test_split_date
+    train_data = dataset[pos]
+    test_data = dataset[~pos]
+    print("train: {}".format(train_data.shape))
+    print("test: {}".format(test_data.shape))
+
+    train_features = train_data[:, 0:feature.FEATURE_SIZE()]
+    train_labels = train_data[:, feature.COL_ACTIVE_LABEL():feature.COL_ACTIVE_LABEL()+1]
+
+    test_features = test_data[:, 0:feature.FEATURE_SIZE()]
+    test_labels = test_data[:, feature.COL_ACTIVE_LABEL():feature.COL_ACTIVE_LABEL()+1]
+
+    return train_features, train_labels, test_features, test_labels, test_data
 
 def Debug(test_data):
     t0_date_index = feature.COL_TRADE_DATE(0)
@@ -227,11 +308,11 @@ def GetDailyDataSet(start_date):
 
 if __name__ == "__main__":
     # 生成测试集和训练集数据
-    UpdateFixDataSet(False, False)
-    CheckFixDataSet()
+    UpdateFixDataSet(False, False, False)
+    # CheckFixDataSet()
 
     # 生成 daily dataset 用于预测
-    UpdateFixDataSet(True, True)
+    # UpdateFixDataSet(True, True)
     
     # test_data = GetTestData()
     # Debug(test_data)

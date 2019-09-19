@@ -25,6 +25,7 @@ pridect_mode = False
 # True: 预测与买入信号和预卖出信号，用于实战，只打印预交易信号
 # False：回归测试
 def TestAllStocksDailyData():
+    print("dataset: %s" % wave_kernel.FileNameDailyDataSet())
     if not os.path.exists(wave_kernel.FileNameDailyDataSet()):
         result_df = pd.DataFrame()
         increase_sum = 0.0

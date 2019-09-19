@@ -31,6 +31,9 @@ def GetProprocessedData(ts_code):
     if os.path.exists(stock_pp_file_name):
         pp_data = pd.read_csv(stock_pp_file_name)
         return pp_data
+    else:
+        print("File not exist: %s" % stock_pp_file_name)
+        return []
 
 
 def ShowAStock(ts_code):
@@ -38,6 +41,8 @@ def ShowAStock(ts_code):
     # tushare_data.DownloadAStocksData(ts_code)
     # tushare_data.UpdatePreprocessDataAStock(0, ts_code)
     pp_data = GetProprocessedData(ts_code)
+    if len(pp_data) == 0:
+        return
     # pp_data = pp_daily_update.GetPreprocessedDataExt(ts_code)
     stock_name = tushare_data.StockName(ts_code)
     title = "%s - %s" % (ts_code, stock_name)
@@ -70,7 +75,7 @@ def ShowAStock(ts_code):
     pp_data['vol_5_avg'] = pp_data['vol_5_avg'] * vol_ratio
     pp_data['vol_10_avg'] = pp_data['vol_10_avg'] * vol_ratio
     pp_data['vol_30_avg'] = pp_data['vol_30_avg'] * vol_ratio
-    pp_data['vol_200_avg'] = pp_data['vol_200_avg'] * vol_ratio
+    # pp_data['vol_200_avg'] = pp_data['vol_200_avg'] * vol_ratio
     # pp_data['sell_sm_vol_30_avg'] = (pp_data['sell_sm_vol_30_avg'] - pp_data['buy_sm_vol_30_avg']) * vol_ratio * 10.0
     # pp_data['sell_elg_vol_30_avg'] = (pp_data['sell_elg_vol_30_avg'] - pp_data['buy_elg_vol_30_avg']) * vol_ratio * 10.0
     plt.plot(xs, pp_data['vol'].values, label='vol', linewidth=1)

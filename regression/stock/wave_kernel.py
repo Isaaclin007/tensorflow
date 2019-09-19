@@ -34,9 +34,7 @@ STATUS_NONE = 0
 STATUS_UP = 1
 STATUS_DOWN = 2
 
-start_date = 20120101
-train_data_end_date = 20180101
-test_data_end_date = 20190501
+wave_kernel_start_date = 20120101
 wave_test_dataset_sample_num = 5
 
 GLOBAL_FEATURE_NONE = 0
@@ -206,11 +204,22 @@ def Predict(pp_data, day_index):
     prediction = model.predict(predict_features)
     return prediction[0]
 
+def SettingName():
+    file_name = '%u_%u_%u_%u_%u_%u_%u_%u' % ( \
+                wave_kernel_start_date, \
+                min_wave_width_left, \
+                min_wave_width_right, \
+                trade_off_threshold, \
+                int(up_100avg_condition), \
+                int(up_200avg_condition), \
+                wave_test_dataset_sample_num, \
+                global_feature)
+    return file_name
 
 def FileNameDataSet():
-    file_name = './data/dataset/dataset_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
+    file_name = './data/dataset/wave_dataset_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
         feature.feature_type, \
-        start_date, \
+        wave_kernel_start_date, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
         tushare_data.train_test_date, \
@@ -226,9 +235,9 @@ def FileNameDataSet():
     return file_name
 
 def FileNameDataSetOriginal():
-    file_name = './data/dataset/dataset_original_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u.npy' % ( \
+    file_name = './data/dataset/wave_dataset_original_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u.npy' % ( \
         feature.feature_type, \
-        start_date, \
+        wave_kernel_start_date, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
         tushare_data.train_test_date, \
@@ -243,9 +252,9 @@ def FileNameDataSetOriginal():
     return file_name
 
 def FileNameDailyDataSet():
-    file_name = './data/dataset/daily_dataset_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
+    file_name = './data/dataset/wave_daily_dataset_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
         feature.feature_type, \
-        start_date, \
+        wave_kernel_start_date, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
         tushare_data.industry_filter, \
@@ -262,9 +271,9 @@ def FileNameDailyDataSet():
     return file_name
 
 def FileNameDailyDataSetOriginal():
-    file_name = './data/dataset/daily_dataset_original_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
+    file_name = './data/dataset/wave_daily_dataset_original_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
         feature.feature_type, \
-        start_date, \
+        wave_kernel_start_date, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
         tushare_data.industry_filter, \
@@ -284,9 +293,9 @@ def SetPreTradeStockNums(data_set):
     data_set = data_set[np.where(data_set[:,COL_TS_CODE()] != 000029.0)].copy()
     # 获取 data_set 的最大和最小 pre_on 时间，生成date_list列表
     on_pretrade_dates = data_set[:, COL_ON_PRETRADE_DATE()]
-    start_date = '%.0f' % np.min(on_pretrade_dates)
-    end_date = '%.0f' % np.max(on_pretrade_dates)
-    date_list = tushare_data.TradeDateListRange(start_date, end_date)
+    temp_start_date = '%.0f' % np.min(on_pretrade_dates)
+    temp_end_date = '%.0f' % np.max(on_pretrade_dates)
+    date_list = tushare_data.TradeDateListRange(temp_start_date, temp_end_date)
     
     # 生成 np_date_holding_num，二列表格
     holding_nums_list = []
@@ -326,9 +335,9 @@ def AppendPreTradeStockNums(data_set):
     data_set = data_set[np.where(data_set[:,COL_TS_CODE()] != 000029.0)].copy()
     # 获取 data_set 的最大和最小 pre_on 时间，生成date_list列表
     on_pretrade_dates = data_set[:, COL_ON_PRETRADE_DATE()]
-    start_date = '%.0f' % np.min(on_pretrade_dates)
-    end_date = '%.0f' % np.max(on_pretrade_dates)
-    date_list = tushare_data.TradeDateListRange(start_date, end_date)
+    temp_start_date = '%.0f' % np.min(on_pretrade_dates)
+    temp_end_date = '%.0f' % np.max(on_pretrade_dates)
+    date_list = tushare_data.TradeDateListRange(temp_start_date, temp_end_date)
     
     # 生成 np_date_holding_num，二列表格
     holding_nums_list = []
@@ -372,9 +381,9 @@ def AppendHoldStockNums(data_set):
     data_set = data_set[np.where(data_set[:,COL_TS_CODE()] != 000029.0)].copy()
     # 获取 data_set 的最大和最小 pre_on 时间，生成date_list列表
     on_pretrade_dates = data_set[:, COL_ON_PRETRADE_DATE()]
-    start_date = '%.0f' % np.min(on_pretrade_dates)
-    end_date = '%.0f' % np.max(on_pretrade_dates)
-    date_list = tushare_data.TradeDateListRange(start_date, end_date)
+    temp_start_date = '%.0f' % np.min(on_pretrade_dates)
+    temp_end_date = '%.0f' % np.max(on_pretrade_dates)
+    date_list = tushare_data.TradeDateListRange(temp_start_date, temp_end_date)
     
     # 生成 np_date_holding_num，二列表格
     on_dates = data_set[:, COL_ON_DATE()]
@@ -420,9 +429,9 @@ def AppendGlobalFeatures(data_set):
     # pp_merge_data = pp_daily_update.GetPPMergeDataOriginalSimplify()
     # print(pp_merge_data.dtypes)
     # temp_date_col = pp_merge_data['trade_date'].values
-    # start_date = np.min(temp_date_col)
-    # end_date = np.max(temp_date_col)
-    # date_list = tushare_data.TradeDateListRange(start_date, end_date)
+    # temp_start_date = np.min(temp_date_col)
+    # temp_end_date = np.max(temp_date_col)
+    # date_list = tushare_data.TradeDateListRange(temp_start_date, temp_end_date)
     # for iloop in range(0, len(date_list)):
     #     temp_date = int(date_list[iloop])
     #     pos = (temp_date_col == temp_date)
@@ -437,130 +446,6 @@ def SaveDataSet():
     train_data = AppendGlobalFeatures(train_data)
     np.save(FileNameDataSet(), train_data)
 
-def GetTrainData():
-    train_data = np.load(FileNameDataSet())
-    if GLOBAL_FEATURE_PRETRADE_NUM == global_feature:
-        feature.feature_size += 1
-    print("data_set: {}".format(train_data.shape))
-
-    pos = (train_data[:,COL_ON_PRETRADE_DATE()] < train_data_end_date) & (train_data[:,COL_OFF_DATE()] != 20990101.0)
-    train_data = train_data[pos].copy()
-    print("train_data: {}".format(train_data.shape))
-
-    print("reorder...")
-    order=np.argsort(np.random.random(len(train_data)))
-    train_data=train_data[order]
-    train_data=train_data[:2000000]
-
-    label_index = feature.feature_size
-    print("get feature ...")
-    train_features = train_data[:, 0:feature.feature_size].copy()
-    # raw_input("Enter ...")
-
-    print("get label...")
-    train_labels = train_data[:, label_index:label_index+1].copy()
-    # raw_input("Enter ...")
-    print("train_features: {}".format(train_features.shape))
-    print("train_labels: {}".format(train_labels.shape))
-
-    return train_features, train_labels
-
-def GetTrainDataOriginal():
-    train_data = np.load(FileNameDataSetOriginal())
-    print("data_set: {}".format(train_data.shape))
-
-    pos = (train_data[:,COL_ON_PRETRADE_DATE()] < train_data_end_date) & (train_data[:,COL_OFF_DATE()] != 20990101.0)
-    train_data = train_data[pos].copy()
-    print("train_data: {}".format(train_data.shape))
-
-    print("reorder...")
-    order=np.argsort(np.random.random(len(train_data)))
-    train_data=train_data[order]
-    train_data=train_data[:2000000]
-
-    label_index = feature.feature_size
-    print("get feature ...")
-    train_features = train_data[:, 0:feature.feature_size].copy()
-    # raw_input("Enter ...")
-
-    print("get label...")
-    train_labels = train_data[:, label_index:label_index+1].copy()
-    # raw_input("Enter ...")
-    print("train_features: {}".format(train_features.shape))
-    print("train_labels: {}".format(train_labels.shape))
-
-    return train_features, train_labels
-
-def GetTestData():
-    data_set = np.load(FileNameDataSet())
-
-    # debug
-    # feature.feature_size += 1
-    # captions = []
-    # for iloop in range(0, feature.feature_size):
-    #     captions.append('f_%u' % iloop)
-    # captions.append('label')
-    # captions.append('ts_code')
-    # captions.append('pre_on_date')
-    # captions.append('on_date')
-    # captions.append('off_date')
-    # captions.append('holding_days')
-    # data_df = pd.DataFrame(data_set, columns=captions)
-    # data_df = data_df.sort_values(by=['pre_on_date', 'ts_code'], ascending=(True, True))
-
-    # pos = (data_df['on_date'] <= 20190215.0) & (data_df['off_date'] > 20190215.0) & (data_df['pre_on_date'] < 20190101.0)
-    # print('pos: %u' % np.sum(pos))
-    # debug_df = data_df[pos]
-    # print(debug_df)
-    # return debug_df
-
-    if GLOBAL_FEATURE_PRETRADE_NUM == global_feature:
-        feature.feature_size += 1
-    print("data_set: {}".format(data_set.shape))
-    pos = (data_set[:,COL_ON_PRETRADE_DATE()] >= train_data_end_date) & (data_set[:,COL_ON_PRETRADE_DATE()] < test_data_end_date)
-    data_set = data_set[pos]
-    print("test_data: {}".format(data_set.shape))
-
-    captions = []
-    for iloop in range(0, feature.feature_size):
-        captions.append('f_%u' % iloop)
-    captions.append('label')
-    captions.append('ts_code')
-    captions.append('pre_on_date')
-    captions.append('on_date')
-    captions.append('off_date')
-    captions.append('holding_days')
-    data_df = pd.DataFrame(data_set, columns=captions)
-    data_df = data_df.sort_values(by=['pre_on_date', 'ts_code'], ascending=(True, True))
-
-    # debug_df = data_df[(data_df['pre_on_date'] == 20190327.0) & (data_df['ts_code'] == 002605.0)]
-    # print(debug_df)
-    # return debug_df.values
-
-    return data_df.values
-
-    data_set = data_set[np.argsort(data_set[:,feature.feature_size + 2])]
-    return data_set
-
-def GetTestDataOriginal():
-    data_set = np.load(FileNameDataSetOriginal())
-    print("data_set: {}".format(data_set.shape))
-    pos = (data_set[:,COL_ON_PRETRADE_DATE()] >= train_data_end_date) & (data_set[:,COL_ON_PRETRADE_DATE()] < test_data_end_date)
-    data_set = data_set[pos]
-    print("test_data: {}".format(data_set.shape))
-    captions = []
-    for iloop in range(0, feature.feature_size):
-        captions.append('f_%u' % iloop)
-    captions.append('label')
-    captions.append('ts_code')
-    captions.append('pre_on_date')
-    captions.append('on_date')
-    captions.append('off_date')
-    captions.append('holding_days')
-    data_df = pd.DataFrame(data_set, columns=captions)
-    data_df = data_df.sort_values(by=['pre_on_date', 'ts_code'], ascending=(True, True))
-    return data_df.values
-
 def SaveDailyDataSet():
     global g_data_set
     # train_data = np.array(train_data_list)
@@ -568,39 +453,6 @@ def SaveDailyDataSet():
     np.save(FileNameDailyDataSetOriginal(), train_data)
     train_data = AppendGlobalFeatures(train_data)
     np.save(FileNameDailyDataSet(), train_data)
-
-def GetDailyDataSet():
-    data_set = np.load(FileNameDailyDataSet())
-    # feature.feature_size += 1
-    print("data_set: {}".format(data_set.shape))
-    data_set = data_set[np.where(data_set[:,feature.feature_size + 2] >= train_data_end_date)]
-    print("data_set from train_data_end_date: {}".format(data_set.shape))
-
-    # temp_data = data_set[data_set[:, feature.feature_size + 1] == 000012.0]
-    # print[temp_data]
-    # return temp_data
-
-    captions = []
-    for iloop in range(0, feature.feature_size):
-        captions.append('f_%u' % iloop)
-    captions.append('label')
-    captions.append('ts_code')
-    captions.append('pre_on_date')
-    captions.append('on_date')
-    captions.append('off_date')
-    captions.append('holding_days')
-    data_df = pd.DataFrame(data_set, columns=captions)
-    data_df = data_df.sort_values(by=['pre_on_date', 'ts_code'], ascending=(True, True))
-
-    # debug_df = data_df[(data_df['pre_on_date'] == 20190327.0) & (data_df['ts_code'] == 002605.0)]
-    debug_df = data_df[(data_df['ts_code'] == 600198.0)]
-    print(debug_df)
-    # return debug_df.values
-
-    return data_df.values
-
-    # data_set = data_set[np.argsort(data_set[:,feature.feature_size + 2])]
-    # return data_set
 
 def PrintRecord(trade_count, \
                 ts_code, \
@@ -801,8 +653,16 @@ def TradeTest(input_pp_data, \
         current_date = input_pp_data.loc[day_index, 'trade_date']
         close = input_pp_data.loc[day_index, wave_index]
         close_10_avg = input_pp_data.loc[day_index, 'close_10_avg']
-        close_100_avg = input_pp_data.loc[day_index, 'close_100_avg']
-        close_200_avg = input_pp_data.loc[day_index, 'close_200_avg']
+        # close_100_avg
+        if up_100avg_condition:
+            close_100_avg = input_pp_data.loc[day_index, 'close_100_avg']
+        else:
+            close_100_avg = 0.0
+        # close_200_avg
+        if up_200avg_condition:
+            close_200_avg = input_pp_data.loc[day_index, 'close_200_avg']
+        else:
+            close_200_avg = 0.0
         wave_extreme = input_pp_data.loc[day_index + min_wave_width_right, 'wave_extreme']
         wave_status = input_pp_data.loc[day_index, 'wave_status']
         trade_flag = TRADE_NONE

@@ -8,6 +8,7 @@ import pandas as pd
 import os
 import time
 import sys
+import matplotlib.pyplot as plt
 import tushare_data
 
 reload(sys)
@@ -401,22 +402,121 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # print(temp)
 # print(tup2)
 
-import matplotlib.pyplot as plt
-for iloop in range(0, 10):
-    plt.ion()
-    x = np.linspace(-1, iloop, iloop)
+# import matplotlib.pyplot as plt
+# for iloop in range(0, 10):
+#     plt.ion()
+#     x = np.linspace(-1, iloop, iloop)
     
-    # 绘制普通图像
-    y = x**2
-    plt.cla()
-    plt.figure(dpi=70,figsize=(32,10))
-    plt.plot(x, y, label = "y")
-    plt.plot(x, y, label = "y2")
-    plt.plot(x, y, label = "y3")
-    plt.legend()
-    plt.show()
-    plt.pause(0.001)
-    print(iloop)
-    plt.savefig('./temp.png')
+#     # 绘制普通图像
+#     y = x**2
+#     plt.cla()
+#     plt.figure(dpi=70,figsize=(32,10))
+#     plt.plot(x, y, label = "y")
+#     plt.plot(x, y, label = "y2")
+#     plt.plot(x, y, label = "y3")
+#     plt.legend()
+#     plt.show()
+#     plt.pause(0.001)
+#     print(iloop)
+#     plt.savefig('./temp.png')
 
 # plt.pause(0.001)
+
+# temp_list = [20190101.0, 20190102.0, 20190103.0, 20190104.0, 20190105.0]
+# dataset = np.array(temp_list)
+# test_pos = ((dataset.astype(int) % 100) % 4) == 0
+# print(type(test_pos))
+# print(test_pos)
+# print(~test_pos)
+# test_data = dataset[test_pos]
+# print(test_data)
+# train_data = dataset[~test_pos]
+# print(train_data)
+
+
+
+# plt.ion()
+# fig, ax1 = plt.subplots()
+# ax2 = ax1.twinx()
+# for iloop in range(0, 10):
+#     x = np.arange(0,iloop+1,1)
+#     y1 = 0.05 * x**2
+#     y2 = -1 * y1
+#     ax1.cla()
+#     ax1.plot(x,y1,'g-')
+#     ax2.plot(x,y2,'b-')
+    
+#     ax1.set_xlabel("X data")
+#     ax1.set_ylabel("Y1",color='g')
+    
+#     ax2.set_ylabel("Y2",color='b')
+#     plt.show()
+#     plt.pause(1)
+
+# def f():
+#     if not hasattr(f, 'x'):
+#         f.x = 0
+#     print(f.x)
+#     f.x+=1
+
+# for iloop in range(0, 10):
+#     f()
+
+
+# plt.ion()
+# fig, ax1 = plt.subplots()
+# ax2 = ax1.twinx()
+# x = np.arange(0,10,1)
+# y1 = 0.05 * x**2
+# ax1.plot(x,y1,'g-')
+# plt.show()
+# plt.pause(1)
+
+# def PlotHistory(losses):        
+#     np_arr = np.array(losses)
+#     if len(np_arr) > 0:
+#         # x = np_arr[:,0]
+#         # y = np_arr[:,1]
+#         print(type(x))
+#         print(type(y))
+#         print(x)
+#         print(y)
+        
+
+# a = [[0.0,1.0], [1.0,10.0]]
+# PlotHistory(a)
+
+# def Plot2DArray(ax, arr, name):
+#     np_arr = np.array(arr)
+#     if len(np_arr) > 1:
+#         x = np_arr[:,0]
+#         y = np_arr[:,1]
+#         ax.plot(x, y, label=name)
+
+# def PlotHistory(losses, val_losses, test_increase):
+#     if not hasattr(PlotHistory, 'fig'):
+#         plt.ion()
+#         PlotHistory.fig, PlotHistory.ax1 = plt.subplots()
+#         PlotHistory.ax2 = PlotHistory.ax1.twinx()
+#     PlotHistory.ax1.cla()
+#     PlotHistory.ax2.cla()
+#     Plot2DArray(PlotHistory.ax1, losses, 'loss')
+#     Plot2DArray(PlotHistory.ax1, val_losses, 'val_loss')
+#     Plot2DArray(PlotHistory.ax2, test_increase, 'test_increase')
+#     PlotHistory.ax1.legend()
+#     PlotHistory.ax2.legend()
+#     plt.show()
+#     plt.pause(1)
+#     # temp_path_name = ModelFilePath(train_mode)
+#     # if not os.path.exists(temp_path_name):
+#     #     os.makedirs(temp_path_name)
+#     # plt.savefig('%s/figure.png' % temp_path_name)
+
+# a = [[0.0,1.0], [1.0,10.0]]
+# for iloop in range(0,4):
+#     print(iloop)
+#     x = np.arange(0,iloop,1)
+#     y1 = 0.05 * x**2
+#     PlotHistory(a, a, a)
+
+print(np.random.randint(0, 5, size=100))

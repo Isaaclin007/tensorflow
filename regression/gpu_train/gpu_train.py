@@ -3,23 +3,18 @@
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.python.keras import backend as K
-import tushare as ts
 import numpy as np
 import pandas as pd
 import os
 import time
 import sys
-import tushare_data
 import math
 import matplotlib.pyplot as plt
-import wave_dataset
-import wave_kernel
 from tensorflow.python.keras.callbacks import LearningRateScheduler
-import fix_dataset
-import feature
-import fix_test
-import wave_test_regression as wave_test
-
+import gpu_train_fix_dataset as fix_dataset
+import gpu_train_wave_dataset as wave_dataset
+import gpu_train_fix_test as fix_test
+import gpu_train_wave_test as wave_test
 
 BATCH_SIZE = 10240
 LEANING_RATE = 0.004
@@ -38,10 +33,10 @@ use_test_data = True
 # MODEL_LSTM_36_TP10MaxRatio = 'LSTM36_TP10MaxRatio'
 
 model_type = 'LSTM'
-lstm_size = 36
+lstm_size = 64
 lstm_dense_size = 1
-optimizer_type = 'RMSProp'
-loss_func = 'TP0MaxRatio'
+optimizer_type = 'KerasRMSProp'  # RMSProp KerasRMSProp
+loss_func = 'T2P0MaxRatio'  # TP0MaxRatio TP1MaxRatio T10P0MaxRatio
 model_option = '%s_%u.%u_%s_%s' % (model_type, lstm_size, lstm_dense_size, optimizer_type, loss_func)
 reshape_data_rnn = True
 
@@ -50,9 +45,15 @@ SPLIT_MODE_SPLIT_BY_DATE = 'splitbydate'
 SPLIT_MODE_RANDOM = 'random'
 train_test_split_mode = SPLIT_MODE_SPLIT_BY_DATE
 
+feature_days = 30
+feature_unit_size = 5
+
 reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
+
+# def mystockloss(y_true, y_pred, e=0.1):
+#     return abs((y_true-4.0) - (y_pred-4.0)) / 10.0 * K.max([(y_true-4.0), (y_pred-4.0), y_true*0.0])
 
 def LossTP0MaxRatio(y_true, y_pred, e=0.1):
     return abs(y_true - y_pred) / 10.0 * K.max([y_true, y_pred, y_true*0.0])
@@ -69,21 +70,33 @@ def LossTP1MaxRatio(y_true, y_pred, e=0.1):
 def mystockloss(y_true, y_pred, e=0.1):
     return abs(y_true - y_pred)
 
+# def mystockloss(y_true, y_pred, e=0.1):
+#     return abs(y_true - y_pred) / 10.0 * K.max([abs(y_true), abs(y_pred)])
+
+# loss
+if loss_func == 'TP0MaxRatio':
+    my_loss = LossTP0MaxRatio
+elif loss_func == 'TP1MaxRatio':
+    my_loss = LossTP1MaxRatio
+elif loss_func == 'T10P0MaxRatio':
+    my_loss = LossT10P0MaxRatio
+elif loss_func == 'T2P0MaxRatio':
+    my_loss = LossT2P0MaxRatio
+
+# optimizer
+if optimizer_type == 'RMSProp':
+    my_optimizer = tf.train.RMSPropOptimizer(LEANING_RATE)
+elif optimizer_type == 'KerasRMSProp':
+    my_optimizer = keras.optimizers.RMSprop(lr=LEANING_RATE, rho=0.9, epsilon=1e-06)
+
 def build_model(input_layer_shape):
     # model
     if model_type == 'LSTM':
         model = keras.models.Sequential()
         model.add(keras.layers.LSTM(lstm_size, input_shape=(input_layer_shape), return_sequences=False))
         model.add(keras.layers.Dense(lstm_dense_size))
-    # optimizer
-    if optimizer_type == 'RMSProp':
-        my_optimizer = tf.train.RMSPropOptimizer(LEANING_RATE)
-    
-    # loss
-    if loss_func == 'TP0MaxRatio':
-        my_loss = LossTP0MaxRatio
 
-    model.compile(loss=LossTP0MaxRatio, optimizer=my_optimizer, metrics=[LossTP0MaxRatio])
+    model.compile(loss=my_loss, optimizer=my_optimizer, metrics=[my_loss])
     return model
     # if model_option == MODEL_DENSE_4_TP0MaxRatio:
     #     model = keras.Sequential([
@@ -147,19 +160,9 @@ def build_model(input_layer_shape):
 
 def ModelFilePath(input_train_mode):
     if input_train_mode == "fix":
-        temp_path_name = "./model/fix/%s_%s_%u_%f_%s" % (
-                         fix_dataset.TrainSettingName(), 
-                         model_option, 
-                         BATCH_SIZE, 
-                         LEANING_RATE, 
-                         train_test_split_mode)
+        temp_path_name = "./model/fix/%s_%s_%u_%f_%s" % ("", model_option, BATCH_SIZE, LEANING_RATE, train_test_split_mode)
     else:
-        temp_path_name = "./model/wave/%s_%s_%s_%u_%f" % (
-                         fix_dataset.SettingName(), 
-                         wave_kernel.SettingName(),
-                         model_option, 
-                         BATCH_SIZE, 
-                         LEANING_RATE)
+        temp_path_name = "./model/wave/%s_%s_%u_%f_%s" % ("", model_option, BATCH_SIZE, LEANING_RATE, train_test_split_mode)
     return temp_path_name
 
 def ModelFileNames(input_train_mode, epoch=-1):
@@ -183,31 +186,14 @@ def SaveModel(model, mean, std, epoch=-1):
 
 def LoadModel(input_train_mode, epoch=-1):
     temp_path_name, model_name, mean_name, std_name = ModelFileNames(input_train_mode, epoch)
-    model = keras.models.load_model(model_name)
-    mean = np.load(mean_name)
-    std = np.load(std_name)
-    return model, mean, std
-
-def LoadTestModel(input_train_mode):
-    if input_train_mode == 'fix':
-        model_name = "./model/fix/model.h5"
-        mean_name = "./model/fix/mean.npy"
-        std_name = "./model/fix/std.npy"
-    elif input_train_mode == 'wave':
-        model_name = "./model/wave/model.h5"
-        mean_name = "./model/wave/mean.npy"
-        std_name = "./model/wave/std.npy"
-    model = keras.models.load_model(model_name, custom_objects={
-        'LossTP0MaxRatio': LossTP0MaxRatio,
-        'LossTP1MaxRatio': LossTP1MaxRatio, 
-        'LossT10P0MaxRatio': LossT10P0MaxRatio,
-        'LossT2P0MaxRatio': LossT2P0MaxRatio})
+    model = keras.models.load_model(model_name, custom_objects={'Loss%s' % loss_func: my_loss})
+    # model = keras.models.load_model(model_name)
     mean = np.load(mean_name)
     std = np.load(std_name)
     return model, mean, std
 
 def ReshapeRnnFeatures(features):
-    return features.reshape(features.shape[0], feature.feature_days, feature.feature_unit_size)
+    return features.reshape(features.shape[0], feature_days, feature_unit_size)
 
 def FeaturesPretreat(features, mean, std):
     features = (features - mean) / std
@@ -247,9 +233,8 @@ def PlotHistory(losses, val_losses, test_increase):
     Plot2DArray(PlotHistory.ax1, val_losses, 'val_loss')
     Plot2DArray(PlotHistory.ax2, test_increase, 'test_increase', 'g-')
     PlotHistory.ax1.legend()
-    # PlotHistory.ax2.legend()
     plt.show()
-    # plt.pause(1)
+    plt.pause(5)
     temp_path_name = ModelFilePath(train_mode)
     if not os.path.exists(temp_path_name):
         os.makedirs(temp_path_name)
@@ -270,6 +255,51 @@ def PlotHistory(losses, val_losses, test_increase):
     #     if not os.path.exists(temp_path_name):
     #         os.makedirs(temp_path_name)
     #     plt.savefig('%s/figure.png' % temp_path_name)
+
+def SaveHistory(losses, val_losses, test_increase):
+    temp_path_name = ModelFilePath(train_mode)
+    if not os.path.exists(temp_path_name):
+        os.makedirs(temp_path_name)
+    if len(losses) > 0:
+        np.save('%s/loss.npy' % temp_path_name, np.array(losses))
+    if len(val_losses) > 0:
+        np.save('%s/val_losses.npy' % temp_path_name, np.array(val_losses))
+    if len(test_increase):
+        np.save('%s/test_increase.npy' % temp_path_name, np.array(test_increase))
+
+def ShowHistory():
+    temp_path_name = ModelFilePath(train_mode)
+    if not os.path.exists(temp_path_name):
+        print("ShowHistory.Error: path (%s) not exist" % temp_path_name)
+        return
+    
+    losses = []
+    val_losses = []
+    test_increase = []
+
+    temp_file_name = '%s/loss.npy' % temp_path_name
+    if os.path.exists(temp_file_name):
+        losses = np.load(temp_file_name).tolist()
+    temp_file_name = '%s/val_losses.npy' % temp_path_name
+    if os.path.exists(temp_file_name):
+        val_losses = np.load(temp_file_name).tolist()
+    temp_file_name = '%s/test_increase.npy' % temp_path_name
+    if os.path.exists(temp_file_name):
+        test_increase = np.load(temp_file_name).tolist()
+        max_increase_epoch = 0.0
+        max_increase = 0.0
+        for iloop in range(0, len(test_increase)):
+            print("%-8.0f: %.1f" % (test_increase[iloop][0], test_increase[iloop][1]))
+            if max_increase < test_increase[iloop][1]:
+                max_increase = test_increase[iloop][1]
+                max_increase_epoch = test_increase[iloop][0]
+        print("-------------------------------")
+        print("max increase(%.0f): %.1f" % (max_increase_epoch, max_increase))
+        captions = ['epoch', 'increase']
+        data_df = pd.DataFrame(test_increase, columns=captions)
+        data_df.to_csv('%s/test_increase.csv' % temp_path_name)
+
+    PlotHistory(losses, val_losses, test_increase)
 
 def train():
     if train_mode == "fix":
@@ -335,7 +365,7 @@ def train():
     model = build_model(train_features.shape[1:])
     model.summary()
 
-    EPOCHS = 200
+    EPOCHS = 500
 
     # Display training progress by printing a single dot for each completed epoch.
     class PrintDot(keras.callbacks.Callback):
@@ -360,17 +390,18 @@ def train():
             if use_test_data:
                 self.losses.append([epoch, logs.get('loss')])
                 self.val_losses.append([epoch, logs.get('val_loss')])
-                if ((epoch % 1) == 0):
+                if ((epoch % 10) == 0):
                     self.test_increase.append([epoch, TestModel(test_data, self.model, mean, std)])
                 SaveModel(self.model, mean, std, epoch)
-                # SaveHistory(self.losses, self.val_losses, self.test_increase)
-                PlotHistory(self.losses, self.val_losses, self.test_increase)
+                SaveHistory(self.losses, self.val_losses, self.test_increase)
+                # PlotHistory(self.losses, self.val_losses, self.test_increase)
             else:
                 self.losses.append([epoch, logs.get('loss')])
                 self.val_losses.append([epoch, logs.get('val_loss')])
-                # SaveHistory(self.losses, self.val_losses, self.test_increase)
-                PlotHistory(self.losses, self.val_losses, self.test_increase)
-                SaveModel(self.model, mean, std, epoch)
+                SaveHistory(self.losses, self.val_losses, self.test_increase)
+                # PlotHistory(self.losses, self.val_losses, self.test_increase)
+                if ((epoch % 10) == 0):
+                    SaveModel(self.model, mean, std, epoch)
 
 
 

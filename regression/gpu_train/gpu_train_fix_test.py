@@ -2,17 +2,15 @@
 
 import tensorflow as tf
 from tensorflow import keras
-import tushare as ts
 import numpy as np
 import pandas as pd
 import os
 import time
 import sys
-import tushare_data
 import random
-import train_rnn
-import fix_dataset
-import feature
+import gpu_train as train_rnn
+import gpu_train_fix_dataset as fix_dataset
+import gpu_train_feature as feature
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -20,13 +18,12 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 predict_trade_threshold = 0
 max_trade_count_1_day = 1
-test_data_start_date = 20190415
+# test_data_start_date = 20190414
 
 def Predict(test_data, model, mean, std):
     predict_features = test_data[:, feature.COL_FEATURE_OFFSET(): feature.COL_FEATURE_OFFSET() + feature.FEATURE_SIZE()]
     predict_features = train_rnn.FeaturesPretreat(predict_features, mean, std)
-    predictions = model.predict(predict_features)
-    print("Predict out")
+    predictions = model.predict_on_batch(predict_features)
     predictions_df = pd.DataFrame(predictions, columns=['pred'])
 
     temp_index = feature.COL_ACTURE_OFFSET(0)
@@ -148,13 +145,14 @@ def TestEntry(test_data, print_msg, model, mean, std):
                             #             out_price = temp_close
                             #             break
 
-                            day_trade_count += 1
                             if out_price > 0.0:
                                 temp_increase = ((out_price / buying_price) - 1.0 - 0.001) *100.0
                                 increase_sum += temp_increase
+
+                                day_trade_count += 1
                                 trade_count += 1
                                 # print("%f, %f, %f" % (capital_value, capital_ratio, temp_increase))
-                                capital_value += capital_ratio / float(tushare_data.predict_day_count) / float(max_trade_count_1_day) * (temp_increase / 100.0)
+                                capital_value += capital_ratio / float(feature.active_label_day + 1) / float(max_trade_count_1_day) * (temp_increase / 100.0)
 
                                 if capital_value > 1.0:
                                     capital_ratio = int(capital_value)  # 每增加1倍更新一次
@@ -232,7 +230,7 @@ if __name__ == "__main__":
     #             max_capital_increase_max_trade_count_1_day = temp_count
     # print("max:")
     # TestEntry(max_capital_increase_threshold, max_capital_increase_max_trade_count_1_day, True)
-    dataset_name = 'test'
+    dataset_name = 'fix'
     model_epoch = -1
     if len(sys.argv) > 1:
         dataset_name = sys.argv[1]
@@ -240,11 +238,11 @@ if __name__ == "__main__":
         model_epoch = int(sys.argv[2])
 
     if dataset_name == 'daily':
-        fix_dataset.UpdateFixDataSet(True, True, True)
-        test_data = fix_dataset.GetDailyDataSet(test_data_start_date)
+        test_data = fix_dataset.GetDailyDataSet(20190101)
+        print('Unsupport')
     else:
         test_data = fix_dataset.GetTestData()
-    model, mean, std = train_rnn.LoadTestModel('fix')
+    model, mean, std = train_rnn.LoadModel('fix', model_epoch)
     TestEntry(test_data, True, model, mean, std)
 
 

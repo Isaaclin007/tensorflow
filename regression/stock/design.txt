@@ -327,9 +327,25 @@ V1.0.22
     每个 epoch 覆盖保存 loss, val_loss, test_loss, test_increase 的 pandas 数据
     每个 epoch 根据 pandas 数据绘制图，每个 epoch 覆盖保存图
     validation_split 改为 validation_data，显示切分验证集
+    -------------------------------------------------------
+    测试结论：使用训练集做fix_test效果很好，使用未参与训练的数据效果不好
     
-    
+V1.0.23
+1. 训练过程
+    fix_dataset 增加接口 GetTrainTestData 按比例返回（train_features，train_labels，test_features, test_labels, test_data)
+    其中 val 和 test 为同一部分 dataset，数据切分按照日期为单位，例如 比例为5则：如期最后两位对5取余为0的作为测试集
+    -------------------------------------------------------
+    测试结论：按照日期为单位切分，valloss不下降，随机切分valloss下降，但是对未来的数据效果不好
 
 
 V----
 1. 根据预测结果决定卖出时间
+
+V1.0.24
+1.支持GPU训练
+
+
+
+已知问题：
+测试集 loss 和 训练集 loss 不相关
+测试集 loss 和 increase 不相关
