@@ -10,12 +10,13 @@ import sys
 import random
 import gpu_train as train_rnn
 import gpu_train_feature as feature
+import gpu_train_wave_dataset as wave_dataset
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
-predict_threshold = 10
+predict_threshold = 0
 
 def AvgValue(sum_value, sample_num):
     if sample_num == 0:
@@ -76,14 +77,22 @@ def TestEntry(test_data, print_msg, model, mean, std):
                     increase_sum, \
                     AvgValue(increase_sum, trade_count), \
                     AvgValue(increase_sum, holding_days_sum)))
+    increase_score = increase_sum - (max_drawdown * 2)
     if print_msg:
-        print("trade_count:%u, increase_sum:%-10.2f, max_drawdown:%.2f" %( \
+        print("trade_count:%u, increase_sum:%-10.2f, max_drawdown:%.2f, score:%.1f" %( \
             trade_count, \
             increase_sum, \
-            max_drawdown))
-    return increase_sum - (max_drawdown * 2)
+            max_drawdown, \
+            increase_score))
+    increase_score = increase_sum - (max_drawdown * 2)
+    return increase_score
 
 if __name__ == "__main__":
-    print('wave_test')
+    model_epoch = -1
+    if len(sys.argv) > 1:
+        model_epoch = int(sys.argv[1])
+    dataset = wave_dataset.GetTestData()
+    model, mean, std = train_rnn.LoadModel('wave', model_epoch)
+    TestEntry(dataset, True, model, mean, std)
 
 

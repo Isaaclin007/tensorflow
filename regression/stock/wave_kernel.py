@@ -187,7 +187,6 @@ def MergeDataUnitsToDataSet():
         else:
             g_data_set = np.vstack((g_data_set, temp_data_set))
         train_data_list = []
-    print("len(g_data_set): %u" % len(g_data_set))
 
 def Predict(pp_data, day_index):
     model=keras.models.load_model("./model/model_.h5")

@@ -14,9 +14,6 @@ dataset_daily_file_name = "./data/dataset/fix_dataset_daily_0_30_1_10___20000101
 dataset_train_test_split_date = 20170101
 
 
-def FEATURE_SIZE():
-    return 150
-
 def GetTrainTestDataMerge():
     if not os.path.exists(dataset_merge_file_name):
         init_flag = True

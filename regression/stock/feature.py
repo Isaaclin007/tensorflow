@@ -21,7 +21,7 @@ INVALID_DATE = 99990101.0
 # 设置参数
 feature_days = 30
 label_days = 10
-active_label_day = 1  # 0 ~ (label_days-1)
+active_label_day = 2  # 0 ~ (label_days-1)
 feature_type = FEATURE_G0_D5_AVG
 label_type = LABEL_T1_OPEN_2_TD_CLOSE
 

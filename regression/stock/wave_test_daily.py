@@ -10,6 +10,7 @@ import time
 import sys
 import tushare_data
 import wave_kernel
+import wave_dataset
 import random
 import daily_data
 import wave_test_regression
@@ -77,7 +78,7 @@ def TestAllStocksDailyData():
         # result_df.to_csv('wave_test_result.csv')
         wave_kernel.SaveDailyDataSet()
     
-    dataset = wave_kernel.GetDailyDataSet()
+    dataset = wave_dataset.GetDailyDataSet()
     wave_test_regression.RegressionTest(dataset)
 
 def TestAStocksDailyData(stock_code):

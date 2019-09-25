@@ -15,6 +15,7 @@ import gpu_train_fix_dataset as fix_dataset
 import gpu_train_wave_dataset as wave_dataset
 import gpu_train_fix_test as fix_test
 import gpu_train_wave_test as wave_test
+import gpu_train_feature as feature
 
 BATCH_SIZE = 10240
 LEANING_RATE = 0.004
@@ -33,11 +34,10 @@ use_test_data = True
 # MODEL_LSTM_36_TP10MaxRatio = 'LSTM36_TP10MaxRatio'
 
 model_type = 'LSTM'
-lstm_size = 64
+lstm_size = 4
 lstm_dense_size = 1
 optimizer_type = 'KerasRMSProp'  # RMSProp KerasRMSProp
-loss_func = 'T2P0MaxRatio'  # TP0MaxRatio TP1MaxRatio T10P0MaxRatio
-model_option = '%s_%u.%u_%s_%s' % (model_type, lstm_size, lstm_dense_size, optimizer_type, loss_func)
+loss_func = 'TP0MaxRatio'  # TP0MaxRatio TP1MaxRatio T10P0MaxRatio
 reshape_data_rnn = True
 
 SPLIT_MODE_SAMPLE_BY_DATE = 'samplebydate'
@@ -45,12 +45,13 @@ SPLIT_MODE_SPLIT_BY_DATE = 'splitbydate'
 SPLIT_MODE_RANDOM = 'random'
 train_test_split_mode = SPLIT_MODE_SPLIT_BY_DATE
 
-feature_days = 30
-feature_unit_size = 5
-
 reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
+
+def SettingName():
+    model_setting = '%s_%u.%u_%s_%s' % (model_type, lstm_size, lstm_dense_size, optimizer_type, loss_func)
+    return model_setting
 
 # def mystockloss(y_true, y_pred, e=0.1):
 #     return abs((y_true-4.0) - (y_pred-4.0)) / 10.0 * K.max([(y_true-4.0), (y_pred-4.0), y_true*0.0])
@@ -67,6 +68,9 @@ def LossT2P0MaxRatio(y_true, y_pred, e=0.1):
 def LossTP1MaxRatio(y_true, y_pred, e=0.1):
     return abs(y_true - y_pred) / 10.0 * K.max([y_true, y_pred, (abs(y_true) + 100) / (abs(y_true) + 100)])
 
+def LossTs5Ps50MaxRatio(y_true, y_pred, e=0.1):
+    return abs(y_true - y_pred) / 10.0 * K.max([(y_true - 5.0), (y_pred - 5.0), y_true*0.0])
+
 def mystockloss(y_true, y_pred, e=0.1):
     return abs(y_true - y_pred)
 
@@ -74,20 +78,26 @@ def mystockloss(y_true, y_pred, e=0.1):
 #     return abs(y_true - y_pred) / 10.0 * K.max([abs(y_true), abs(y_pred)])
 
 # loss
-if loss_func == 'TP0MaxRatio':
-    my_loss = LossTP0MaxRatio
-elif loss_func == 'TP1MaxRatio':
-    my_loss = LossTP1MaxRatio
-elif loss_func == 'T10P0MaxRatio':
-    my_loss = LossT10P0MaxRatio
-elif loss_func == 'T2P0MaxRatio':
-    my_loss = LossT2P0MaxRatio
+def ActiveLoss():
+    if loss_func == 'TP0MaxRatio':
+        my_loss = LossTP0MaxRatio
+    elif loss_func == 'TP1MaxRatio':
+        my_loss = LossTP1MaxRatio
+    elif loss_func == 'T10P0MaxRatio':
+        my_loss = LossT10P0MaxRatio
+    elif loss_func == 'T2P0MaxRatio':
+        my_loss = LossT2P0MaxRatio
+    elif loss_func == 'Ts5Ps50MaxRatio':
+        my_loss = LossTs5Ps50MaxRatio
+    return my_loss
 
 # optimizer
-if optimizer_type == 'RMSProp':
-    my_optimizer = tf.train.RMSPropOptimizer(LEANING_RATE)
-elif optimizer_type == 'KerasRMSProp':
-    my_optimizer = keras.optimizers.RMSprop(lr=LEANING_RATE, rho=0.9, epsilon=1e-06)
+def ActiveOptimizer():
+    if optimizer_type == 'RMSProp':
+        my_optimizer = tf.train.RMSPropOptimizer(LEANING_RATE)
+    elif optimizer_type == 'KerasRMSProp':
+        my_optimizer = keras.optimizers.RMSprop(lr=LEANING_RATE, rho=0.9, epsilon=1e-06)
+    return my_optimizer
 
 def build_model(input_layer_shape):
     # model
@@ -96,7 +106,7 @@ def build_model(input_layer_shape):
         model.add(keras.layers.LSTM(lstm_size, input_shape=(input_layer_shape), return_sequences=False))
         model.add(keras.layers.Dense(lstm_dense_size))
 
-    model.compile(loss=my_loss, optimizer=my_optimizer, metrics=[my_loss])
+    model.compile(loss=ActiveLoss(), optimizer=ActiveOptimizer(), metrics=[ActiveLoss()])
     return model
     # if model_option == MODEL_DENSE_4_TP0MaxRatio:
     #     model = keras.Sequential([
@@ -160,9 +170,9 @@ def build_model(input_layer_shape):
 
 def ModelFilePath(input_train_mode):
     if input_train_mode == "fix":
-        temp_path_name = "./model/fix/%s_%s_%u_%f_%s" % ("", model_option, BATCH_SIZE, LEANING_RATE, train_test_split_mode)
+        temp_path_name = "./model/fix/%s_%s_%u_%f_%s" % (SettingName(), feature.SettingName(), BATCH_SIZE, LEANING_RATE, train_test_split_mode)
     else:
-        temp_path_name = "./model/wave/%s_%s_%u_%f_%s" % ("", model_option, BATCH_SIZE, LEANING_RATE, train_test_split_mode)
+        temp_path_name = "./model/wave/%s_%s_%u_%f_%s" % (SettingName(), feature.SettingName(), BATCH_SIZE, LEANING_RATE, train_test_split_mode)
     return temp_path_name
 
 def ModelFileNames(input_train_mode, epoch=-1):
@@ -186,14 +196,14 @@ def SaveModel(model, mean, std, epoch=-1):
 
 def LoadModel(input_train_mode, epoch=-1):
     temp_path_name, model_name, mean_name, std_name = ModelFileNames(input_train_mode, epoch)
-    model = keras.models.load_model(model_name, custom_objects={'Loss%s' % loss_func: my_loss})
+    model = keras.models.load_model(model_name, custom_objects={'Loss%s' % loss_func: ActiveLoss()})
     # model = keras.models.load_model(model_name)
     mean = np.load(mean_name)
     std = np.load(std_name)
     return model, mean, std
 
 def ReshapeRnnFeatures(features):
-    return features.reshape(features.shape[0], feature_days, feature_unit_size)
+    return features.reshape(features.shape[0], feature.feature_days, feature.feature_unit_size)
 
 def FeaturesPretreat(features, mean, std):
     features = (features - mean) / std
@@ -390,7 +400,7 @@ def train():
             if use_test_data:
                 self.losses.append([epoch, logs.get('loss')])
                 self.val_losses.append([epoch, logs.get('val_loss')])
-                if ((epoch % 10) == 0):
+                if ((epoch % 5) == 0):
                     self.test_increase.append([epoch, TestModel(test_data, self.model, mean, std)])
                 SaveModel(self.model, mean, std, epoch)
                 SaveHistory(self.losses, self.val_losses, self.test_increase)
@@ -400,7 +410,7 @@ def train():
                 self.val_losses.append([epoch, logs.get('val_loss')])
                 SaveHistory(self.losses, self.val_losses, self.test_increase)
                 # PlotHistory(self.losses, self.val_losses, self.test_increase)
-                if ((epoch % 10) == 0):
+                if ((epoch % 5) == 0):
                     SaveModel(self.model, mean, std, epoch)
 
 
@@ -444,5 +454,13 @@ if __name__ == "__main__":
     if len(sys.argv) > 2 and sys.argv[2] == 'show':
         ShowHistory()
     else:
+        if len(sys.argv) > 2:
+            loss_func = sys.argv[2]
+        if len(sys.argv) > 3:
+            optimizer_type = sys.argv[3]
+        if len(sys.argv) > 4:
+            feature.active_label_day = int(sys.argv[4])
+        if len(sys.argv) > 5:
+            lstm_size = int(sys.argv[5])
         train()
 

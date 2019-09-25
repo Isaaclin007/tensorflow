@@ -93,7 +93,7 @@ def TestEntry(test_data, print_msg, model, mean, std):
     return increase_sum - (max_drawdown * 2)
 
 def RegressionTest(test_data, print_msg=True):
-    model, mean, std = train_rnn.LoadModel('wave')
+    model, mean, std = train_rnn.LoadTestModel('wave')
     return TestEntry(test_data, print_msg, model, mean, std)
 
     # # 显示持有数量和平均收益率的关系

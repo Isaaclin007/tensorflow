@@ -59,6 +59,9 @@ def COL_ACTURE_OFFSET(actrue_day_index):
 def COL_TRADE_DATE(actrue_day_index):
     return (COL_ACTURE_OFFSET(actrue_day_index) + ACTURE_DATA_INDEX_DATE)
 
+def SettingName():
+    return ('%u_%u_%u_%u' % (feature_type, label_type, feature_days, active_label_day))
+
 
 if __name__ == "__main__":
     print('features.py')
