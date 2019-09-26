@@ -85,11 +85,13 @@ def TestEntry(test_data, print_msg, model, mean, std):
                     increase_sum, \
                     AvgValue(increase_sum, trade_count), \
                     AvgValue(increase_sum, holding_days_sum)))
+    increase_score = increase_sum - (max_drawdown * 2)
     if print_msg:
-        print("trade_count:%u, increase_sum:%-10.2f, max_drawdown:%.2f" %( \
+        print("trade_count:%u, increase_sum:%-10.2f, max_drawdown:%.2f, score:%.1f" %( \
             trade_count, \
             increase_sum, \
-            max_drawdown))
+            max_drawdown, \
+            increase_score))
     return increase_sum - (max_drawdown * 2)
 
 def RegressionTest(test_data, print_msg=True):

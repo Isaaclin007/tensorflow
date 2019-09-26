@@ -5,6 +5,7 @@ import os
 import time
 import sys
 import math
+import pandas as pd
 import gpu_train_feature as feature
 
 dataset_file_name = "./data/dataset/wave_dataset_0_20020101_20000101_20000101_20190414___2_2_0_1_0_5_0.npy"
@@ -33,6 +34,19 @@ def COL_HOLDING_DAYS():
 def GetTrainTestDataMerge():
     return np.load(dataset_file_name)
 
+def SortWaveDataset(dataset):
+    captions = []
+    for iloop in range(0, feature.FEATURE_SIZE()):
+        captions.append('f_%u' % iloop)
+    captions.append('label')
+    captions.append('ts_code')
+    captions.append('pre_on_date')
+    captions.append('on_date')
+    captions.append('off_date')
+    captions.append('holding_days')
+    data_df = pd.DataFrame(dataset, columns=captions)
+    data_df = data_df.sort_values(by=['pre_on_date', 'ts_code'], ascending=(True, True))
+    return data_df.values
 
 def GetTrainTestDataSampleByDate(test_ratio):
     sample_num = int(1.0/test_ratio + 0.0001)
@@ -43,6 +57,8 @@ def GetTrainTestDataSampleByDate(test_ratio):
     train_data = dataset[~pos]
     print("train: {}".format(train_data.shape))
     print("test: {}".format(test_data.shape))
+
+    test_data = SortWaveDataset(test_data)
 
     train_features = train_data[:, 0:feature.FEATURE_SIZE()]
     train_labels = train_data[:, feature.FEATURE_SIZE():feature.FEATURE_SIZE()+1]
@@ -64,6 +80,8 @@ def GetTrainTestDataRandom(test_ratio):
     print("train: {}".format(train_data.shape))
     print("test: {}".format(test_data.shape))
 
+    test_data = SortWaveDataset(test_data)
+
     train_features = train_data[:, 0:feature.FEATURE_SIZE()]
     train_labels = train_data[:, feature.FEATURE_SIZE():feature.FEATURE_SIZE()+1]
 
@@ -80,6 +98,8 @@ def GetTrainTestDataSplitByDate():
     test_data = dataset[~pos]
     print("train: {}".format(train_data.shape))
     print("test: {}".format(test_data.shape))
+
+    test_data = SortWaveDataset(test_data)
 
     train_features = train_data[:, 0:feature.FEATURE_SIZE()]
     train_labels = train_data[:, feature.FEATURE_SIZE():feature.FEATURE_SIZE()+1]

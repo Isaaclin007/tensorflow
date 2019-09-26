@@ -23,7 +23,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # update_date = tushare_data.CurrentDate()
 # update_date = '20190604'
-update_date = '20190924'
+update_date = '20190925'
 code_list = tushare_data.StockCodes()
 
 def CreatePPMergeDataOriginal():

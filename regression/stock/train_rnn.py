@@ -66,6 +66,9 @@ def LossT2P0MaxRatio(y_true, y_pred, e=0.1):
 def LossTP1MaxRatio(y_true, y_pred, e=0.1):
     return abs(y_true - y_pred) / 10.0 * K.max([y_true, y_pred, (abs(y_true) + 100) / (abs(y_true) + 100)])
 
+def LossTs5Ps50MaxRatio(y_true, y_pred, e=0.1):
+    return abs(y_true - y_pred) / 10.0 * K.max([(y_true - 5.0), (y_pred - 5.0), y_true*0.0])
+
 def mystockloss(y_true, y_pred, e=0.1):
     return abs(y_true - y_pred)
 
@@ -201,7 +204,8 @@ def LoadTestModel(input_train_mode):
         'LossTP0MaxRatio': LossTP0MaxRatio,
         'LossTP1MaxRatio': LossTP1MaxRatio, 
         'LossT10P0MaxRatio': LossT10P0MaxRatio,
-        'LossT2P0MaxRatio': LossT2P0MaxRatio})
+        'LossT2P0MaxRatio': LossT2P0MaxRatio,
+        'LossTs5Ps50MaxRatio': LossTs5Ps50MaxRatio})
     mean = np.load(mean_name)
     std = np.load(std_name)
     return model, mean, std

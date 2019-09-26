@@ -16,7 +16,7 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
-predict_threshold = 0
+predict_threshold = 10
 
 def AvgValue(sum_value, sample_num):
     if sample_num == 0:
@@ -84,7 +84,6 @@ def TestEntry(test_data, print_msg, model, mean, std):
             increase_sum, \
             max_drawdown, \
             increase_score))
-    increase_score = increase_sum - (max_drawdown * 2)
     return increase_score
 
 if __name__ == "__main__":

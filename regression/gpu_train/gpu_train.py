@@ -34,7 +34,7 @@ use_test_data = True
 # MODEL_LSTM_36_TP10MaxRatio = 'LSTM36_TP10MaxRatio'
 
 model_type = 'LSTM'
-lstm_size = 4
+lstm_size = 64
 lstm_dense_size = 1
 optimizer_type = 'KerasRMSProp'  # RMSProp KerasRMSProp
 loss_func = 'TP0MaxRatio'  # TP0MaxRatio TP1MaxRatio T10P0MaxRatio
