@@ -78,6 +78,8 @@ def ShowHistory(path_name):
         PlotHistory(losses, val_losses, test_increase, path_name)
 
 def ShowHistoryLevel2(level2_path_name):
+    if not os.path.exists(level2_path_name):
+        return
     path_list = os.listdir(level2_path_name)
     for path_name in path_list:
         temp_path_name = '%s/%s' % (level2_path_name, path_name)

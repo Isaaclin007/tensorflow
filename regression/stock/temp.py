@@ -2,6 +2,7 @@
 
 import tensorflow as tf
 from tensorflow import keras
+from tensorflow.python.keras import backend as K
 import tushare as ts
 import numpy as np
 import pandas as pd
@@ -519,4 +520,21 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 #     y1 = 0.05 * x**2
 #     PlotHistory(a, a, a)
 
-print(np.random.randint(0, 5, size=100))
+# print(np.random.randint(0, 5, size=100))
+
+# def LossTs5Ps50MaxRatio(y_true, y_pred, e=0.1):
+#     # return K.mean(abs(y_true - y_pred) / 10.0 * K.max([(y_true - 5.0), (y_pred - 5.0), y_true*0.0]))
+#     return K.max(y_true - y_pred)
+
+# a = np.array([1.0, 2.0, 3.0, 4.0])
+# b = np.array([11.0, 12.0, 13.0, 14.0])
+
+# print(LossTs5Ps50MaxRatio(a, b))
+
+# temp_num = 3
+# temp_array = [1, 2, 3, 4]
+# temp_str = '%u_' % temp_num, format(temp_array)
+# print('temp_str:%s' % temp_str)
+
+temp_str = '1,2,3,4'
+print(map(int, temp_str.split(',')))

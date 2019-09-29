@@ -306,6 +306,7 @@ V1.0.20
     test_data 中提取的日期列表
 
 V1.0.21
+1.
     抽查训练数据。
     对比fix_dataset 和 tushare_data的结果，找到不同的日期
     调取测试集中预测结果不同的一天的数据，对比数量，如果数量相同则对比feature
@@ -317,7 +318,9 @@ V1.0.21
            实现方案：
         2. feature.GetDataUnit 判断使用的数据区间内是否包含停牌的边界数据，如果包含则返回空list，
            fix_dataset GetDataUnit 后判断 data_unit是否为空
+    
     fix_test 已支持测试和预测，预测通过daily测试实现
+2. pp data 添加AdjFlag
 
 V1.0.22
 1. 训练过程
@@ -347,7 +350,25 @@ V1.0.24
 V1.0.25
 1.gpu_train 支持命令设置模型参数
 
+V1.0.26
+1. 添加损失函数PTNDiff（暂不实现），
+    y_pred > 10 && y_true > 10 : loss = 0
+    y_pred > 10 && y_true < 10 : loss = (10 - y_true)
+    y_pred < 10 && y_true > 10 : loss = (10 - y_pred)
+    y_pred < 10 && y_true < 10 : loss = 0
+2. 添加损失函数TP010ClipDiff（已实现），
+    y_pred > 10 && y_true > 10 : loss = 0
+    y_pred < 0 && y_true < 0 : loss = 0
+    else : abs(y_pred - y_true)
+    实现：K.mean(K.abs(K.clip(y_pred, 0, 10) - K.clip(y_pred, 0, 10)))
+3. 添加损失函数 LossTanhDiff
+4. gpu_train 支持 getopt 参数解析
+
 
 已知问题：
 测试集 loss 和 训练集 loss 不相关
 测试集 loss 和 increase 不相关
+
+新的思路：
+训练过程 active_label_day = 1
+预测过程 active_lable_day = 2

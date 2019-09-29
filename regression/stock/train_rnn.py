@@ -72,6 +72,9 @@ def LossTs5Ps50MaxRatio(y_true, y_pred, e=0.1):
 def mystockloss(y_true, y_pred, e=0.1):
     return abs(y_true - y_pred)
 
+def LossTanhDiff(y_true, y_pred, e=0.1):
+    return abs(K.tanh((y_true - 5.0) * 0.4) - K.tanh((y_pred - 5.0) * 0.4))
+
 def build_model(input_layer_shape):
     # model
     if model_type == 'LSTM':
@@ -205,7 +208,8 @@ def LoadTestModel(input_train_mode):
         'LossTP1MaxRatio': LossTP1MaxRatio, 
         'LossT10P0MaxRatio': LossT10P0MaxRatio,
         'LossT2P0MaxRatio': LossT2P0MaxRatio,
-        'LossTs5Ps50MaxRatio': LossTs5Ps50MaxRatio})
+        'LossTs5Ps50MaxRatio': LossTs5Ps50MaxRatio, 
+        'LossTanhDiff': LossTanhDiff})
     mean = np.load(mean_name)
     std = np.load(std_name)
     return model, mean, std
