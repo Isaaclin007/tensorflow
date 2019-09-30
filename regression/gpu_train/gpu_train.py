@@ -12,69 +12,16 @@ import math
 import getopt
 import matplotlib.pyplot as plt
 from tensorflow.python.keras.callbacks import LearningRateScheduler
+import gpu_train_paras as paras
 import gpu_train_fix_dataset as fix_dataset
 import gpu_train_wave_dataset as wave_dataset
 import gpu_train_fix_test as fix_test
 import gpu_train_wave_test as wave_test
 import gpu_train_feature as feature
 
-train_data_ = 'fix'  
-    # fix 
-    # wave
-data_split_mode_ = 'splitbydate'
-    # samplebydate
-    # splitbydate
-    # random
-val_split_ = 0.2
-model_type_ = 'LSTM'  
-    # LSTM 
-    # Dense
-lstm_size_ = 64
-lstm_dense_size_ = 1
-dense_layer_num_ = 1
-dense_size_ = [4, 4, 4, 4]
-loss_func_ = 'LossTanhDiff'  
-    # LossTP0MaxRatio 
-    # LossT10P0MaxRatio 
-    # LossT2P0MaxRatio 
-    # LossTP1MaxRatio 
-    # LossTs5Ps50MaxRatio 
-    # LossTs5Ps50MaxRatioMean 
-    # LossTs9Ps90MaxRatio 
-    # LossAbs 
-    # LossTP010ClipDiff 
-    # LossTanhDiff
-optimizer_ = 'KerasRMSProp'  
-    # RMSProp 
-    # KerasRMSProp
-
-learning_rate_ = 0.004
-batch_size_ = 10240
-epochs_ = 500
-use_test_data_ = True
-
 reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
-
-def SettingName():
-    if model_type_ == 'LSTM':
-        model_str = '%s_%u.%u' % (model_type_, lstm_size_, lstm_dense_size_)
-    elif model_type_ == 'Dense':
-        model_str = '%s_%u' % (model_type_, dense_size_[0])
-        for iloop in range(1, dense_layer_num_):
-            model_str = model_str + '.%u' % dense_size_[iloop]
-    model_setting = '%s_%s_%s_%s_%f_%f_%u_%u' % (model_str,   
-                                                loss_func_, 
-                                                optimizer_, 
-                                                data_split_mode_, 
-                                                val_split_, 
-                                                learning_rate_, 
-                                                batch_size_, 
-                                                epochs_
-                                                )
-    return model_setting
-
 
 def LossTP0MaxRatio(y_true, y_pred, e=0.1):
     return abs(y_true - y_pred) / 10.0 * K.max([y_true, y_pred, y_true*0.0])
@@ -110,57 +57,57 @@ def LossTanhDiff(y_true, y_pred, e=0.1):
 # loss
 def ActiveLoss():
     my_loss = ''
-    if loss_func_ == 'LossTP0MaxRatio':
+    if paras.loss_func_ == 'LossTP0MaxRatio':
         my_loss = LossTP0MaxRatio
-    elif loss_func_ == 'LossTP1MaxRatio':
+    elif paras.loss_func_ == 'LossTP1MaxRatio':
         my_loss = LossTP1MaxRatio
-    elif loss_func_ == 'LossT10P0MaxRatio':
+    elif paras.loss_func_ == 'LossT10P0MaxRatio':
         my_loss = LossT10P0MaxRatio
-    elif loss_func_ == 'LossT2P0MaxRatio':
+    elif paras.loss_func_ == 'LossT2P0MaxRatio':
         my_loss = LossT2P0MaxRatio
-    elif loss_func_ == 'LossTs5Ps50MaxRatio':
+    elif paras.loss_func_ == 'LossTs5Ps50MaxRatio':
         my_loss = LossTs5Ps50MaxRatio
-    elif loss_func_ == 'LossTs5Ps50MaxRatioMean':
+    elif paras.loss_func_ == 'LossTs5Ps50MaxRatioMean':
         my_loss = LossTs5Ps50MaxRatioMean
-    elif loss_func_ == 'LossTs9Ps90MaxRatio':
+    elif paras.loss_func_ == 'LossTs9Ps90MaxRatio':
         my_loss = LossTs9Ps90MaxRatio
-    elif loss_func_ == 'LossAbs':
+    elif paras.loss_func_ == 'LossAbs':
         my_loss = LossAbs
-    elif loss_func_ == 'LossTP010ClipDiff':
+    elif paras.loss_func_ == 'LossTP010ClipDiff':
         my_loss = LossTP010ClipDiff
-    elif loss_func_ == 'LossTanhDiff':
+    elif paras.loss_func_ == 'LossTanhDiff':
         my_loss = LossTanhDiff
     return my_loss
 
 # optimizer
 def ActiveOptimizer():
-    if optimizer_ == 'RMSProp':
-        my_optimizer = tf.train.RMSPropOptimizer(learning_rate_)
-    elif optimizer_ == 'KerasRMSProp':
-        my_optimizer = keras.optimizers.RMSprop(lr=learning_rate_, rho=0.9, epsilon=1e-06)
+    if paras.optimizer_ == 'RMSProp':
+        my_optimizer = tf.train.RMSPropOptimizer(paras.learning_rate_)
+    elif paras.optimizer_ == 'KerasRMSProp':
+        my_optimizer = keras.optimizers.RMSprop(lr=paras.learning_rate_, rho=0.9, epsilon=1e-06)
     return my_optimizer
 
 def build_model(input_layer_shape):
     # model
-    if model_type_ == 'LSTM':
+    if paras.model_type_ == 'LSTM':
         model = keras.models.Sequential()
-        model.add(keras.layers.LSTM(lstm_size_, input_shape=(input_layer_shape), return_sequences=False))
-        model.add(keras.layers.Dense(lstm_dense_size_))
-    elif model_type_ == 'Dense':
+        model.add(keras.layers.LSTM(paras.lstm_size_, input_shape=(input_layer_shape), return_sequences=False))
+        model.add(keras.layers.Dense(paras.lstm_dense_size_))
+    elif paras.model_type_ == 'Dense':
         model = keras.models.Sequential()
-        model.add(keras.layers.Dense(dense_size_[0], activation=tf.nn.relu, input_shape=input_layer_shape))
-        for iloop in range(1, dense_layer_num_):
-            model.add(keras.layers.Dense(dense_size_[iloop], activation=tf.nn.relu))
+        model.add(keras.layers.Dense(paras.dense_size_[0], activation=tf.nn.relu, input_shape=input_layer_shape))
+        for iloop in range(1, len(paras.dense_size_)):
+            model.add(keras.layers.Dense(paras.dense_size_[iloop], activation=tf.nn.relu))
         model.add(keras.layers.Dense(1))
 
-    if loss_func_ == 'mae':
+    if paras.loss_func_ == 'mae':
         model.compile(loss="mae", optimizer=ActiveOptimizer())
     else:
         model.compile(loss=ActiveLoss(), optimizer=ActiveOptimizer(), metrics=[ActiveLoss()])
     return model
 
 def ModelFilePath(input_train_mode):
-    temp_path_name = "./model/%s/%s_%s" % (train_data_, SettingName(), feature.SettingName())
+    temp_path_name = "./model/%s/%s_%s" % (paras.train_data_, paras.SettingName(), feature.SettingName())
     return temp_path_name
 
 def ModelFileNames(input_train_mode, epoch=-1):
@@ -174,7 +121,7 @@ def ModelFileNames(input_train_mode, epoch=-1):
     return temp_path_name, model_name, mean_name, std_name
 
 def SaveModel(model, mean, std, epoch=-1):
-    temp_path_name, model_name, mean_name, std_name = ModelFileNames(train_data_, epoch)
+    temp_path_name, model_name, mean_name, std_name = ModelFileNames(paras.train_data_, epoch)
     if not os.path.exists(temp_path_name):
         os.makedirs(temp_path_name)
     model.save(model_name)
@@ -185,7 +132,7 @@ def SaveModel(model, mean, std, epoch=-1):
 def LoadModel(input_train_mode, epoch=-1):
     temp_path_name, model_name, mean_name, std_name = ModelFileNames(input_train_mode, epoch)
     print("LoadModel: %s" % model_name)
-    model = keras.models.load_model(model_name, custom_objects={loss_func_: ActiveLoss()})
+    model = keras.models.load_model(model_name, custom_objects={paras.loss_func_: ActiveLoss()})
     mean = np.load(mean_name)
     std = np.load(std_name)
     return model, mean, std
@@ -195,12 +142,12 @@ def ReshapeRnnFeatures(features):
 
 def FeaturesPretreat(features, mean, std):
     features = (features - mean) / std
-    if model_type_ == 'LSTM':
+    if paras.model_type_ == 'LSTM':
         features = ReshapeRnnFeatures(features)
     return features
 
 def TestModel(input_test_data, input_model, input_mean, input_std):
-    if train_data_ == 'fix':
+    if paras.train_data_ == 'fix':
         return fix_test.TestEntry(input_test_data, False, input_model, input_mean, input_std)
     else:
         return wave_test.TestEntry(input_test_data, False, input_model, input_mean, input_std)
@@ -234,7 +181,7 @@ def PlotHistory(losses, val_losses, test_increase):
     plt.savefig('%s/figure.png' % temp_path_name)
 
 def SaveHistory(losses, val_losses, test_increase):
-    temp_path_name = ModelFilePath(train_data_)
+    temp_path_name = ModelFilePath(paras.train_data_)
     if not os.path.exists(temp_path_name):
         os.makedirs(temp_path_name)
     if len(losses) > 0:
@@ -279,19 +226,19 @@ def ShowHistory():
     PlotHistory(losses, val_losses, test_increase)
 
 def train():
-    if train_data_ == "fix":
-        if data_split_mode_ == 'samplebydate':
+    if paras.train_data_ == "fix":
+        if paras.data_split_mode_ == 'samplebydate':
             train_features, train_labels, val_features, val_labels, test_data = fix_dataset.GetTrainTestDataSampleByDate(val_split_)
-        if data_split_mode_ == 'splitbydate':
+        if paras.data_split_mode_ == 'splitbydate':
             train_features, train_labels, val_features, val_labels, test_data = fix_dataset.GetTrainTestDataSplitByDate()
-        elif data_split_mode_ == 'random':
+        elif paras.data_split_mode_ == 'random':
             train_features, train_labels, val_features, val_labels, test_data = fix_dataset.GetTrainTestDataRandom(val_split_)
     else:
-        if data_split_mode_ == 'samplebydate':
+        if paras.data_split_mode_ == 'samplebydate':
             train_features, train_labels, val_features, val_labels, test_data = wave_dataset.GetTrainTestDataSampleByDate(val_split_)
-        if data_split_mode_ == 'splitbydate':
+        if paras.data_split_mode_ == 'splitbydate':
             train_features, train_labels, val_features, val_labels, test_data = wave_dataset.GetTrainTestDataSplitByDate()
-        elif data_split_mode_ == 'random':
+        elif paras.data_split_mode_ == 'random':
             train_features, train_labels, val_features, val_labels, test_data = wave_dataset.GetTrainTestDataRandom(val_split_)
     print("train_features: {}".format(train_features.shape))
 
@@ -307,10 +254,14 @@ def train():
     train_features[where_are_inf] = 0.0
     mean = train_features.mean(axis=0)
     std = train_features.std(axis=0)
+
+    print("paras.model_type_ 313:%s" % paras.model_type_)
     train_features = FeaturesPretreat(train_features, mean, std)
     print("train_features: {}".format(train_features.shape))
 
+    print("paras.model_type_ 318:%s" % paras.model_type_)
     val_features = FeaturesPretreat(val_features, mean, std)
+    print("paras.model_type_ 320:%s" % paras.model_type_)
 
     model = build_model(train_features.shape[1:])
     model.summary()
@@ -330,7 +281,7 @@ def train():
         def on_epoch_end(self, epoch, logs={}):
             sys.stdout.write('\r%d' % (epoch))
             sys.stdout.flush()
-            if use_test_data_:
+            if paras.use_test_data_:
                 self.losses.append([epoch, logs.get('loss')])
                 self.val_losses.append([epoch, logs.get('val_loss')])
                 if ((epoch % 5) == 0):
@@ -350,69 +301,14 @@ def train():
 
     # The patience parameter is the amount of epochs to check for improvement.
     early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50)
-    history = model.fit(train_features, train_labels, epochs=epochs_, batch_size=batch_size_, 
+    history = model.fit(train_features, train_labels, epochs=paras.epochs_, batch_size=paras.batch_size_, 
                         validation_data=(val_features, val_labels), verbose=0,
                         # callbacks=[early_stop, TestCallback()])
                         callbacks=[TrainCallback()])
 
     SaveModel(model, mean, std)
 
-def InitParas(argv):
-    opts,args = getopt.getopt(argv[1:],'-h-v', ['help',
-                                                'version',
-                                                'train_data=',
-                                                'data_split_mode=',
-                                                'val_split=',
-                                                'model_type=',
-                                                'lstm_size=',
-                                                'lstm_dense_size=',
-                                                'dense_layer_num=',
-                                                'dense_size=',
-                                                'loss_func=',
-                                                'optimizer=',
-                                                'fix_activer_label_day=',
-                                                'learning_rate=',
-                                                'batch_size=',
-                                                'epoch='
-                                                ])
-    if len(args) > 0:
-        print('InitParas.Error, unsupported args:')
-        print(args)
-        return False
-    for opt_name,opt_value in opts:
-        if opt_name == '--train_data':
-            train_data_ = opt_value
-        elif opt_name == '--data_split_mode':
-            data_split_mode_ = opt_value
-        elif opt_name == '--val_split':
-            val_split_ = float(opt_value)
-        elif opt_name == '--model_type':
-            model_type_ = opt_value
-        elif opt_name == '--lstm_size':
-            lstm_size_ = int(opt_value)
-        elif opt_name == '--lstm_dense_size':
-            lstm_dense_size_ = int(opt_value)
-        elif opt_name == '--dense_layer_num':
-            dense_layer_num_ = int(opt_value)
-        elif opt_name == '--dense_size':
-            dense_size_ = map(int, opt_value.split(','))
-        elif opt_name == '--loss_func':
-            loss_func_ = opt_value
-        elif opt_name == '--optimizer':
-            optimizer_ = opt_value
-        elif opt_name == '--learning_rate':
-            learning_rate_ = float(opt_value)
-        elif opt_name == '--batch_size':
-            batch_size_ = int(opt_value)
-        elif opt_name == '--epochs':
-            epochs_ = int(opt_value)
-        else:
-            print('InitParas.Error, unsupported opt_name(%s)!' % opt_name)
-            return False
-    return True
-
-
 if __name__ == "__main__":
-    if InitParas(sys.argv):
+    if paras.InitParas(sys.argv):
         train()
 

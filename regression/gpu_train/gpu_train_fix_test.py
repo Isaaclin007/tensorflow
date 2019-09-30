@@ -20,6 +20,9 @@ predict_trade_threshold = 0
 max_trade_count_1_day = 1
 # test_data_start_date = 20190414
 
+def ACTIVE_LABEL_DAY():
+    return feature.ACTIVE_LABEL_DAY()
+
 def Predict(test_data, model, mean, std):
     predict_features = test_data[:, feature.COL_FEATURE_OFFSET(): feature.COL_FEATURE_OFFSET() + feature.FEATURE_SIZE()]
     predict_features = train_rnn.FeaturesPretreat(predict_features, mean, std)
@@ -38,7 +41,7 @@ def Predict(test_data, model, mean, std):
         'stock_code', \
         'T0_trade_date'])
         
-    temp_index = feature.COL_ACTURE_OFFSET(feature.ACTIVE_LABEL_DAY())
+    temp_index = feature.COL_ACTURE_OFFSET(ACTIVE_LABEL_DAY())
     td_acture_data = test_data[:, temp_index: temp_index+acture_unit_size]
     temp_df=pd.DataFrame(td_acture_data, columns=[ \
         'Td_open_increse', \
@@ -152,7 +155,7 @@ def TestEntry(test_data, print_msg, model, mean, std):
                                 day_trade_count += 1
                                 trade_count += 1
                                 # print("%f, %f, %f" % (capital_value, capital_ratio, temp_increase))
-                                capital_value += capital_ratio / float(feature.active_label_day + 1) / float(max_trade_count_1_day) * (temp_increase / 100.0)
+                                capital_value += capital_ratio / float(ACTIVE_LABEL_DAY() + 1) / float(max_trade_count_1_day) * (temp_increase / 100.0)
 
                                 if capital_value > 1.0:
                                     capital_ratio = int(capital_value)  # 每增加1倍更新一次
@@ -210,7 +213,23 @@ def TestEntry(test_data, print_msg, model, mean, std):
     # result_sum = result_sum.sort_values(by='act_increase', ascending=False)
     # result_sum.to_csv('./test_result_sum_sort.csv')
 
+daily_data_ = False
+model_epoch_ = -1
+def InitParas(argv):
+    opts,args = getopt.getopt(argv[1:],'-h-v', ['help',
+                                                'version',
+                                                'daily_data',
+                                                'model_epoch='
+                                                ])
+    for opt_name,opt_value in opts:
+        if opt_name == '--train_data':
+            daily_data_ = True
+        elif opt_name == '--model_epoch':
+            model_epoch_ = int(opt_value)
+    return True
+
 if __name__ == "__main__":
+    train_rnn.InitParas(sys.argv)
     # max_capital_increase = -10000
     # max_capital_increase_threshold = 0
     # max_capital_increase_max_trade_count_1_day = 0
@@ -230,19 +249,13 @@ if __name__ == "__main__":
     #             max_capital_increase_max_trade_count_1_day = temp_count
     # print("max:")
     # TestEntry(max_capital_increase_threshold, max_capital_increase_max_trade_count_1_day, True)
-    dataset_name = 'fix'
-    model_epoch = -1
-    if len(sys.argv) > 1:
-        dataset_name = sys.argv[1]
-    if len(sys.argv) > 2:
-        model_epoch = int(sys.argv[2])
 
-    if dataset_name == 'daily':
-        test_data = fix_dataset.GetDailyDataSet(20190101)
-        print('Unsupport')
-    else:
-        test_data = fix_dataset.GetTestData()
-    model, mean, std = train_rnn.LoadModel('fix', model_epoch)
+    # if daily_data_:
+    #     test_data = fix_dataset.GetDailyDataSet(20190101)
+    # else:
+    #     test_data = fix_dataset.GetTestData()
+    test_data = fix_dataset.GetTestData()
+    model, mean, std = train_rnn.LoadModel('fix', 60)
     TestEntry(test_data, True, model, mean, std)
 
 

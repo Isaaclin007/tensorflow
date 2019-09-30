@@ -538,3 +538,6 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 temp_str = '1,2,3,4'
 print(map(int, temp_str.split(',')))
+
+temp_str = '4'
+print(map(int, temp_str.split(',')))

@@ -364,11 +364,15 @@ V1.0.26
 3. 添加损失函数 LossTanhDiff
 4. gpu_train 支持 getopt 参数解析
 
+V1.0.27
+添加 gpu_train_paras.py 用于保存全局变量
 
 已知问题：
 测试集 loss 和 训练集 loss 不相关
 测试集 loss 和 increase 不相关
 
-新的思路：
+新的思路
+1. (bug 已修复)：
 训练过程 active_label_day = 1
 预测过程 active_lable_day = 2
+2. 停牌和复权的处理需要优化

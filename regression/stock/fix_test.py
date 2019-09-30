@@ -154,7 +154,7 @@ def TestEntry(test_data, print_msg, model, mean, std):
                                 increase_sum += temp_increase
                                 trade_count += 1
                                 # print("%f, %f, %f" % (capital_value, capital_ratio, temp_increase))
-                                capital_value += capital_ratio / float(tushare_data.predict_day_count) / float(max_trade_count_1_day) * (temp_increase / 100.0)
+                                capital_value += capital_ratio / float(feature.ACTIVE_LABEL_DAY() + 1) / float(max_trade_count_1_day) * (temp_increase / 100.0)
 
                                 if capital_value > 1.0:
                                     capital_ratio = int(capital_value)  # 每增加1倍更新一次

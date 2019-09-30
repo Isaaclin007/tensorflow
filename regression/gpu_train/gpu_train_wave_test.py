@@ -8,6 +8,7 @@ import os
 import time
 import sys
 import random
+import gpu_train
 import gpu_train as train_rnn
 import gpu_train_feature as feature
 import gpu_train_wave_dataset as wave_dataset

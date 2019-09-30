@@ -63,4 +63,9 @@ rm -f *.pyc
 
 # python gpu_train.py wave Ts5Ps50MaxRatio KerasRMSProp 1 64 0.004 10240 500
 
-python gpu_train.py --train_data=fix --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=64 --learning_rate=0.004 
+# python gpu_train.py --train_data=fix --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=64 --learning_rate=0.004 
+
+python gpu_train.py --train_data=wave --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=64 --learning_rate=0.004 
+
+# python gpu_train.py --train_data=wave --loss_func=LossTanhDiff --model_type=Dense --dense_size=4 --learning_rate=0.004 
+# python gpu_train.py --train_data=fix  --loss_func=LossTanhDiff --model_type=Dense --dense_size=4 --learning_rate=0.004 
