@@ -24,6 +24,8 @@ label_days = 10
 active_label_day = 1  # 0 ~ (label_days-1)
 feature_type = FEATURE_G0_D5_AVG
 label_type = LABEL_T1_OPEN_2_TD_CLOSE
+filter_suspend_data = False
+filter_adj_flag_data = False
 
 # 计算参数
 feature_unit_size = 0
@@ -31,6 +33,24 @@ if feature_type == FEATURE_G0_D5_AVG:
     feature_unit_size = 5
 feature_size = feature_unit_size * feature_days
 acture_unit_size = 7
+
+def SettingName():
+    temp_name = '%u_%u_%u_%u_%u_%u' % ( \
+        feature_type, \
+        feature_days, \
+        label_type, \
+        label_days, \
+        filter_suspend_data, \
+        filter_adj_flag_data)
+    return temp_name
+
+def SettingNameFeature():
+    temp_name = '%u_%u_%u_%u' % ( \
+        feature_type, \
+        feature_days, \
+        filter_suspend_data, \
+        filter_adj_flag_data)
+    return temp_name
 
 ACTURE_DATA_INDEX_OPEN_INCREASE = 0
 ACTURE_DATA_INDEX_LOW_INCREASE = 1
@@ -68,7 +88,9 @@ def AppendFeature(pp_data, day_index, data_unit):
         base_vol = pp_data['vol_100_avg'][day_index]
         for iloop in reversed(range(0, feature_days)):
             temp_index = day_index + iloop
-            if (pp_data['suspend'][temp_index] != 0) or (pp_data['adj_flag'][temp_index] != 0):
+            if filter_suspend_data and (pp_data['suspend'][temp_index] != 0):
+                return False
+            if filter_adj_flag_data and (pp_data['adj_flag'][temp_index] != 0):
                 return False
             data_unit.append(pp_data['open'][temp_index] / base_close)
             data_unit.append(pp_data['close'][temp_index] / base_close)
@@ -83,7 +105,9 @@ def AppendLabel(pp_data, day_index, data_unit):
     for iloop in range(0, label_days):
         temp_index = start_day_index - iloop
         if temp_index >= 0:
-            if (pp_data['suspend'][temp_index] != 0) or (pp_data['adj_flag'][temp_index] != 0):
+            if filter_suspend_data and (pp_data['suspend'][temp_index] != 0):
+                return False
+            if filter_adj_flag_data and (pp_data['adj_flag'][temp_index] != 0):
                 return False
     if label_type == LABEL_PRE_CLOSE_2_TD_CLOSE:
         if day_index >= 0:

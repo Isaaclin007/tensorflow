@@ -65,7 +65,48 @@ rm -f *.pyc
 
 # python gpu_train.py --train_data=fix --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=64 --learning_rate=0.004 
 
-python gpu_train.py --train_data=wave --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=64 --learning_rate=0.004 
+# python gpu_train.py --train_data=wave --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=64 --learning_rate=0.004 
 
 # python gpu_train.py --train_data=wave --loss_func=LossTanhDiff --model_type=Dense --dense_size=4 --learning_rate=0.004 
-# python gpu_train.py --train_data=fix  --loss_func=LossTanhDiff --model_type=Dense --dense_size=4 --learning_rate=0.004 
+# python gpu_train.py --train_data=fix  --loss_func=LossTanhDiff --model_type=Dense --dense_size=4 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=fix  --loss_func=LossTanhDiff --model_type=Dense --dense_size=8 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=fix  --loss_func=LossTanhDiff --model_type=Dense --dense_size=24 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=fix  --loss_func=LossTanhDiff --model_type=Dense --dense_size=32 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=fix  --loss_func=LossTanhDiff --model_type=Dense --dense_size=64 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=fix  --loss_func=LossTanhDiff --model_type=Dense --dense_size=64,32,8 --learning_rate=0.004 --epochs=500
+
+# python gpu_train.py --train_data=wave --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=16 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=wave --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=24 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=wave --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=32 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=wave --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=48 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=wave --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=64 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=wave --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=128 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=wave  --loss_func=LossTanhDiff --model_type=Dense --dense_size=4 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=wave  --loss_func=LossTanhDiff --model_type=Dense --dense_size=8 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=wave  --loss_func=LossTanhDiff --model_type=Dense --dense_size=24 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=wave  --loss_func=LossTanhDiff --model_type=Dense --dense_size=32 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=wave  --loss_func=LossTanhDiff --model_type=Dense --dense_size=64 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=wave  --loss_func=LossTanhDiff --model_type=Dense --dense_size=64,32,8 --learning_rate=0.004 --epochs=500
+
+
+# python gpu_train.py --train_data=fix --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=16 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=fix --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=24 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=fix --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=32 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=fix --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=48 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=fix --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=64 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=fix --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=128 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=fix  --loss_func=LossTanhDiff --model_type=Dense --dense_size=4 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=fix  --loss_func=LossTanhDiff --model_type=Dense --dense_size=8 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=fix  --loss_func=LossTanhDiff --model_type=Dense --dense_size=24 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=fix  --loss_func=LossTanhDiff --model_type=Dense --dense_size=32 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=fix  --loss_func=LossTanhDiff --model_type=Dense --dense_size=64 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=fix  --loss_func=LossTanhDiff --model_type=Dense --dense_size=64,32,8 --learning_rate=0.004 --epochs=500
+
+# python gpu_train.py --train_data=wave --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=32 --lstm_dense_size=8 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=wave --data_split_mode=random --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=32 --lstm_dense_size=8 --learning_rate=0.004 --epochs=500
+# python gpu_train.py --train_data=wave --data_split_mode=samplebydate --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=32 --lstm_dense_size=8 --learning_rate=0.004 --epochs=500
+python gpu_train.py --train_data=wave --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=32 --lstm_dense_size=4 --learning_rate=0.008 --epochs=500
+
+
+
+

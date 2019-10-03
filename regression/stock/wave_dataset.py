@@ -95,7 +95,7 @@ def GetTestData():
 def GetDailyDataSet():
     data_set = np.load(wave_kernel.FileNameDailyDataSet())
     print("data_set: {}".format(data_set.shape))
-    data_set = data_set[np.where(data_set[:,feature.feature_size + 2] >= dataset_train_test_split_date)]
+    data_set = data_set[np.where(data_set[:,wave_kernel.COL_ON_PRETRADE_DATE()] >= 20190415)]
     print("data_set split: {}".format(data_set.shape))
     # debug_df = data_df[(data_df['pre_on_date'] == 20190327.0) & (data_df['ts_code'] == 002605.0)]
     # print(debug_df)

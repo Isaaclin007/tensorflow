@@ -115,7 +115,7 @@ def UpdatePPMergeData(merge_pp_data, merge_daily_data):
         new_stock_pp_data = pd.DataFrame()
         for iloop in reversed(range(0, len(daily_data))):
             add_row_data = daily_data[iloop:iloop+1].copy().reset_index(drop=True)
-
+            preprocess.StockDataPreProcess_AdjForward(add_row_data)
             # 添加 preprocess 数据
             # if add_row_data.loc[0,'pre_close'] != stock_pp_data.loc[0,'close']:
             #     print(stock_pp_data)
@@ -164,7 +164,7 @@ def UpdatePPMergeData(merge_pp_data, merge_daily_data):
     return update_merge_pp_data
 
 def GetPreprocessedMergeData():
-    date_list = tushare_data.TradeDateList(update_date, 100)
+    date_list = tushare_data.TradeDateList(update_date, 200)
     pp_merge_file_name = tushare_data.FileNameMergePPData(date_list[0])
     if os.path.exists(pp_merge_file_name):
         return pd.read_csv(pp_merge_file_name)
@@ -210,9 +210,9 @@ def GetPreprocessedDataExt(ts_code):
 if __name__ == "__main__":
     # CreatePPMergeDataOriginal()
     merge_data = GetPreprocessedMergeData()
-    stock_data = GetPreprocessedData(merge_data, '000720.SZ')
-    stock_data = CleanCols(stock_data)
-    stock_data.to_csv('./temp.csv')
+    # stock_data = GetPreprocessedData(merge_data, '000720.SZ')
+    # stock_data = CleanCols(stock_data)
+    # stock_data.to_csv('./temp.csv')
     
 
 

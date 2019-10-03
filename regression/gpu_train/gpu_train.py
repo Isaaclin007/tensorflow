@@ -92,7 +92,9 @@ def build_model(input_layer_shape):
     if paras.model_type_ == 'LSTM':
         model = keras.models.Sequential()
         model.add(keras.layers.LSTM(paras.lstm_size_, input_shape=(input_layer_shape), return_sequences=False))
-        model.add(keras.layers.Dense(paras.lstm_dense_size_))
+        if paras.lstm_dense_size_ > 1:
+            model.add(keras.layers.Dense(paras.lstm_dense_size_))
+        model.add(keras.layers.Dense(1))
     elif paras.model_type_ == 'Dense':
         model = keras.models.Sequential()
         model.add(keras.layers.Dense(paras.dense_size_[0], activation=tf.nn.relu, input_shape=input_layer_shape))
@@ -228,18 +230,18 @@ def ShowHistory():
 def train():
     if paras.train_data_ == "fix":
         if paras.data_split_mode_ == 'samplebydate':
-            train_features, train_labels, val_features, val_labels, test_data = fix_dataset.GetTrainTestDataSampleByDate(val_split_)
+            train_features, train_labels, val_features, val_labels, test_data = fix_dataset.GetTrainTestDataSampleByDate(paras.val_split_)
         if paras.data_split_mode_ == 'splitbydate':
             train_features, train_labels, val_features, val_labels, test_data = fix_dataset.GetTrainTestDataSplitByDate()
         elif paras.data_split_mode_ == 'random':
-            train_features, train_labels, val_features, val_labels, test_data = fix_dataset.GetTrainTestDataRandom(val_split_)
+            train_features, train_labels, val_features, val_labels, test_data = fix_dataset.GetTrainTestDataRandom(paras.val_split_)
     else:
         if paras.data_split_mode_ == 'samplebydate':
-            train_features, train_labels, val_features, val_labels, test_data = wave_dataset.GetTrainTestDataSampleByDate(val_split_)
+            train_features, train_labels, val_features, val_labels, test_data = wave_dataset.GetTrainTestDataSampleByDate(paras.val_split_)
         if paras.data_split_mode_ == 'splitbydate':
             train_features, train_labels, val_features, val_labels, test_data = wave_dataset.GetTrainTestDataSplitByDate()
         elif paras.data_split_mode_ == 'random':
-            train_features, train_labels, val_features, val_labels, test_data = wave_dataset.GetTrainTestDataRandom(val_split_)
+            train_features, train_labels, val_features, val_labels, test_data = wave_dataset.GetTrainTestDataRandom(paras.val_split_)
     print("train_features: {}".format(train_features.shape))
 
     print("reorder...")

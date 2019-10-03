@@ -7,9 +7,12 @@ import sys
 import math
 import gpu_train_feature as feature
 
-dataset_path_name = "./data/dataset/fix_dataset_0_30_1_10___20000101_20020101_20190414"
-dataset_merge_file_name = "./data/dataset/fix_dataset_0_30_1_10___20000101_20020101_20190414.npy"
+# dataset_path_name = "./data/dataset/fix_dataset_0_30_1_10___20000101_20020101_20190414"
+# dataset_merge_file_name = "./data/dataset/fix_dataset_0_30_1_10___20000101_20020101_20190414.npy"
 dataset_daily_file_name = "./data/dataset/fix_dataset_daily_0_30_1_10___20000101_20120101_20190918.npy"
+
+dataset_path_name = "./data/dataset/fix_dataset_0_30_1_10_0_0___20000101_20020101_20190414"
+dataset_merge_file_name = "./data/dataset/fix_dataset_0_30_1_10_0_0___20000101_20020101_20190414.npy"
 
 dataset_train_test_split_date = 20170101
 

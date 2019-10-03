@@ -35,7 +35,7 @@ STATUS_UP = 1
 STATUS_DOWN = 2
 
 wave_kernel_start_date = 20120101
-wave_test_dataset_sample_num = 5
+wave_test_dataset_sample_num = 1
 
 GLOBAL_FEATURE_NONE = 0
 GLOBAL_FEATURE_PRETRADE_NUM = 1
@@ -216,8 +216,8 @@ def SettingName():
     return file_name
 
 def FileNameDataSet():
-    file_name = './data/dataset/wave_dataset_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
-        feature.feature_type, \
+    file_name = './data/dataset/wave_dataset_%s_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
+        feature.SettingNameFeature(), \
         wave_kernel_start_date, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
@@ -234,8 +234,8 @@ def FileNameDataSet():
     return file_name
 
 def FileNameDataSetOriginal():
-    file_name = './data/dataset/wave_dataset_original_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u.npy' % ( \
-        feature.feature_type, \
+    file_name = './data/dataset/wave_dataset_original_%s_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u.npy' % ( \
+        feature.SettingNameFeature(), \
         wave_kernel_start_date, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
@@ -251,8 +251,8 @@ def FileNameDataSetOriginal():
     return file_name
 
 def FileNameDailyDataSet():
-    file_name = './data/dataset/wave_daily_dataset_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
-        feature.feature_type, \
+    file_name = './data/dataset/wave_daily_dataset_%s_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
+        feature.SettingNameFeature(), \
         wave_kernel_start_date, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \
@@ -270,8 +270,8 @@ def FileNameDailyDataSet():
     return file_name
 
 def FileNameDailyDataSetOriginal():
-    file_name = './data/dataset/wave_daily_dataset_original_%u_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
-        feature.feature_type, \
+    file_name = './data/dataset/wave_daily_dataset_original_%s_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
+        feature.SettingNameFeature(), \
         wave_kernel_start_date, \
         tushare_data.stocks_list_end_date, \
         tushare_data.pp_data_start_date, \

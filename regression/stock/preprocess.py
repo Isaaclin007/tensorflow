@@ -16,6 +16,7 @@ import math
 import tushare_data
 
 preprocess_ref_days = 100
+ADJ_FORWARD = True
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -69,18 +70,35 @@ def StockDataPreProcess_AddSuspendBorder(src_df, previous_df=[]):
 
 
 def StockDataPreProcess_AddAdjFlag(src_df, previous_df=[]):
-    if len(src_df) == 0:
-        print("Warning: StockDataPreProcess_AddAdjFlag, len(src_df)==0")
-        return
-    src_df['adj_flag'] = 0
-    current_adj_factor = src_df.loc[len(src_df)-1, 'adj_factor']
-    for iloop in reversed(range(0, len(src_df))):
-        if current_adj_factor != src_df.loc[iloop, 'adj_factor']:
-            src_df.loc[iloop, 'adj_flag'] = 1
-            current_adj_factor = src_df.loc[iloop, 'adj_factor']
-    if len(previous_df) > 0:
-        if src_df.loc[len(src_df)-1, 'adj_factor'] != previous_df.loc[0, 'adj_factor']:
-            src_df.loc[len(src_df)-1, 'adj_flag'] = 1
+    if tushare_data.use_adj_factor:
+        if len(src_df) == 0:
+            print("Warning: StockDataPreProcess_AddAdjFlag, len(src_df)==0")
+            return
+        src_df['adj_flag'] = 0
+
+        # 如果没有复权才需要关注 adj_flag
+        if not ADJ_FORWARD:
+            current_adj_factor = src_df.loc[len(src_df)-1, 'adj_factor']
+            for iloop in reversed(range(0, len(src_df))):
+                if current_adj_factor != src_df.loc[iloop, 'adj_factor']:
+                    src_df.loc[iloop, 'adj_flag'] = 1
+                    current_adj_factor = src_df.loc[iloop, 'adj_factor']
+            if len(previous_df) > 0:
+                if src_df.loc[len(src_df)-1, 'adj_factor'] != previous_df.loc[0, 'adj_factor']:
+                    src_df.loc[len(src_df)-1, 'adj_flag'] = 1
+
+def StockDataPreProcess_AdjForward(src_df):
+    if tushare_data.use_adj_factor and ADJ_FORWARD:
+        if len(src_df) == 0:
+            print("Warning: StockDataPreProcess_AdjForward, len(src_df)==0")
+            return
+
+        for iloop in reversed(range(0, len(src_df))):
+            adj_factor = src_df.loc[iloop, 'adj_factor']
+            src_df.loc[iloop, 'open'] = src_df.loc[iloop, 'open'] * adj_factor
+            src_df.loc[iloop, 'close'] = src_df.loc[iloop, 'close'] * adj_factor
+            src_df.loc[iloop, 'high'] = src_df.loc[iloop, 'high'] * adj_factor
+            src_df.loc[iloop, 'low'] = src_df.loc[iloop, 'low'] * adj_factor
     
 def StockDataPreProcess(stock_data_df):
     src_basic_col_names_str = [
@@ -133,6 +151,9 @@ def StockDataPreProcess(stock_data_df):
     if len(stock_data_df) == 0:
         return stock_data_df
     src_df_2=stock_data_df[src_all_col_names].copy().reset_index(drop=True)
+
+    StockDataPreProcess_AdjForward(src_df_2)
+
     src_df_2['pre_close']=0.0
     for day_loop in range(0, len(src_df_2) - 1): 
         src_df_2.loc[day_loop,'pre_close'] = src_df_2.loc[day_loop + 1,'close']
@@ -209,8 +230,7 @@ def StockDataPreProcess(stock_data_df):
         src_df.loc[day_loop,'high_increase'] = ((src_df.loc[day_loop,'high'] / temp_pre_close) - 1.0) * 100.0
         src_df.loc[day_loop,'low_increase'] = ((src_df.loc[day_loop,'low'] / temp_pre_close) - 1.0) * 100.0
     StockDataPreProcess_AddSuspendBorder(src_df)
-    if tushare_data.use_adj_factor:
-        StockDataPreProcess_AddAdjFlag(src_df)
+    StockDataPreProcess_AddAdjFlag(src_df)
     return src_df[:len(src_df)-preprocess_ref_days]
 
 

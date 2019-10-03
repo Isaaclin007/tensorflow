@@ -367,6 +367,13 @@ V1.0.26
 V1.0.27
 添加 gpu_train_paras.py 用于保存全局变量
 
+V1.1.0, support AdjForware
+1. 优化复权的处理过程，preprocess 中将所有 price 向前复权 
+    确认复权因子是否是绝对值（已确认)
+    AdjForware : 将 open, close, high, low 都重新复制为复权因子的倍数
+    在 proprocess 前期 AdjForware
+    在 pp_daily_update 的 proprocess 前期 AdjForware
+
 已知问题：
 测试集 loss 和 训练集 loss 不相关
 测试集 loss 和 increase 不相关
@@ -376,3 +383,4 @@ V1.0.27
 训练过程 active_label_day = 1
 预测过程 active_lable_day = 2
 2. 停牌和复权的处理需要优化
+3. wave_test 改为实战模式

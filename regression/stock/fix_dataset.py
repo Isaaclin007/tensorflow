@@ -13,15 +13,12 @@ import tushare_data
 import feature
 import pp_daily_update
 
-dataset_start_date = 20120101
+dataset_start_date = 20020101
 dataset_train_test_split_date = 20170101
 
 def SettingName():
-    temp_name = '%u_%u_%u_%u_%s_%s_%s_%u' % ( \
-        feature.feature_type, \
-        feature.feature_days, \
-        feature.label_type, \
-        feature.label_days, \
+    temp_name = '%s_%s_%s_%s_%u' % ( \
+        feature.SettingName(), \
         tushare_data.industry_filter, \
         tushare_data.code_filter, \
         tushare_data.stocks_list_end_date, \
