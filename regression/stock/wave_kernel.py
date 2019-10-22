@@ -35,7 +35,7 @@ STATUS_UP = 1
 STATUS_DOWN = 2
 
 wave_kernel_start_date = 20120101
-wave_test_dataset_sample_num = 1
+wave_test_dataset_sample_num = 5
 
 GLOBAL_FEATURE_NONE = 0
 GLOBAL_FEATURE_PRETRADE_NUM = 1

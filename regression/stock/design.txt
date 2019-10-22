@@ -374,6 +374,22 @@ V1.1.0, support AdjForware
     在 proprocess 前期 AdjForware
     在 pp_daily_update 的 proprocess 前期 AdjForware
 
+V1.1.1, best wave model
+1. wave 保存最优模型代码，trade_count:16, increase_sum:563.84    , max_drawdown:7.79
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 已知问题：
 测试集 loss 和 训练集 loss 不相关
 测试集 loss 和 increase 不相关
@@ -384,3 +400,16 @@ V1.1.0, support AdjForware
 预测过程 active_lable_day = 2
 2. 停牌和复权的处理需要优化
 3. wave_test 改为实战模式
+
+最优模型：
+wave：
+    dataset: wave_dataset_0_30_0_0_20120101_20000101_20000101_20190414___2_2_0_1_0_5_0
+    LSTM: 36
+    Dense: 1
+    Optimizer: tf.train.RMSPropOptimizer(LEANING_RATE)
+    Loss: return abs(y_true - y_pred) / 10.0 * K.max([y_true, y_pred, y_true*0.0])
+    Early_stop: keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
+    batch size: 10240
+    validation_split: 0.1
+    dataset split date: 20180101
+    learning rate: 0.004

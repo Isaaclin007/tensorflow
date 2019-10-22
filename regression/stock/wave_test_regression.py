@@ -24,7 +24,7 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
-predict_threshold = 11
+predict_threshold = 10
 
 def AvgValue(sum_value, sample_num):
     if sample_num == 0:

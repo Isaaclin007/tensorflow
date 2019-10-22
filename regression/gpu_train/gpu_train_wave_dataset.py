@@ -12,7 +12,7 @@ import gpu_train_feature as feature
 dataset_file_name = "./data/dataset/wave_dataset_0_30_0_0_20120101_20000101_20000101_20190414___2_2_0_1_0_5_0.npy"
 # dataset_file_name = "./data/dataset/wave_dataset_0_30_0_0_20120101_20000101_20000101_20190414___2_2_0_1_0_1_0.npy"
 
-dataset_train_test_split_date = 20170101
+dataset_train_test_split_date = 20180101
 
 
 def COL_INCREASE():
