@@ -62,6 +62,7 @@ def SortWaveDataset(dataset):
     captions.append('ts_code')
     captions.append('pre_on_date')
     captions.append('on_date')
+    captions.append('pre_off_date')
     captions.append('off_date')
     captions.append('holding_days')
     data_df = pd.DataFrame(dataset, columns=captions)

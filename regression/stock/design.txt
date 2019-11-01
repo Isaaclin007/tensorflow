@@ -377,6 +377,10 @@ V1.1.0, support AdjForware
 V1.1.1, best wave model
 1. wave 保存最优模型代码，trade_count:16, increase_sum:563.84    , max_drawdown:7.79
 
+V1.1.2
+1. wave test predict 门限设置为6
+2. wave test 支持输出 pre off date
+
 
 
 

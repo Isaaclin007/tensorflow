@@ -25,6 +25,7 @@ trade_off_threshold = 0
 up_100avg_condition = True
 up_200avg_condition = False
 wave_index = 'close'
+save_original_dataset = False
 
 EXTREME_NONE = 0
 EXTREME_PEAK = 1
@@ -129,13 +130,22 @@ def COL_ON_PRETRADE_DATE():
 def COL_ON_DATE():
     return feature.feature_size + 3
 
-def COL_OFF_DATE():
+def COL_OFF_PRETRADE_DATE():
     return feature.feature_size + 4
 
-def COL_HOLDING_DAYS():
+def COL_OFF_DATE():
     return feature.feature_size + 5
 
-def GetTrainDataUnit(pp_data, pre_on_day_index, on_date_index, off_date_index, holding_days, increase):
+def COL_HOLDING_DAYS():
+    return feature.feature_size + 6
+
+def GetTrainDataUnit(pp_data, 
+                     pre_on_day_index, 
+                     on_day_index, 
+                     pre_off_day_index, 
+                     off_day_index, 
+                     holding_days, 
+                     increase):
     global train_data_list
     if (len(pp_data) - pre_on_day_index) < feature.feature_days:
         return
@@ -155,17 +165,24 @@ def GetTrainDataUnit(pp_data, pre_on_day_index, on_date_index, off_date_index, h
     data_unit.append(float(temp_str))
 
     # 买入日期
-    if on_date_index < 0:
+    if on_day_index < 0:
         data_unit.append(20990101.0)
     else:
-        temp_str = pp_data['trade_date'][on_date_index]
+        temp_str = pp_data['trade_date'][on_day_index]
+        data_unit.append(float(temp_str))
+
+    # 预卖出日期
+    if pre_off_day_index < 0:
+        data_unit.append(20990101.0)
+    else:
+        temp_str = pp_data['trade_date'][pre_off_day_index]
         data_unit.append(float(temp_str))
 
     # 卖出日期
-    if off_date_index < 0:
+    if off_day_index < 0:
         data_unit.append(20990101.0)
     else:
-        temp_str = pp_data['trade_date'][off_date_index]
+        temp_str = pp_data['trade_date'][off_day_index]
         data_unit.append(float(temp_str))
 
     # 持有天数
@@ -251,7 +268,7 @@ def FileNameDataSetOriginal():
     return file_name
 
 def FileNameDailyDataSet():
-    file_name = './data/dataset/wave_daily_dataset_%s_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
+    file_name = './data/dataset/wave_daily/wave_daily_dataset_%s_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
         feature.SettingNameFeature(), \
         wave_kernel_start_date, \
         tushare_data.stocks_list_end_date, \
@@ -270,7 +287,7 @@ def FileNameDailyDataSet():
     return file_name
 
 def FileNameDailyDataSetOriginal():
-    file_name = './data/dataset/wave_daily_dataset_original_%s_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
+    file_name = './data/dataset/wave_daily/wave_daily_dataset_original_%s_%u_%s_%s_%s_%s_%s_%u_%u_%u_%u_%u_%u_%u.npy' % ( \
         feature.SettingNameFeature(), \
         wave_kernel_start_date, \
         tushare_data.stocks_list_end_date, \
@@ -441,7 +458,8 @@ def SaveDataSet():
     global g_data_set
     # train_data = np.array(train_data_list)
     train_data = g_data_set
-    np.save(FileNameDataSetOriginal(), train_data)
+    if save_original_dataset:
+        np.save(FileNameDataSetOriginal(), train_data)
     train_data = AppendGlobalFeatures(train_data)
     np.save(FileNameDataSet(), train_data)
 
@@ -449,7 +467,8 @@ def SaveDailyDataSet():
     global g_data_set
     # train_data = np.array(train_data_list)
     train_data = g_data_set
-    np.save(FileNameDailyDataSetOriginal(), train_data)
+    if save_original_dataset:
+        np.save(FileNameDailyDataSetOriginal(), train_data)
     train_data = AppendGlobalFeatures(train_data)
     np.save(FileNameDailyDataSet(), train_data)
 
@@ -524,6 +543,7 @@ def TradeTestFinishedHandel(trade_count, \
             GetTrainDataUnit(input_pp_data, \
                 pre_on_day_index - iloop, \
                 on_day_index - iloop, \
+                pre_off_day_index, \
                 off_day_index, \
                 holding_days - iloop, \
                 temp_increase)
@@ -547,6 +567,7 @@ def TradeTestUnfinishedPreOnHandel(trade_count, \
     if save_data_set:
         GetTrainDataUnit(input_pp_data, \
             pre_on_day_index, \
+            -1, \
             -1, \
             -1, \
             0, \
@@ -582,7 +603,8 @@ def TradeTestUnfinishedPreOffHandel(trade_count, \
             GetTrainDataUnit(input_pp_data, \
                 pre_on_day_index - iloop, \
                 on_day_index - iloop, \
-                -1, \
+                pre_off_day_index, \
+                -1,
                 holding_days - iloop, \
                 0.0)
 
@@ -614,6 +636,7 @@ def TradeTestUnfinishedHandel(trade_count, \
             GetTrainDataUnit(input_pp_data, \
                 pre_on_day_index - iloop, \
                 on_day_index -iloop, \
+                -1, \
                 -1, \
                 holding_days -iloop, \
                 0.0)

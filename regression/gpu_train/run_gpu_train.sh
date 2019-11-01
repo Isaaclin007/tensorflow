@@ -105,8 +105,9 @@ rm -f *.pyc
 # python gpu_train.py --train_data=wave --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=32 --lstm_dense_size=8 --learning_rate=0.004 --epochs=500
 # python gpu_train.py --train_data=wave --data_split_mode=random --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=32 --lstm_dense_size=8 --learning_rate=0.004 --epochs=500
 # python gpu_train.py --train_data=wave --data_split_mode=samplebydate --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=32 --lstm_dense_size=8 --learning_rate=0.004 --epochs=500
-python gpu_train.py --train_data=wave --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=32 --lstm_dense_size=4 --learning_rate=0.008 --epochs=500
+# python gpu_train.py --train_data=wave --loss_func=LossTanhDiff --model_type=LSTM --lstm_size=32 --lstm_dense_size=4 --learning_rate=0.008 --epochs=500
 
+python gpu_train.py --train_data=wave --loss_func=LossTP0MaxRatio --model_type=LSTM --lstm_size=36 --lstm_dense_size=1 --learning_rate=0.004 --epochs=1000 --val_split=0.1
 
 
 

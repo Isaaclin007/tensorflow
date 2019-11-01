@@ -85,6 +85,7 @@ def TestEntry(test_data, print_msg, model, mean, std):
             increase_sum, \
             max_drawdown, \
             increase_score))
+    print("\n%f/%f" % (increase_sum, max_drawdown))
     return increase_score
 
 if __name__ == "__main__":

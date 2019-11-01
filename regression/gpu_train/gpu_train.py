@@ -91,7 +91,9 @@ def build_model(input_layer_shape):
     # model
     if paras.model_type_ == 'LSTM':
         model = keras.models.Sequential()
-        model.add(keras.layers.LSTM(paras.lstm_size_, input_shape=(input_layer_shape), return_sequences=False))
+        model.add(keras.layers.LSTM(paras.lstm_size_, 
+                                    input_shape=(input_layer_shape), 
+                                    return_sequences=False))
         if paras.lstm_dense_size_ > 1:
             model.add(keras.layers.Dense(paras.lstm_dense_size_))
         model.add(keras.layers.Dense(1))
@@ -302,11 +304,13 @@ def train():
 
 
     # The patience parameter is the amount of epochs to check for improvement.
-    early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50)
+    early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
     history = model.fit(train_features, train_labels, epochs=paras.epochs_, batch_size=paras.batch_size_, 
-                        validation_data=(val_features, val_labels), verbose=0,
+                        validation_split=0.1, 
+                        # validation_data=(val_features, val_labels), 
+                        verbose=0,
                         # callbacks=[early_stop, TestCallback()])
-                        callbacks=[TrainCallback()])
+                        callbacks=[early_stop, TrainCallback()])
 
     SaveModel(model, mean, std)
 

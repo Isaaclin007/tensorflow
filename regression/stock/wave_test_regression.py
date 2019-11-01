@@ -24,35 +24,26 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
-predict_threshold = 10
+predict_threshold = 6
 
 def AvgValue(sum_value, sample_num):
     if sample_num == 0:
         return 0.0
     else:
         return sum_value / sample_num
+
+def TradeDateStr(pre_trade_date, trade_date):
+    if trade_date < 20990101.0:
+        return ('%d' % int(trade_date))
+    elif pre_trade_date < 20990101.0:
+        return ('%d+1' % int(pre_trade_date))
+    else:
+        return '--'
     
 def TestEntry(test_data, print_msg, model, mean, std):
     predict_features = test_data[:, 0: feature.feature_size]
     if print_msg:
         print("predict_features: {}".format(predict_features.shape))
-    col_index = feature.feature_size
-    labels = test_data[:, col_index: col_index + 1]
-
-    col_index += 1
-    ts_codes = test_data[:, col_index: col_index + 1]
-
-    col_index += 1
-    on_pretrade_dates = test_data[:, col_index: col_index + 1]
-
-    col_index += 1
-    on_dates = test_data[:, col_index: col_index + 1]
-
-    col_index += 1
-    off_dates = test_data[:, col_index: col_index + 1]
-
-    col_index += 1
-    holding_days = test_data[:, col_index: col_index + 1]
 
     predict_features = train_rnn.FeaturesPretreat(predict_features, mean, std)
     predictions = model.predict(predict_features)
@@ -62,10 +53,18 @@ def TestEntry(test_data, print_msg, model, mean, std):
     max_drawdown = 0.0
     max_increase_sum = 0.0
     for iloop in range(0, len(test_data)):
-        if predictions[iloop] > predict_threshold:
-            if off_dates[iloop] < 20990101.0:
-                increase_sum += labels[iloop]
-                holding_days_sum += holding_days[iloop]
+        prediction = predictions[iloop]
+        if prediction > predict_threshold:
+            label = test_data[iloop][wave_kernel.COL_INCREASE()]
+            ts_code = test_data[iloop][wave_kernel.COL_TS_CODE()]
+            on_pretrade_date = test_data[iloop][wave_kernel.COL_ON_PRETRADE_DATE()]
+            on_date = test_data[iloop][wave_kernel.COL_ON_DATE()]
+            off_pretrade_date = test_data[iloop][wave_kernel.COL_OFF_PRETRADE_DATE()]
+            off_date = test_data[iloop][wave_kernel.COL_OFF_DATE()]
+            holding_days = test_data[iloop][wave_kernel.COL_HOLDING_DAYS()]
+            if off_date < 20990101.0:
+                increase_sum += label
+                holding_days_sum += holding_days
                 trade_count += 1
                 if max_increase_sum < increase_sum:
                     max_increase_sum = increase_sum.copy()
@@ -73,15 +72,14 @@ def TestEntry(test_data, print_msg, model, mean, std):
                 if max_drawdown < temp_drawdown:
                     max_drawdown = temp_drawdown.copy()
             if print_msg:
-                print("%-6u%06u    %-10.0f%-10.0f%-10.0f%-10.0f%-10.2f%-10.2f%-10.2f%-10.2f%-10.2f" %( \
+                print("%-6u%06u    %-12s%-12s%-10.0f%-10.2f%-10.2f%-10.2f%-10.2f%-10.2f" %( \
                     trade_count, \
-                    int(ts_codes[iloop]), \
-                    on_pretrade_dates[iloop], \
-                    on_dates[iloop], \
-                    off_dates[iloop], \
-                    holding_days[iloop], \
-                    predictions[iloop], \
-                    labels[iloop], \
+                    int(ts_code), \
+                    TradeDateStr(on_pretrade_date, on_date), \
+                    TradeDateStr(off_pretrade_date, off_date), \
+                    holding_days, \
+                    prediction, \
+                    label, \
                     increase_sum, \
                     AvgValue(increase_sum, trade_count), \
                     AvgValue(increase_sum, holding_days_sum)))
