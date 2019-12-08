@@ -1,0 +1,96 @@
+实现方案：
+理论分析：
+在实际交易过程中 空仓状态下的做多预测和持仓状态下的做多预测是否等效？空仓状态下的做空预测和持仓状态下的做空预测是否等效？
+回复：强化学习对Q的处理思路是只关注下一步的reward，不断叠加判断长期reward，如果只关注下一步reward则上述问题等效，
+ 
+1.准备数据集，将多个 ts_code 的 preprocess_data 转换为 [date][ts_code][data_unit] 三维numpy数据，其中[data_unit]包括rnn特征和acture data，如果某个ts_code当天没有数据则所有数据设置为0，迭代时跳过全0数据。[date]做最高维的原因是：a.容易计算全局指标；b.可以在原数据集的基础上 append 新的数据更新数据集
+2. for iloop in range(0, T):
+        for dloop in range(0, len(train_dataset)):  # 遍历train_dataset的日期
+            随机选择一个 ts_code，根据探索率e决定是否随机trade，非随机trade时预测q_action[]，选择最高分action执行：
+                1. 空仓状态的 in_action 买入，并继续对此 ts_code 迭代，直到 out_action，reward=open_t2 - open_t1（t0为预测日）
+                2. 持仓状态的 in_action，继续持有，并继续对此 ts_code 迭代，reward=open_t2 - open_t1
+                3. 空仓状态的 out_action，继续空仓，下一轮 重新选择 ts_code，reward=0
+                 
+ 
+V1.1.3
+ 
+actions: keep_empty, in, out, hold
+ 
+网络输入（state）：rnn feature
+ 
+网络输出 reward
+[actions]：所有actions对应的reward
+dataset 
+存储数据：state, next_state, action, reward
+  
+训练数据：
+     
+    x(150): state
+     
+    y(4) = predict(state)
+     
+    action_index = max(y)
+     
+    y[action_index] = reward + max(predict(next_state)) * gamma // 需要根据当前持仓/空仓状态计算max
+ 
+方案2：
+actions：in, out（in 状态的 in_action 表示hold，out 状态的 out 表示 keep_empty）
+网络模型：rnn + one_hot_key_action_multiply
+网络输入：state + one_hot_key_action
+rnn输入网络state，输出所有action的Q值
+one_hot_key_action_multiply 层 输入 所有action的Q值 和 one_hot_key_action，输出一个Q值
+存储数据：state, next_state, action, reward
+ 
+训练：
+    x(152): state + one_hot_key_action
+    y(1): reward + max(rnn.predict(next_state))
+预测：
+    rnn.predict(state)
+算法流程：
+算法输入：迭代轮数T，衰减因子r，探索率e
+ 
+问题1：
+action 怎么样影响 reward、后续状态、Q值
+ 
+方案3(优先方案)：
+不预测动作，改为预测趋势，动作的选择只影响采样，不影响 next_state：
+1.准备数据集，将多个 ts_code 的 preprocess_data 转换为 [date][ts_code][data_unit] 三维numpy数据，
+  其中[data_unit]包括rnn特征和acture data，如果某个ts_code当天没有数据则所有数据设置为0，迭代时跳过全0数据。
+    根据 start_date 和 end_date 获取 date_list
+    获取 ts_code_list
+    创建三维numpy数据 np_dataset(初始化为0)，shape = (len(date_list), len(ts_code_list), len(data_unit))
+    生成 date -> date_index 的字典映射
+    生成 ts_code -> ts_code_index 的字典映射
+    遍历每个 ts_code 的所有日期，生成 data_unit 插入 np_dataset，data_unit 的 feature 和 acture_data 指向同一天
+
+2.更新数据集，在旧的 old_dataset 添加新日期的数据生成新的 new_dataset：
+    根据 start_date 和 update_date 计算 data_list：
+    计算旧的 dataset_current_date 的 date_index
+    old_dataset 最高维度增加 date_index 得到 new_dataset，新数据填充0，
+        此过程需要验证 date_index + old_dataset.shape(0) == len(data_list)
+    生成 date -> data_index 的字典映射
+    生成 ts_code -> ts_code_index 的字典映射
+
+    遍历每个ts_code
+        for iloop in range(0, date_index):
+            if trade_date > dataset_current_date
+                插入新的 dataset
+    验证从日期A创建 dataset update 到日期B的dataset是否与从日期B创建的 dataset 一致
+       
+3.迭代过程
+    for iloop in range(0, T):
+        for dloop in range(0, len(train_dataset)):  # 遍历train_dataset的日期
+            随机选择一个 ts_code，根据探索率e决定是否随机trade，非随机trade时预测q_action[]，选择最高分action执行：
+                以下过程采样的 reward=open_t2 - open_t1（t0为预测日），
+                    采样（经验回收perceive）数据包括：current_state，reward，next_state
+                1. 空仓状态 Q>0 买入，采样，并继续对此 ts_code 迭代，直到 Q<=0，
+                2. 持仓状态 Q>0 继续持有，采样，并继续对此 ts_code 迭代
+                3. 空仓状态 Q<=0 继续空仓，(采样|不采样都要尝试), 下一轮 重新选择 ts_code
+                4. 持仓状态 Q<=0 卖出，采样，下一轮 重新选择 ts_code
+                如果action日停牌(data_unit数据为全0)，则action日延后致下一个正常交易日
+训练过程：
+x = current_state
+y = reward + GAMMA * predict(next_state)
+ 
+GAMMA 为常数：0.8 ?
+               

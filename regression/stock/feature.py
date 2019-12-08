@@ -83,15 +83,19 @@ def COL_TRADE_DATE(actrue_day_index):
 
 # 从 day_index 开始的前 feature_days 天的数据，包含 day_index
 def AppendFeature(pp_data, day_index, data_unit):
+    data_len = len(pp_data)
     if feature_type == FEATURE_G0_D5_AVG:
         base_close = pp_data['close_100_avg'][day_index]
         base_vol = pp_data['vol_100_avg'][day_index]
         for iloop in reversed(range(0, feature_days)):
             temp_index = day_index + iloop
-            if filter_suspend_data and (pp_data['suspend'][temp_index] != 0):
+            if temp_index >= data_len:
                 return False
-            if filter_adj_flag_data and (pp_data['adj_flag'][temp_index] != 0):
-                return False
+            # 关闭复权和停牌检查 2019-12-01
+            # if filter_suspend_data and (pp_data['suspend'][temp_index] != 0):
+            #     return False
+            # if filter_adj_flag_data and (pp_data['adj_flag'][temp_index] != 0):
+            #     return False
             data_unit.append(pp_data['open'][temp_index] / base_close)
             data_unit.append(pp_data['close'][temp_index] / base_close)
             data_unit.append(pp_data['high'][temp_index] / base_close)
@@ -194,6 +198,31 @@ def AppendActureData(pp_data, day_index, data_unit):
             data_unit.append(float(temp_str))
     return True
 
+#  day_index 当天的数据
+def AppendActureData1Day(pp_data, day_index, data_unit):
+    if day_index >= len(pp_data):
+        return False
+    temp_str = pp_data['ts_code'][0]
+    ts_code_value = float(temp_str[0:6])
+    if day_index < 0:
+        data_unit.append(0.0)
+        data_unit.append(0.0)
+        data_unit.append(0.0)
+        data_unit.append(0.0)
+        data_unit.append(0.0)
+        data_unit.append(ts_code_value)
+        data_unit.append(INVALID_DATE)
+    else:
+        data_unit.append(pp_data['open_increase'][day_index])
+        data_unit.append(pp_data['low_increase'][day_index])
+        data_unit.append(pp_data['open'][day_index])
+        data_unit.append(pp_data['low'][day_index])
+        data_unit.append(pp_data['close'][day_index])
+        data_unit.append(ts_code_value)
+        temp_str = pp_data['trade_date'][day_index]
+        data_unit.append(float(temp_str))
+    return True
+
 def GetDataUnit(pp_data, day_index):
     data_unit=[]
     if not AppendFeature(pp_data, day_index, data_unit):
@@ -201,6 +230,14 @@ def GetDataUnit(pp_data, day_index):
     if not AppendLabel(pp_data, day_index, data_unit):
         return []
     if not AppendActureData(pp_data, day_index, data_unit):
+        return []
+    return data_unit
+
+def GetDataUnit1Day(pp_data, day_index):
+    data_unit=[]
+    if not AppendFeature(pp_data, day_index, data_unit):
+        return []
+    if not AppendActureData1Day(pp_data, day_index, data_unit):
         return []
     return data_unit
 

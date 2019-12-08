@@ -9,6 +9,7 @@ import pandas as pd
 import os
 import time
 import sys
+import random
 import matplotlib.pyplot as plt
 import tushare_data
 
@@ -536,8 +537,60 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # temp_str = '%u_' % temp_num, format(temp_array)
 # print('temp_str:%s' % temp_str)
 
-temp_str = '1,2,3,4'
-print(map(int, temp_str.split(',')))
+# temp_str = '1,2,3,4'
+# print(map(int, temp_str.split(',')))
 
-temp_str = '4'
-print(map(int, temp_str.split(',')))
+# temp_str = '4'
+# print(map(int, temp_str.split(',')))
+
+################# 测试字典映射和列表搜索的速度 ######################################
+# date_list = tushare_data.TradeDateListRange("20000101", "20191130").tolist()
+# date_dict = {}
+# for iloop in range(0, len(date_list)):
+#     date_dict[date_list[iloop]] = iloop
+
+# start_time = time.time()
+# for iloop in range(0, len(date_list)): 
+#     temp_index = date_dict[date_list[iloop]]
+# run_time = time.time() - start_time
+# print(run_time)
+# print(temp_index)
+
+# start_time = time.time()
+# for iloop in range(0, len(date_list)): 
+#     temp_index = date_list.index(date_list[iloop])
+# run_time = time.time() - start_time
+# print(run_time)
+# print(temp_index)
+
+################# 测试 np 多维数据 unit 赋值 ######################################
+# dataset = np.zeros((2,3,4), dtype=float)
+# print(dataset)
+# print('\n')
+
+# # unit = np.array([1.0, 1.0, 1.0, 1.0])
+# unit = [1.0, 3.0, 2.0, 4.0]
+# dataset[0][1] = unit
+# print(dataset)
+# print('\n')
+
+# unit = [1.0, 1.0, 1.0, 1.0]
+# print(dataset)
+# print('\n')
+
+################# 测试 randint ######################################
+# start_time = time.time()
+# for iloop in range(0, 10):
+#     # temp_num = random.randint(0,10)
+#     temp_num = random.randint(-100, 100)
+#     print(temp_num)
+# run_time = time.time() - start_time
+# print(run_time)
+
+################# 测试 amax ######################################
+a = np.array([[1,2,3],[4,5,6]])
+max_dimension1 = np.amax(a, axis=1)
+print(max_dimension1)
+
+# date_list = tushare_data.TradeDateListRange("20170101", "20190414")
+# print(len(date_list))

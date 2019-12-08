@@ -321,7 +321,7 @@ def StockCodeFilter(ts_code, code_filter_list):
             return True
     return False
 
-def StockCodesName(input_stocks_list_end_date, input_industry_filter, input_code_filter):
+def StockCodesName(input_stocks_list_end_date, input_industry_filter, input_code_filter, sample_step=1):
     pro = ts.pro_api()
 
     if input_industry_filter == 'hk':
@@ -336,6 +336,7 @@ def StockCodesName(input_stocks_list_end_date, input_industry_filter, input_code
             load_df.to_csv(file_name)
 
         load_df = load_df[load_df['list_date'] <= int(input_stocks_list_end_date)]
+        load_df = load_df[::sample_step]
         load_df = load_df.copy()
         load_df = load_df.reset_index(drop=True)
 
@@ -382,10 +383,13 @@ def StockCodesName(input_stocks_list_end_date, input_industry_filter, input_code
         print('StockCodes(%s)[%u]' % (input_industry_filter, len(load_df)))
         code_list = load_df['ts_code'].values
         name_list = load_df['name'].values
+        # if sample_step != 1:
+        #     code_list = code_list[::sample_step]
+        #     name_list = name_list[::sample_step]
         return code_list, name_list
 
-def StockCodes():
-    code_list, name_list = StockCodesName(stocks_list_end_date, industry_filter, code_filter)
+def StockCodes(sample_step=1):
+    code_list, name_list = StockCodesName(stocks_list_end_date, industry_filter, code_filter, sample_step)
     return code_list
 
 def StockName(ts_code):
