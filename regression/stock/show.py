@@ -36,10 +36,17 @@ def GetProprocessedData(ts_code):
         return []
 
 
-def ShowAStock(ts_code):
-    # tushare_data.train_test_date = tushare_data.CurrentDate()
-    # tushare_data.DownloadAStocksData(ts_code)
-    # tushare_data.UpdatePreprocessDataAStock(0, ts_code)
+def ShowAStock(ts_code, show_values=['open', 
+                                     'close', 
+                                     'close_5_avg', 
+                                     'close_10_avg', 
+                                     'close_30_avg',
+                                     'close_100_avg',
+                                     'vol',
+                                     'vol_5_avg',
+                                     'vol_10_avg',
+                                     'vol_30_avg',
+                                     'wave']):
     pp_data = GetProprocessedData(ts_code)
     if len(pp_data) == 0:
         return
@@ -51,22 +58,18 @@ def ShowAStock(ts_code):
     ax1 = fig1.add_subplot(1,1,1) 
     ax1.xaxis.set_major_formatter(mdate.DateFormatter('%Y-%m-%d'))
     plt.title(title, fontproperties=zhfont)
-    # plt.title(u"中文", fontproperties=zhfont)
-    # plt.subplot(1, 1, 1)
     plt.xlabel('date')
     plt.ylabel('price')
     xs = [datetime.strptime(d, '%Y%m%d').date() for d in pp_data['trade_date'].astype(str).values]
-    # plt.xticks(xs,rotation=45)
-    # xs = pp_data['trade_date']
     plt.grid(True)
 
     # plt.plot(xs, pp_data['open'].values, label='open', linewidth=1)
-    plt.plot(xs, pp_data['close'].values, label='close', linewidth=2)
+    # plt.plot(xs, pp_data['close'].values, label='close', linewidth=2)
     # plt.plot(xs, pp_data['close_5_avg'].values, label='5', linewidth=1)
-    plt.plot(xs, pp_data['close_10_avg'].values, label='10', linewidth=1)
+    # plt.plot(xs, pp_data['close_10_avg'].values, label='10', linewidth=1)
     # plt.plot(xs, pp_data['close_30_avg'].values, label='30', linewidth=1)
     # plt.plot(xs, pp_data['close_100_avg'].values, label='100', linewidth=1)
-    plt.plot(xs, pp_data['close_100_avg'].values, label='100', linewidth=1)
+    # plt.plot(xs, pp_data['close_100_avg'].values, label='100', linewidth=1)
 
     # pp_data['vol'] = pp_data['vol'] / pp_data.loc[0,'vol_100_avg'] * pp_data.loc[0,'close_100_avg'] * 0.2
     close_max = pp_data['close'].max()
@@ -75,23 +78,20 @@ def ShowAStock(ts_code):
     pp_data['vol_5_avg'] = pp_data['vol_5_avg'] * vol_ratio
     pp_data['vol_10_avg'] = pp_data['vol_10_avg'] * vol_ratio
     pp_data['vol_30_avg'] = pp_data['vol_30_avg'] * vol_ratio
-    # pp_data['vol_200_avg'] = pp_data['vol_200_avg'] * vol_ratio
-    # pp_data['sell_sm_vol_30_avg'] = (pp_data['sell_sm_vol_30_avg'] - pp_data['buy_sm_vol_30_avg']) * vol_ratio * 10.0
-    # pp_data['sell_elg_vol_30_avg'] = (pp_data['sell_elg_vol_30_avg'] - pp_data['buy_elg_vol_30_avg']) * vol_ratio * 10.0
-    plt.plot(xs, pp_data['vol'].values, label='vol', linewidth=1)
-    plt.plot(xs, pp_data['vol_5_avg'].values, label='v_5', linewidth=1)
-    # plt.plot(xs, pp_data['vol_10_avg'].values, label='v_10', linewidth=1)
-    # plt.plot(xs, pp_data['vol_200_avg'].values, label='v_200', linewidth=1)
-    # plt.plot(xs, pp_data['sell_elg_vol_30_avg'].values, label='ssm_vol', linewidth=1)
+    for name in show_values:
+        if name == 'wave':
+            wave_kernel.AppendWaveData(pp_data)
+            peak_data = pp_data[pp_data['wave_extreme'] == wave_kernel.EXTREME_PEAK]
+            xs = [datetime.strptime(d, '%Y%m%d').date() for d in peak_data['trade_date'].astype(str).values]
+            plt.plot(xs, peak_data[wave_kernel.wave_index].values, 'ro', label='peak', linewidth=1)
 
-    wave_kernel.AppendWaveData(pp_data)
-    peak_data = pp_data[pp_data['wave_extreme'] == wave_kernel.EXTREME_PEAK]
-    xs = [datetime.strptime(d, '%Y%m%d').date() for d in peak_data['trade_date'].astype(str).values]
-    plt.plot(xs, peak_data[wave_kernel.wave_index].values, label='peak', linewidth=1)
-
-    valley_data = pp_data[pp_data['wave_extreme'] == wave_kernel.EXTREME_VALLEY]
-    xs = [datetime.strptime(d, '%Y%m%d').date() for d in valley_data['trade_date'].astype(str).values]
-    plt.plot(xs, valley_data[wave_kernel.wave_index].values, label='valley', linewidth=1)
+            valley_data = pp_data[pp_data['wave_extreme'] == wave_kernel.EXTREME_VALLEY]
+            xs = [datetime.strptime(d, '%Y%m%d').date() for d in valley_data['trade_date'].astype(str).values]
+            plt.plot(xs, valley_data[wave_kernel.wave_index].values, 'go', label='valley', linewidth=1)
+        else:
+            plt.plot(xs, pp_data[name].values, label=name, linewidth=1)
+    # plt.plot(xs, pp_data['vol'].values, label='vol', linewidth=1)
+    # plt.plot(xs, pp_data['vol_5_avg'].values, label='v_5', linewidth=1)
 
     plt.gcf().autofmt_xdate()
     plt.legend()
@@ -101,7 +101,8 @@ def ShowAStock(ts_code):
 if __name__ == "__main__":
     # ShowAStock('600050.SH')
     if len(sys.argv) > 1:
-        ShowAStock(sys.argv[1])
+        # ShowAStock(sys.argv[1])
+        ShowAStock(sys.argv[1], ['close', 'close_30_avg', 'wave'])
     else:
         code_list = ['002236.SZ', '002415.SZ', '000650.SZ', '000937.SZ', '600104.SH']
         for ts_code in code_list:

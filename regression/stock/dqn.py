@@ -23,10 +23,12 @@ INITIAL_EPSILON = 0.5 # starting value of epsilon
 FINAL_EPSILON = 0.01 # final value of epsilon
 REPLAY_SIZE = 10000 # experience replay buffer size
 BATCH_SIZE = 32 # size of minibatch
-T = 10
+T = 100
 
 STATUS_OFF = 0
 STATUS_ON = 1
+STATUS_PRE_OFF = 2
+STATUS_PRE_ON = 3
 date_col_index = dqn_dataset.ACTURE_DATA_INDEX_DATE()
 open_col_index = dqn_dataset.ACTURE_DATA_INDEX_OPEN()
 tscode_col_index = dqn_dataset.ACTURE_DATA_INDEX_TSCODE()
@@ -89,6 +91,7 @@ class DQN():
     def __init__(self):
         self.replay_buffer = deque()
         self.train_dataset, self.test_dataset = dqn_dataset.GetDataSet()
+        # self.test_dataset = self.train_dataset
         self.step_num = 0
         self.LossClean()
         if ModelExist():
@@ -214,7 +217,7 @@ class DQN():
                 if t2_date_index < 0:
                     break
                 next_feature = self.train_dataset[t1_date_index][code_index][0:feature.FEATURE_SIZE()]
-                reward = self.train_dataset[t2_date_index][code_index][open_col_index] / self.train_dataset[t1_date_index][code_index][open_col_index] - 1.0
+                reward = (self.train_dataset[t2_date_index][code_index][open_col_index] / self.train_dataset[t1_date_index][code_index][open_col_index] - 1.0) * 100.0
                 self.PerceiveAndTrain(current_feature, next_feature, reward)
             increase, trade_count, max_Q_mean = self.TestTop1()
             print('%-8u%-8u%-8.5f%-12.3f%-12u%-12.6f' % (iloop, 
@@ -279,16 +282,18 @@ class DQN():
         increase_sum = 0.0
         hold_days_sum = 0
         if print_trade_detail:
-            print('%-8s%-10s%-10s%-10s%-10s%-10s%-10s%-10s' % ('index', 'in_date', 'out_date', 'ts_code', 'in', 'out', 'increase', 'hold_days'))
+            print('%-8s%-10s%-10s%-10s%-10s%-10s%-10s%-10s%-10s' % ('index', 'in_date', 'out_date', 'ts_code', 'pred','in', 'out', 'increase', 'hold_days'))
             print('-' * 80)
-        for dloop in reversed(range(0, date_num)):  # 遍历dataset的日期
+        dloop = date_num - 1
+        while dloop >= 0:  # 遍历dataset的日期
             if curren_status == STATUS_OFF:
                 code_index = max_Q_codes_index[dloop]
             if self.test_dataset[dloop][code_index][date_col_index] == 0.0:
+                dloop -= 1
                 continue
             
             Q = predictions[dloop][code_index]
-            if Q > 0.01:
+            if Q > 0:
                 # print(Q)
                 next_status = STATUS_ON
             else:
@@ -298,19 +303,28 @@ class DQN():
                 if next_status == STATUS_ON:
                     curren_status = STATUS_ON
                     t1_date_index = self.NextValidDateIndex(self.test_dataset, code_index, dloop)
+                    if t1_date_index < 0:
+                        break
                     in_price = self.test_dataset[t1_date_index][code_index][open_col_index]
+                    in_pred = Q
+                    dloop = t1_date_index
+                else:
+                    dloop -= 1
             else:
                 if next_status == STATUS_OFF:
                     curren_status = STATUS_OFF
                     t2_date_index = self.NextValidDateIndex(self.test_dataset, code_index, dloop)
+                    if t2_date_index < 0:
+                        break
                     out_price = self.test_dataset[t2_date_index][code_index][open_col_index]
                     increase = out_price / in_price - 1.0
                     hold_days = t1_date_index - t2_date_index
                     if print_trade_detail:
-                        print('%-8u%-10.0f%-10.0f%-10s%-10.2f%-10.2f%-10.4f%-10u' % (trade_count, 
+                        print('%-8u%-10.0f%-10.0f%-10s%-10.2f%-10.2f%-10.2f%-10.4f%-10u' % (trade_count, 
                                 self.test_dataset[t1_date_index][code_index][date_col_index], 
                                 self.test_dataset[t2_date_index][code_index][date_col_index], 
                                 '%06u' % self.test_dataset[t1_date_index][code_index][tscode_col_index],
+                                in_pred,
                                 in_price,
                                 out_price,
                                 increase,
@@ -318,9 +332,18 @@ class DQN():
                     increase_sum += increase
                     trade_count += 1
                     hold_days_sum += hold_days
+                    dloop = t2_date_index
+                else:
+                    dloop -= 1
         if print_trade_detail:
-            print('%-8s%-10s%-10s%-10s%-10s%-10s%-10.4f%-10u' % ('sum', '--', '--', '--', '--', '--', increase_sum, hold_days_sum))
+            print('%-8s%-10s%-10s%-10s%-10s%-10s%-10s%-10.4f%-10u' % ('sum', '--', '--', '--', '--', '--', '--', increase_sum, hold_days_sum))
         return increase_sum, trade_count, max_Q_mean
+
+    def TestTop1LowLevel(self, model, mean, std, print_trade_detail=False):
+        self.model = model
+        self.mean = mean
+        self.std = std
+        self.TestTop1(print_trade_detail)
 
 
 
@@ -328,9 +351,10 @@ class DQN():
 
 if __name__ == "__main__":
     dqn = DQN()
-    dqn.Train()
+    # dqn.Train()
     # dqn.SaveModel_()
     # dqn.TestTop1(True)
+    dqn.TestTop1(True)
     # dqn.Test()
 
 

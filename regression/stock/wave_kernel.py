@@ -30,10 +30,12 @@ save_original_dataset = False
 EXTREME_NONE = 0
 EXTREME_PEAK = 1
 EXTREME_VALLEY = 2
+EXTREME_STR = ['NONE', 'PEAK', 'VALLEY']
 
 STATUS_NONE = 0
 STATUS_UP = 1
 STATUS_DOWN = 2
+WAVE_STATUS_STR = ['NONE', 'UP', 'DOWN']
 
 wave_kernel_start_date = 20120101
 wave_test_dataset_sample_num = 5
@@ -115,6 +117,7 @@ TRADE_ON = 1
 TRADE_OFF = 2
 TRADE_PRE_ON = 3
 TRADE_PRE_OFF = 4
+TRADE_STATUS_STR = ['NONE', 'ON', 'OFF', 'PRE_ON', 'PRE_OFF']
 train_data_list = []
 g_data_set = np.array(train_data_list)
 
@@ -764,6 +767,14 @@ def TradeTest(input_pp_data, \
                 trade_count += 1
                 if temp_increase > 0:
                     trade_count_profitable += 1
+                on_price = 0.0
+
+            print('%-s  trade_flag:%-8s current_status:%-8s wave_status:%-8s close:%-8.2f on_price:%-8.2f' % (
+                input_pp_data.loc[day_index,'trade_date'],
+                TRADE_STATUS_STR[trade_flag],
+                TRADE_STATUS_STR[current_trade_status],
+                WAVE_STATUS_STR[wave_status],
+                close, on_price))
 
         # 更新 last_peak 和 last_valley
         if wave_extreme == EXTREME_PEAK:

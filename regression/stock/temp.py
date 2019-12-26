@@ -9,13 +9,35 @@ import pandas as pd
 import os
 import time
 import sys
+sys.path.append("..")
 import random
 import matplotlib.pyplot as plt
 import tushare_data
+from common import np_common
 
 reload(sys)
+# sys.path.append("..")
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
+
+################# common Sort2D测试 ######################################
+src_data = np.array([
+    [3, 2, 5],
+    [4, 3, 1],
+    [4, 3, 1],
+    [4, 3, 1],
+    [2, 2, 9],], dtype=np.float32)
+print('src_data.dtype:{}'.format(src_data.dtype))
+print('src_data:\n{}'.format(src_data))
+# sort_1 = np_common.Sort2D(src_data, [1,0])
+# print('sort_1.dtype:{}'.format(sort_1.dtype))
+# print('sort_1:\n{}'.format(sort_1))
+# sort_2 = np_common.Sort2D(src_data, [2])
+# print('sort_2.dtype:{}'.format(sort_2.dtype))
+# print('sort_2:\n{}'.format(sort_2))
+np.random.shuffle(src_data)
+# print('shuffle_data.dtype:{}'.format(shuffle_data.dtype))
+print('shuffle_data:\n{}'.format(src_data))
 
 # test_data_list=[]
 # for iloop in range(0, 3):
@@ -588,9 +610,38 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # print(run_time)
 
 ################# 测试 amax ######################################
-a = np.array([[1,2,3],[4,5,6]])
-max_dimension1 = np.amax(a, axis=1)
-print(max_dimension1)
+# a = np.array([[1,2,3],[4,5,6]])
+# max_dimension1 = np.amax(a, axis=1)
+# print(max_dimension1)
 
 # date_list = tushare_data.TradeDateListRange("20170101", "20190414")
 # print(len(date_list))
+
+################# 测试 numpy 插入数据 ######################################
+# dataset = None
+# data_unit = np.zeros((150)) 
+# start_time = time.time()
+# for iloop in range(0, 10000):
+#     data_unit_2 = np.insert(data_unit, 150, values=1, axis=0)
+#     if dataset is None:
+#         dataset = data_unit_2
+#     else:
+#         dataset = np.vstack((dataset, data_unit_2))
+# run_time = time.time() - start_time
+# print(run_time)
+# print("data_unit_2:{}".format(data_unit_2.shape))
+# print(data_unit_2)
+# print("dataset:{}".format(dataset.shape))
+# print(dataset)
+
+# data_unit = np.ones((150))
+# start_time = time.time()
+# dataset = np.zeros((10000, 151))
+# for iloop in range(0, 10000):
+#     dataset[iloop][:150] = data_unit
+#     dataset[iloop][150] = 2
+# run_time = time.time() - start_time
+# print(run_time)
+# print("dataset:{}".format(dataset.shape))
+# print(dataset)
+
