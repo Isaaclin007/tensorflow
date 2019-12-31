@@ -91,7 +91,7 @@ class DQN():
     def __init__(self):
         self.replay_buffer = deque()
         self.train_dataset, self.test_dataset = dqn_dataset.GetDataSet()
-        # self.test_dataset = self.train_dataset
+        self.test_dataset = self.train_dataset
         self.step_num = 0
         self.LossClean()
         if ModelExist():

@@ -89,5 +89,6 @@ def ShowHistoryLevel2(level2_path_name):
 if __name__ == "__main__":
     ShowHistoryLevel2('./model/fix')
     ShowHistoryLevel2('./model/wave')
+    ShowHistoryLevel2('./model/dqn_fix')
 
 

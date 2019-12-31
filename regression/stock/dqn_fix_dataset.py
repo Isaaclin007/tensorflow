@@ -1,7 +1,6 @@
 # -*- coding:UTF-8 -*-
 
 
-import tushare as ts
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -10,12 +9,27 @@ import time
 import datetime
 import sys
 import math
-import tushare_data
-import feature
-import pp_daily_update
-import dqn_dataset
-sys.path.append("..")
-from common import np_common
+
+import_tushare_data = os.path.exists('tushare_data.py')
+if import_tushare_data:
+    import tushare_data
+
+import_feature = os.path.exists('feature.py')
+if import_feature:
+    import feature
+
+import_pp_daily_update = os.path.exists('pp_daily_update.py')
+if import_pp_daily_update:
+    import pp_daily_update
+
+import_dqn_dataset = os.path.exists('dqn_dataset.py')
+if import_dqn_dataset:
+    import dqn_dataset
+
+import_np_common = os.path.exists('../common/np_common.py')
+if import_np_common:
+    sys.path.append("..")
+    from common import np_common
 
 label_days = 10
 decay_ratio = 0.8
@@ -23,14 +37,35 @@ decay_ratio = 0.8
 
 def SettingName():
     temp_name = '%s_%s_%u_%u_%f' % (dqn_dataset.SettingName(), 
-                              tushare_data.train_test_date, 
-                              dqn_dataset.dataset_train_test_split_date, 
-                              label_days, 
-                              decay_ratio)
+                            tushare_data.train_test_date, 
+                            dqn_dataset.dataset_train_test_split_date, 
+                            label_days, 
+                            decay_ratio)
     return temp_name
 
+if import_tushare_data and import_dqn_dataset:
+    setting_name_ = SettingName()
+    dqn_dataset_file_name_ = dqn_dataset.FileNameDataSet(False)
+    dqn_dataset_ACTURE_DATA_INDEX_DATE_ = dqn_dataset.ACTURE_DATA_INDEX_DATE()
+    dqn_dataset_ACTURE_DATA_INDEX_OPEN_ = dqn_dataset.ACTURE_DATA_INDEX_OPEN()
+    dqn_dataset_ACTURE_DATA_INDEX_TSCODE_ = dqn_dataset.ACTURE_DATA_INDEX_TSCODE()
+    feature_FEATURE_SIZE_ = feature.FEATURE_SIZE()
+    dqn_dataset_dataset_train_test_split_date_ = dqn_dataset.dataset_train_test_split_date
+else:
+    dqn_dataset_ACTURE_DATA_INDEX_DATE_ = 156
+    dqn_dataset_ACTURE_DATA_INDEX_OPEN_ = 152
+    dqn_dataset_ACTURE_DATA_INDEX_TSCODE_ = 155
+    feature_FEATURE_SIZE_ = 150
+    dqn_dataset_dataset_train_test_split_date_ = 20170101
+    setting_name_ = '0_30_1_10_0_0___20000101_10_20020101_20190414_%u_%u_%.6f' % (
+        dqn_dataset_dataset_train_test_split_date_, 
+        label_days, 
+        decay_ratio)
+    dqn_dataset_file_name_ = './data/dataset/dqn_0_30_1_10_0_0___20000101_10_20020101_20190414.npy'
+
+
 def FileNameDataSet():
-    file_name = './data/dataset/dqn_fix_%s.npy' % SettingName()
+    file_name = './data/dataset/dqn_fix_%s.npy' % setting_name_
     return file_name
 
 def CreateDataSet():
@@ -39,16 +74,16 @@ def CreateDataSet():
         print('dataset already exist: %s' % dataset_file_name)
         return
 
-    dqn_dataset_file_name = dqn_dataset.FileNameDataSet(False)
+    dqn_dataset_file_name = dqn_dataset_file_name_
     dqn_src_dataset = np.load(dqn_dataset_file_name)
     print("dqn_src_dataset: {}".format(dqn_src_dataset.shape))
 
     date_num = dqn_src_dataset.shape[0]
     code_num = dqn_src_dataset.shape[1]
-    data_unit_date_index = dqn_dataset.ACTURE_DATA_INDEX_DATE()
-    data_unit_open_index = dqn_dataset.ACTURE_DATA_INDEX_OPEN()
-    data_unit_tscode_index = dqn_dataset.ACTURE_DATA_INDEX_TSCODE()
-    feature_size = feature.FEATURE_SIZE()
+    data_unit_date_index = dqn_dataset_ACTURE_DATA_INDEX_DATE_
+    data_unit_open_index = dqn_dataset_ACTURE_DATA_INDEX_OPEN_
+    data_unit_tscode_index = dqn_dataset_ACTURE_DATA_INDEX_TSCODE_
+    feature_size = feature_FEATURE_SIZE_
 
     # feature | label(从feature_date+1开始计算) | feature_date | ts_code
     dataset = np.zeros((date_num * code_num, feature_size + 3))
@@ -135,33 +170,24 @@ def GetDataSet():
     # ShowDataSet(np_common.RandSelect(sort_dataset[:10], 10), 'max10000_rand_dataset')
 
     #################### 还需要显示最后10000的label随机抽取N条的数据 ##############
-    sort_dataset = np_common.Sort2D(dataset, [feature.FEATURE_SIZE()], True)
-    ShowDataSet(np_common.RandSelect(sort_dataset[:10], 10), 'min10000_rand_dataset')
+    # sort_dataset = np_common.Sort2D(dataset, [feature.FEATURE_SIZE()], True)
+    # ShowDataSet(np_common.RandSelect(sort_dataset[:10], 10), 'min10000_rand_dataset')
 
     #################### 显示 label 直方图 ##############
-    labels = dataset[:, feature.FEATURE_SIZE()]
-    min_label = -30 # np.min(labels)
-    max_lable = 30  #np.max(labels)
-    # print("range(%f, %f):" % (min_label, max_lable))
-    bins = range(min_label, max_lable, 1)
-    # print(bins)
-    # hist,bins = np.histogram(labels, bins = bins) 
-    # print(hist)
+    # labels = dataset[:, feature.FEATURE_SIZE()]
+    # np_common.ShowHist(labels)
+    
+    ###################################################################################
 
-    plt.hist(labels, bins = bins)
-    plt.title("histogram") 
-    plt.savefig('data/dataset/dqn_fix_dataset_hist_%u_%.2f.png' % (label_days, decay_ratio))
-    plt.show()
-
-    pos = dataset[:,feature.FEATURE_SIZE()+1] < dqn_dataset.dataset_train_test_split_date
+    pos = dataset[:,feature_FEATURE_SIZE_+1] < dqn_dataset_dataset_train_test_split_date_
     train_data = dataset[pos]
     test_data = dataset[~pos]
     print("train: {}".format(train_data.shape))
     print("test: {}".format(test_data.shape))
-    train_features = train_data[:, 0:feature.FEATURE_SIZE()]
-    train_labels = train_data[:, feature.FEATURE_SIZE():feature.FEATURE_SIZE()+1]
-    val_features = test_data[:, 0:feature.FEATURE_SIZE()]
-    val_labels = test_data[:, feature.FEATURE_SIZE():feature.FEATURE_SIZE()+1]
+    train_features = train_data[:, 0:feature_FEATURE_SIZE_].astype(np.float32)
+    train_labels = train_data[:, feature_FEATURE_SIZE_:feature_FEATURE_SIZE_+1].astype(np.float32)
+    val_features = test_data[:, 0:feature_FEATURE_SIZE_].astype(np.float32)
+    val_labels = test_data[:, feature_FEATURE_SIZE_:feature_FEATURE_SIZE_+1].astype(np.float32)
     return train_features, train_labels, val_features, val_labels
 
 

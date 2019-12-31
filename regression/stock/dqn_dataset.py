@@ -27,6 +27,12 @@ def SettingName():
         dataset_start_date)
     return temp_name
 
+def SettingNameCode():
+    temp_name = '%s_%u' % ( \
+        feature.SettingName(), \
+        dataset_start_date)
+    return temp_name
+
 def TrainSettingName():
     temp_name = '%s_%u' % (SettingName(), dataset_train_test_split_date)
     return temp_name
@@ -56,49 +62,78 @@ def ACTURE_DATA_INDEX_OPEN():
 def ACTURE_DATA_INDEX_TSCODE():
     return feature.feature_size + feature.ACTURE_DATA_INDEX_TSCODE
 
-def CreateDataSet():
-    dataset_file_name = FileNameDataSet(False)
-    if os.path.exists(dataset_file_name):
-        print('dataset already exist: %s' % dataset_file_name)
-        return
+def FileNameDataSetSplit(ts_code):
+    file_name = './data/dataset/dqn_split/%s_%s_%s.npy' % (SettingNameCode(), tushare_data.train_test_date, ts_code)
+    return file_name
+
+def CreateDataSetSplit():
     start_date = dataset_start_date
     end_date = tushare_data.train_test_date
     date_list = tushare_data.TradeDateListRange(start_date, end_date).tolist()
     code_list = tushare_data.StockCodes(dataset_stock_sample_step)
     date_index_map = ListToIndexMap(date_list, True)
-    code_index_map = ListToIndexMap(code_list)
 
-    dataset = np.zeros((len(date_list), len(code_list), feature.feature_size + feature.acture_unit_size), dtype=float)
     data_unit_date_index = ACTURE_DATA_INDEX_DATE()
     valid_data_unit_num = 0
     for code_index in range(0, len(code_list)):
         stock_code = code_list[code_index]
-        stock_pp_file_name = tushare_data.FileNameStockPreprocessedData(stock_code)
-        if os.path.exists(stock_pp_file_name):
-            pp_data = pd.read_csv(stock_pp_file_name)
-        else:
-            pp_data = []
-        if len(pp_data) == 0:
-            continue
-        for day_loop in range(0, len(pp_data)):
-            data_unit = feature.GetDataUnit1Day(pp_data, day_loop)
-            if len(data_unit) == 0:
+        dataset_split_file_name = FileNameDataSetSplit(stock_code)
+        if not os.path.exists(dataset_split_file_name):
+            stock_pp_file_name = tushare_data.FileNameStockPreprocessedData(stock_code)
+            if os.path.exists(stock_pp_file_name):
+                pp_data = pd.read_csv(stock_pp_file_name)
+            else:
+                pp_data = []
+            if len(pp_data) == 0:
                 continue
-            temp_date = int(data_unit[data_unit_date_index])
-            if temp_date < start_date or temp_date > end_date:
-                continue
-            dateset_index1 = date_index_map[pp_data['trade_date'][day_loop]]
-            dateset_index2 = code_index_map[stock_code]
-            dataset[dateset_index1][dateset_index2] = data_unit
-            valid_data_unit_num += 1
+            
+            dataset = np.zeros((len(date_list), 1, feature.feature_size + feature.acture_unit_size))
+            for day_loop in range(0, len(pp_data)):
+                data_unit = feature.GetDataUnit1Day(pp_data, day_loop)
+                if len(data_unit) == 0:
+                    continue
+                temp_date = int(data_unit[data_unit_date_index])
+                if temp_date < start_date or temp_date > end_date:
+                    continue
+                dateset_index1 = date_index_map[pp_data['trade_date'][day_loop]]
+                dataset[dateset_index1][0] = data_unit
+
+            split_data_date = dataset[:,:,ACTURE_DATA_INDEX_DATE()]
+            np.save(dataset_split_file_name, dataset)
         print("%-4d : %s 100%%" % (code_index, stock_code))
+
+def CreateDataSetMerge(dataset_file_name):
+    start_date = dataset_start_date
+    end_date = tushare_data.train_test_date
+    date_list = tushare_data.TradeDateListRange(start_date, end_date).tolist()
+    code_list = tushare_data.StockCodes(dataset_stock_sample_step)
+    dataset = np.zeros((len(date_list), len(code_list), feature.feature_size + feature.acture_unit_size))
+    code_index_map = ListToIndexMap(code_list)
+    for code_index in range(0, len(code_list)):
+        stock_code = code_list[code_index]
+        dataset_split_file_name = FileNameDataSetSplit(stock_code)
+        if not os.path.exists(dataset_split_file_name):
+            continue
+        split_data = np.load(dataset_split_file_name)
+        dateset_index2 = code_index_map[stock_code]
+        for iloop in range(len(date_list)):
+            dataset[iloop][dateset_index2] = split_data[iloop][0]
     print("dataset: {}".format(dataset.shape))
-    print("valid_data_unit_num: %u" % valid_data_unit_num)
     print("file_name: %s" % dataset_file_name)
     np.save(dataset_file_name, dataset)
 
+
+def CreateDataSet():
+    dataset_file_name = FileNameDataSet(False)
+    if os.path.exists(dataset_file_name):
+        print('dataset already exist: %s' % dataset_file_name)
+        return
+    CreateDataSetSplit()
+    CreateDataSetMerge(dataset_file_name)
+    
+
+
 def GetDataSet():
-    CreateDataSet()
     dataset_file_name = FileNameDataSet(False)
     dataset = np.load(dataset_file_name)
     print("dataset: {}".format(dataset.shape))
@@ -121,6 +156,22 @@ def GetDataSet():
 
 if __name__ == "__main__":
     CreateDataSet()
-    GetDataSet()
+    # GetDataSet()
+
+    # dataset_ = np.load('./data/dataset/dqn_0_30_1_10_0_0___20000101_10_20020101_20190414_.npy')
+    # dataset = np.load('./data/dataset/dqn_0_30_1_10_0_0___20000101_10_20020101_20190414.npy')
+
+    dataset_ = np.load('./data/dataset/dqn_fix_0_30_1_10_0_0___20000101_10_20020101_20190414_20170101_10_0.800000_.npy')
+    dataset = np.load('./data/dataset/dqn_fix_0_30_1_10_0_0___20000101_10_20020101_20190414_20170101_10_0.800000.npy')
+
+    d_ = dataset_.flatten()
+    d = dataset.flatten()
+    print('d_:{}, {}'.format(d_.shape, d_.dtype))
+    print('d:{}, {}'.format(d.shape, d.dtype))
+    for iloop in range(len(d)):
+        if (float(d_[iloop]) - float(d[iloop])) > 0.000001:
+            print('%-16u%-16.10f%-16.10f' % (iloop, d_[iloop], d[iloop]))
+    
+
 
 

@@ -20,24 +20,83 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
+d1 = np.zeros((10, 4), dtype=np.float32)
+d2 = np.zeros((4), dtype=np.float32)
+for iloop in range(10):
+    # d2[0] = float('20190419') + iloop # error
+    d2[0] = 2190419.0 + iloop
+    print(d2)
+    d1[iloop] = d2
+
+# print(d1)
+
+
+# print(np.arange(0, 1, 0.1))
+
+# src_data = np.array([
+#     [-3, 2, 5],
+#     [-4, 3, 1],
+#     [-4, 3, 1],
+#     [4, 3, 1],
+#     [2, 2, 9],], dtype=np.float32)
+
+# def SetValue(np_data):
+#     # np_data[0][0] = 0
+#     np_data[0] = 0
+#     np_data[1] = 0
+#     np_data[2] = 0
+
+# print(src_data)
+# SetValue(src_data[2])
+# print(src_data)
+
+################# numpy 接口测试 ######################################
+# src_data = np.array([
+#     [-3, 2, 5],
+#     [-4, 3, 1],
+#     [-4, 3, 1],
+#     [4, 3, 1],
+#     [2, 2, 9],], dtype=np.float32)
+# print('\nsrc_data:{}'.format(src_data))
+
+# src_data2 = src_data * 2
+# print('\nsrc_data2:{}'.format(src_data2))
+
+# abs_data = np.abs(src_data)
+# print('\nabs_data:{}'.format(abs_data))
+
+# max_data = np.maximum(src_data2, abs_data)
+# print('\nmax_data:{}'.format(max_data))
+
+# sub_data = src_data - src_data2
+# print('\nsub_data:{}'.format(sub_data))
+
+# mul_data = sub_data * src_data
+# print('\nmul_data:{}'.format(mul_data))
+
+# # loss = np.abs(src_data - src_data2) / 10.0 * np.maximum(src_data, src_data2, src_data2 * 0.0)
+# loss = np.maximum(np.maximum(src_data, src_data2), np.abs(src_data2) * 0.0)
+# print('\nloss:{}'.format(np.mean(loss)))
+
+
 ################# common Sort2D测试 ######################################
-src_data = np.array([
-    [3, 2, 5],
-    [4, 3, 1],
-    [4, 3, 1],
-    [4, 3, 1],
-    [2, 2, 9],], dtype=np.float32)
-print('src_data.dtype:{}'.format(src_data.dtype))
-print('src_data:\n{}'.format(src_data))
-# sort_1 = np_common.Sort2D(src_data, [1,0])
-# print('sort_1.dtype:{}'.format(sort_1.dtype))
-# print('sort_1:\n{}'.format(sort_1))
-# sort_2 = np_common.Sort2D(src_data, [2])
-# print('sort_2.dtype:{}'.format(sort_2.dtype))
-# print('sort_2:\n{}'.format(sort_2))
-np.random.shuffle(src_data)
-# print('shuffle_data.dtype:{}'.format(shuffle_data.dtype))
-print('shuffle_data:\n{}'.format(src_data))
+# src_data = np.array([
+#     [3, 2, 5],
+#     [4, 3, 1],
+#     [4, 3, 1],
+#     [4, 3, 1],
+#     [2, 2, 9],], dtype=np.float32)
+# print('src_data.dtype:{}'.format(src_data.dtype))
+# print('src_data:\n{}'.format(src_data))
+# # sort_1 = np_common.Sort2D(src_data, [1,0])
+# # print('sort_1.dtype:{}'.format(sort_1.dtype))
+# # print('sort_1:\n{}'.format(sort_1))
+# # sort_2 = np_common.Sort2D(src_data, [2])
+# # print('sort_2.dtype:{}'.format(sort_2.dtype))
+# # print('sort_2:\n{}'.format(sort_2))
+# np.random.shuffle(src_data)
+# # print('shuffle_data.dtype:{}'.format(shuffle_data.dtype))
+# print('shuffle_data:\n{}'.format(src_data))
 
 # test_data_list=[]
 # for iloop in range(0, 3):
