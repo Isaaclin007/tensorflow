@@ -18,6 +18,8 @@ import matplotlib.dates as mdate
 from matplotlib.font_manager import FontProperties
 zhfont = FontProperties(fname=r"/usr/share/fonts/truetype/wqy/wqy-microhei.ttc", size=15)
 import pp_daily_update
+import avg_wave
+from common.base_common import *
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -35,6 +37,14 @@ def GetProprocessedData(ts_code):
         print("File not exist: %s" % stock_pp_file_name)
         return []
 
+def PlotCondition(pp_data, data_name, data_value, input_color):
+    if len(pp_data) == 0:
+        return
+    filter_data = pp_data[pp_data[data_name] == data_value]
+    if len(filter_data) == 0:
+        return
+    xs = [datetime.strptime(d, '%Y%m%d').date() for d in filter_data['trade_date'].astype(str).values]
+    plt.plot(xs, filter_data['close'].values, 'o', color=input_color, label='%s_%u' % (data_name, data_value), linewidth=1)
 
 def ShowAStock(ts_code, show_values=['open', 
                                      'close', 
@@ -48,6 +58,7 @@ def ShowAStock(ts_code, show_values=['open',
                                      'vol_30_avg',
                                      'wave']):
     pp_data = GetProprocessedData(ts_code)
+    # pp_data = pp_data[:500]
     if len(pp_data) == 0:
         return
     # pp_data = pp_daily_update.GetPreprocessedDataExt(ts_code)
@@ -81,13 +92,13 @@ def ShowAStock(ts_code, show_values=['open',
     for name in show_values:
         if name == 'wave':
             wave_kernel.AppendWaveData(pp_data)
-            peak_data = pp_data[pp_data['wave_extreme'] == wave_kernel.EXTREME_PEAK]
-            xs = [datetime.strptime(d, '%Y%m%d').date() for d in peak_data['trade_date'].astype(str).values]
-            plt.plot(xs, peak_data[wave_kernel.wave_index].values, 'ro', label='peak', linewidth=1)
-
-            valley_data = pp_data[pp_data['wave_extreme'] == wave_kernel.EXTREME_VALLEY]
-            xs = [datetime.strptime(d, '%Y%m%d').date() for d in valley_data['trade_date'].astype(str).values]
-            plt.plot(xs, valley_data[wave_kernel.wave_index].values, 'go', label='valley', linewidth=1)
+            PlotCondition(pp_data, 'wave_extreme', wave_kernel.EXTREME_PEAK)
+            PlotCondition(pp_data, 'wave_extreme', wave_kernel.EXTREME_VALLEY)
+        elif name == 'avg_wave':
+            avg_wave.AppendWaveData(pp_data)
+            print(pp_data)
+            PlotCondition(pp_data, 'avg_wave_status', WS_UP, 'r')
+            PlotCondition(pp_data, 'avg_wave_status', WS_DOWN, 'black')
         else:
             plt.plot(xs, pp_data[name].values, label=name, linewidth=1)
     # plt.plot(xs, pp_data['vol'].values, label='vol', linewidth=1)
@@ -104,9 +115,9 @@ if __name__ == "__main__":
         # ShowAStock(sys.argv[1])
         ShowAStock(sys.argv[1], ['close', 'close_30_avg', 'wave'])
     else:
-        code_list = ['002236.SZ', '002415.SZ', '000650.SZ', '000937.SZ', '600104.SH']
+        code_list = ['000001.SZ']
         for ts_code in code_list:
-            ShowAStock(ts_code)
+            ShowAStock(ts_code, ['close', 'close_30_avg', 'avg_wave'])
 
     
 
