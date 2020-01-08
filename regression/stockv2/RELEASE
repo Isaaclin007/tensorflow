@@ -1,0 +1,14 @@
+1.2.0:
+stock v2重构：
+1. tushare_data 封装 class DataProvider（已完成）
+2. feature 封装 class Feature（已完成），测试 list.append 性能（性能与直接赋值数量级相同）
+3. dataset 封装 class Dataset（已完成）
+4. 增加并行计算接口 ListMultiThread（已完成）
+5. avg_wave 重构（已完成）
+6. dl_model 封装 class DLModel
+
+评估 Dataset 中的 acture data是否需要扩展以代替 pp data 在之后应用层中的应用
+如果不扩展则仅用于支持 DCFa3D data
+avg_wave prediction 测试（分散仓位）：
+    将 2维 prediction 和 acture date 映射成 按时间分组的 list[[date1], [date2]]，每个 date 组内有多个 stock data，按时间顺序测试，
+    维护 持仓状态 列表（含out_date，到达out_date时从持仓状态列表中删除，有空位就可以增加）
