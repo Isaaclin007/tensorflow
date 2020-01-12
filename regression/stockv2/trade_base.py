@@ -44,6 +44,14 @@ class TradeBase(object):
                                             self.feature.setting_name)
         
         self.predict_threshold = predict_threshold
+        self.offset_increase     = 0
+        self.offset_ts_code      = 1
+        self.offset_pre_on_date  = 2
+        self.offset_on_date      = 3
+        self.offset_pre_off_date = 4
+        self.offset_off_date     = 5
+        self.offset_holding_days = 6
+        self.acture_size = 7
         self.index_increase     = self.feature.feature_size
         self.index_ts_code      = self.feature.feature_size + 1
         self.index_pre_on_date  = self.feature.feature_size + 2
@@ -51,6 +59,7 @@ class TradeBase(object):
         self.index_pre_off_date = self.feature.feature_size + 4
         self.index_off_date     = self.feature.feature_size + 5
         self.index_holding_days = self.feature.feature_size + 6
+        self.rtest_max_holding_num = 2
 
     def FileNameDataset(self):
         return './data/dataset/%s.npy' % self.setting_name
@@ -58,7 +67,7 @@ class TradeBase(object):
     def AppendDataUnit(self, data_unit):
         if self.dataset_len >= self.dataset_size:
             self.dataset_size += 1000000
-            new_dataset = np.zeros((self.dataset_size, self.feature.feature_size + 7))
+            new_dataset = np.zeros((self.dataset_size, self.feature.feature_size + self.acture_size))
             if self.dataset_len > 0:
                 new_dataset[:self.dataset_len] = self.dataset[:]
             self.dataset = new_dataset
@@ -78,34 +87,34 @@ class TradeBase(object):
             print('Error: TradeRecord pre_on_day_index == INVALID_INDEX')
             return
         elif on_day_index == INVALID_INDEX:
-            pre_on_date = pp_data.loc[pre_on_day_index,'trade_date']
+            pre_on_date = pp_data[pre_on_day_index][PPI_trade_date]
             on_date = INVALID_DATE
             pre_off_date = INVALID_DATE
             off_date = INVALID_DATE
             increase = 0.0
             holding_days = 0
         elif pre_off_day_index == INVALID_INDEX:
-            pre_on_date = pp_data.loc[pre_on_day_index,'trade_date']
-            on_date = pp_data.loc[on_day_index,'trade_date']
+            pre_on_date = pp_data[pre_on_day_index][PPI_trade_date]
+            on_date = pp_data[on_day_index][PPI_trade_date]
             pre_off_date = INVALID_DATE
             off_date = INVALID_DATE
-            increase = pp_data.loc[0, 'open'] / pp_data.loc[on_day_index, 'open'] - 1.0
+            increase = pp_data[0][PPI_open] / pp_data[on_day_index][PPI_open] - 1.0
             holding_days = on_day_index
         elif off_day_index == INVALID_INDEX:
-            pre_on_date = pp_data.loc[pre_on_day_index,'trade_date']
-            on_date = pp_data.loc[on_day_index,'trade_date']
-            pre_off_date = pp_data.loc[pre_off_day_index,'trade_date']
+            pre_on_date = pp_data[pre_on_day_index][PPI_trade_date]
+            on_date = pp_data[on_day_index][PPI_trade_date]
+            pre_off_date = pp_data[pre_off_day_index][PPI_trade_date]
             off_date = INVALID_DATE
-            increase = pp_data.loc[0, 'open'] / pp_data.loc[on_day_index, 'open'] - 1.0
+            increase = pp_data[0][PPI_open] / pp_data[on_day_index][PPI_open] - 1.0
             holding_days = on_day_index
         else:
-            pre_on_date = pp_data.loc[pre_on_day_index,'trade_date']
-            on_date = pp_data.loc[on_day_index,'trade_date']
-            pre_off_date = pp_data.loc[pre_off_day_index,'trade_date']
-            off_date = pp_data.loc[off_day_index,'trade_date']
-            increase = pp_data.loc[off_day_index, 'open'] / pp_data.loc[on_day_index, 'open'] - 1.0
+            pre_on_date = pp_data[pre_on_day_index][PPI_trade_date]
+            on_date = pp_data[on_day_index][PPI_trade_date]
+            pre_off_date = pp_data[pre_off_day_index][PPI_trade_date]
+            off_date = pp_data[off_day_index][PPI_trade_date]
+            increase = pp_data[off_day_index][PPI_open] / pp_data[on_day_index][PPI_open] - 1.0
             holding_days = on_day_index - off_day_index
-        ts_code = pp_data.loc[0,'ts_code']
+        ts_code = int(pp_data[0][PPI_ts_code])
         if print_trade_record:
             base_common.PrintTrade(trade_count, ts_code, pre_on_date, on_date, pre_off_date, off_date, 
                                    increase, holding_days)
@@ -113,7 +122,7 @@ class TradeBase(object):
             data_unit = []
             if self.feature.AppendFeature(pp_data, pre_on_day_index, data_unit):
                 data_unit.append(float(increase))
-                data_unit.append(float(ts_code[:6]))
+                data_unit.append(float(ts_code))
                 data_unit.append(float(pre_on_date))
                 data_unit.append(float(on_date))
                 data_unit.append(float(pre_off_date))
@@ -135,7 +144,7 @@ class TradeBase(object):
         if data_len == 0:
             return 0.0
         self.TradePP(pp_data)
-        ts_code = pp_data.loc[0, 'ts_code']
+        ts_code = int(pp_data[0][PPI_ts_code])
 
         # global status
         trade_count = 0
@@ -223,7 +232,7 @@ class TradeBase(object):
         if print_trade_record:
             base_common.PrintTrade('sum', ts_code, '--', '--', '--', '--', capital_ratio, sum_holding_days)
         else:
-            code_index = self.data_source.code_index_map[ts_code]
+            code_index = self.data_source.code_index_map_int[ts_code]
             base_common.PrintTrade(code_index, ts_code, '--', '--', '--', '--', capital_ratio, sum_holding_days)
         return sum_increase, sum_holding_days
 
@@ -239,7 +248,8 @@ class TradeBase(object):
 
     def TradeTestStock(self, ts_code):
         pp_data = self.data_source.LoadStockPPData(ts_code, True)
-        self.TradeTest(pp_data, True, False)
+        # self.TradeTest(pp_data, True, False)
+        self.TradeTest(pp_data, False, True)
 
     def GetDataset(self, split_date):
         file_name = self.FileNameDataset()
@@ -249,7 +259,8 @@ class TradeBase(object):
         train_data = dataset[pos]
         test_data = dataset[~pos]
 
-        test_data = np_common.Sort2D(test_data, [self.index_pre_on_date, self.index_ts_code])
+        test_data = np_common.Sort2D(test_data, 
+                                     [self.index_pre_on_date, self.index_ts_code])
 
         print("train: {}".format(train_data.shape))
         print("test: {}".format(test_data.shape))
@@ -265,63 +276,112 @@ class TradeBase(object):
 
     def RTest(self, dl_model, test_features, test_acture, test_features_pretreated=False):
         predictions = dl_model.Predict(test_features, test_features_pretreated)
-        pos = predictions > self.predict_threshold
+        pos = predictions.flatten() > self.predict_threshold
         predictions_f = predictions[pos]
+        print('predictions_f:{}'.format(predictions_f.shape))
         acture_f = test_acture[pos]
+        merge_data = np.hstack((acture_f, predictions_f))
+        predictions_index = self.acture_size
+        merge_data = np_common.Sort2D(merge_data, 
+                                      [self.offset_pre_on_date, predictions_index], 
+                                      [True, False])
+        pool = []  # 保存 off_date
+        trade_count = 0
+        sum_increase = 0.0
+        sum_holding_days = 0
+        for iloop in range(len(merge_data)):
+            temp_pre_on = merge_data[iloop][self.offset_pre_on_date]
+            temp_off = merge_data[iloop][self.offset_off_date]
+            for kloop in range(len(pool)):
+                pool_off = pool[kloop]
+                if pool_off != INVALID_DATE and pool_off <= temp_pre_on:
+                    pool.pop(kloop)
+                    break
+            if len(pool) < self.rtest_max_holding_num:
+                pool.append(temp_off)
+                base_common.PrintTrade(trade_count, 
+                                        merge_data[iloop][self.offset_ts_code], 
+                                        merge_data[iloop][self.offset_pre_on_date], 
+                                        merge_data[iloop][self.offset_on_date], 
+                                        merge_data[iloop][self.offset_pre_off_date], 
+                                        merge_data[iloop][self.offset_off_date], 
+                                        merge_data[iloop][self.offset_increase], 
+                                        merge_data[iloop][self.offset_holding_days])
+                sum_increase += merge_data[iloop][self.offset_increase]
+                sum_holding_days += merge_data[iloop][self.offset_holding_days]
+                trade_count += 1
+        base_common.PrintTrade('sum', '--', '--', '--', '--', '--', sum_increase, sum_holding_days)
+            # pos = holding_status[:, self.offset_off_date] <= merge_data[iloop][self.offset_pre_on_date]
+            # print('pos:{}'.format(pos))
+            # holding_status[pos][self.offset_ts_code] = 0
+            # for kloop in range(self.rtest_max_holding_num):
+            #     if holding_status[kloop][self.offset_ts_code] == 0 or \
+            #        holding_status[kloop][self.offset_off_date] <= merge_data[iloop][self.offset_pre_on_date]:
+            #         holding_status[kloop] = merge_data[iloop]
+            #         base_common.PrintTrade(trade_count, 
+            #                                merge_data[iloop][self.offset_ts_code], 
+            #                                merge_data[iloop][self.offset_pre_on_date], 
+            #                                merge_data[iloop][self.offset_on_date], 
+            #                                merge_data[iloop][self.offset_pre_off_date], 
+            #                                merge_data[iloop][self.offset_off_date], 
+            #                                merge_data[iloop][self.offset_increase], 
+            #                                merge_data[iloop][self.offset_holding_days])
+            #         trade_count += 1
+            #         break
         
     
-class TradeBaseTest(TradeBase):
-    def __init__(self,
-                 o_data_source,
-                 o_feature,
-                 avg_cycle):
-        class_name = 'TradeBaseTest'
-        app_setting_name = '%u' % avg_cycle
-        self.avg_cycle = avg_cycle
-        self.avg_cycle_name = 'close_%u_avg' % avg_cycle
-        super(TradeBaseTest, self).__init__(o_data_source, o_feature, class_name, app_setting_name)
+# class TradeBaseTest(TradeBase):
+#     def __init__(self,
+#                  o_data_source,
+#                  o_feature,
+#                  avg_cycle):
+#         class_name = 'TradeBaseTest'
+#         app_setting_name = '%u' % avg_cycle
+#         self.avg_cycle = avg_cycle
+#         self.avg_cycle_name = 'close_%u_avg' % avg_cycle
+#         super(TradeBaseTest, self).__init__(o_data_source, o_feature, class_name, app_setting_name)
 
-    def TradePP(self, pp_data):
-        # Nothing
-        a = 1
+#     def TradePP(self, pp_data):
+#         # Nothing
+#         a = 1
 
-    def TradeNextStatus(self, pp_data, day_index):
-        pre_day_index = day_index + 1
-        if pre_day_index >= len(pp_data):
-            return TS_NONE
-        if pp_data.loc[day_index, self.avg_cycle_name] > pp_data.loc[pre_day_index, self.avg_cycle_name]:
-            return TS_ON
-        else:
-            return TS_OFF
+#     def TradeNextStatus(self, pp_data, day_index):
+#         pre_day_index = day_index + 1
+#         if pre_day_index >= len(pp_data):
+#             return TS_NONE
+#         if pp_data.loc[day_index, self.avg_cycle_name] > pp_data.loc[pre_day_index, self.avg_cycle_name]:
+#             return TS_ON
+#         else:
+#             return TS_OFF
 
-def main(argv):
-    del argv
+# def main(argv):
+#     del argv
 
-    o_data_source = tushare_data.DataSource(20000101, '', '', 1, 20000101, 20200106, False, False, True)
-    # o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
-    o_feature = feature.Feature(30, feature.FUT_5REGION5_NORM, 1, False, False)
-    o_trade_test = TradeBaseTest(o_data_source, o_feature, 30)
-    split_date = 20170101
-    o_dl_model = dl_model.DLModel('%s_%u' % (o_trade_test.setting_name, split_date), 
-                                  o_feature.feature_unit_num, 
-                                  o_feature.feature_unit_size,
-                                  32, 10240, 0.004, 'mean_absolute_tp0_max_ratio_error')
-    if FLAGS.mode == 'data':
-        o_data_source.DownloadData()
-        o_data_source.UpdatePPData()
-    elif FLAGS.mode == 'testall':
-        o_trade_test.TradeTestAll()
-    elif FLAGS.mode == 'test':
-        o_trade_test.TradeTestStock(FLAGS.c)
-    elif FLAGS.mode == 'train':
-        tf, tl, vf, vl, td = o_trade_test.GetDataset(split_date)
-        o_dl_model.Train(tf, tl, vf, vl, 10)
+#     o_data_source = tushare_data.DataSource(20000101, '', '', 1, 20000101, 20200106, False, False, True)
+#     # o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
+#     o_feature = feature.Feature(30, feature.FUT_5REGION5_NORM, 1, False, False)
+#     o_trade_test = TradeBaseTest(o_data_source, o_feature, 30)
+#     split_date = 20170101
+#     o_dl_model = dl_model.DLModel('%s_%u' % (o_trade_test.setting_name, split_date), 
+#                                   o_feature.feature_unit_num, 
+#                                   o_feature.feature_unit_size,
+#                                   32, 10240, 0.004, 'mean_absolute_tp0_max_ratio_error')
+#     if FLAGS.mode == 'data':
+#         o_data_source.DownloadData()
+#         o_data_source.UpdatePPData()
+#     elif FLAGS.mode == 'testall':
+#         o_trade_test.TradeTestAll()
+#     elif FLAGS.mode == 'test':
+#         o_trade_test.TradeTestStock(FLAGS.c)
+#     elif FLAGS.mode == 'train':
+#         tf, tl, vf, vl, td = o_trade_test.GetDataset(split_date)
+#         o_dl_model.Train(tf, tl, vf, vl, 10)
         
-    exit()
+#     exit()
 
-if __name__ == "__main__":
-    flags.DEFINE_string('mode', 'test', 'test | testall | train')
-    flags.DEFINE_string('c', '000001.SZ', 'ts code')
-    # flags.DEFINE_boolean('testall', False, 'test all stocks, save dataset')
-    app.run(main)
+# if __name__ == "__main__":
+#     flags.DEFINE_string('mode', 'test', 'test | testall | train')
+#     flags.DEFINE_string('c', '000001.SZ', 'ts code')
+#     # flags.DEFINE_boolean('testall', False, 'test all stocks, save dataset')
+#     app.run(main)
     

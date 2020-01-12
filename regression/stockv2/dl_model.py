@@ -78,7 +78,7 @@ class DLModel():
         self.save_step = save_step
         self.test_func = test_func
         self.test_param = test_param
-        self.continue_train = True
+        self.continue_train = False
         self.losses = []
         self.val_losses = []
         self.test_increase = []
@@ -115,13 +115,13 @@ class DLModel():
         model.compile(loss=active_loss, optimizer=my_optimizer, metrics=[active_loss])
         return model
 
-    def SaveModel(self, model, mean, std, epoch=-1):
+    def SaveModel(self, model, epoch=-1):
         temp_path_name, model_name, mean_name, std_name = self.ModelFileNames(epoch)
         if not os.path.exists(temp_path_name):
             os.makedirs(temp_path_name)
         model.save(model_name)
-        np.save(mean_name, mean)
-        np.save(std_name, std)
+        np.save(mean_name, self.mean)
+        np.save(std_name, self.std)
 
     def LoadHistoryUnit(self, his_name):
         file_name = '%s/%s.npy' % (self.model_path, his_name)
@@ -143,6 +143,7 @@ class DLModel():
         else:
             load_epoch = epoch
         temp_path_name, model_name, mean_name, std_name = self.ModelFileNames(load_epoch)
+        print('LoadModel:%s' % model_name)
         self.model = keras.models.load_model(model_name, custom_objects=loss.LossDict())
         self.mean = np.load(mean_name)
         self.std = np.load(std_name)
@@ -247,7 +248,7 @@ class DLModel():
                 if temp_epoch % self.dl_model.save_step == 0:
                     if self.dl_model.test_func != None:
                         self.test_increase.append([temp_epoch, self.dl_model.test_func(self.dl_model.test_param, self.model)])
-                    self.dl_model.SaveModel(self.model, mean, std, temp_epoch)
+                    self.dl_model.SaveModel(self.model, temp_epoch)
                     self.dl_model.SaveHistory(self.losses, self.val_losses, self.test_increase)
 
         # The patience parameter is the amount of epochs to check for improvement.

@@ -14,6 +14,7 @@ import preprocess
 sys.path.append("..")
 from common import base_common
 from common import np_common
+from common.const_def import *
 
 pro = ts.pro_api()
 
@@ -179,6 +180,10 @@ class DataSource():
         self.code_list = StockCodes(self.release_end_date, self.industry_filter, self.code_filter, self.sample_step)
         self.date_list = TradeDateListRange(self.start_date, self.end_date)
         self.code_index_map = base_common.ListToIndexMap(self.code_list, False)
+        code_list_int = []
+        for iloop in range(len(self.code_list)):
+            code_list_int.append(int(self.code_list[iloop][0:6]))
+        self.code_index_map_int = base_common.ListToIndexMap(code_list_int)
 
     def ShowStockCodes(self):
         print('%-7s%s' % ('index', 'ts_code'))
@@ -200,7 +205,7 @@ class DataSource():
         return name_list
 
     def FileNameStockPPData(self, ts_code):
-        temp_file_name = './data/preprocessed/%s_%s.csv' %(\
+        temp_file_name = './data/preprocessed/%s_%s.npy' %(\
             ts_code, \
             self.setting_name_stock_pp)
         return temp_file_name
@@ -310,23 +315,23 @@ class DataSource():
         stock_pp_file_name = self.FileNameStockPPData(ts_code)
         if not os.path.exists(stock_pp_file_name):
             ###################### temp transfer ##########################
-            temp_setting_name = '%s_%u_%u_%u' % (\
-                            str(self.end_date), \
-                            int(self.use_daily_basic), \
-                            int(self.use_money_flow), \
-                            int(self.use_adj_factor))
-            temp_file_name = './data/preprocessed/%s_%s.csv' %(\
-                            ts_code, \
-                            temp_setting_name)
-            if os.path.exists(temp_file_name):
-                shutil.move(temp_file_name, stock_pp_file_name)
-                return
+            # temp_setting_name = '%s_%u_%u_%u' % (\
+            #                 str(self.end_date), \
+            #                 int(self.use_daily_basic), \
+            #                 int(self.use_money_flow), \
+            #                 int(self.use_adj_factor))
+            # temp_file_name = './data/preprocessed/%s_%s.csv' %(\
+            #                 ts_code, \
+            #                 temp_setting_name)
+            # if os.path.exists(temp_file_name):
+            #     shutil.move(temp_file_name, stock_pp_file_name)
+            #     return
             ###############################################################
             merge_df = self.LoadDownloadStockData(ts_code)
             pp_data = preprocess.StockDataPreProcess(merge_df, self.adj_mode)
             if len(pp_data) > 0:
                 base_common.MKFileDirs(stock_pp_file_name)
-                pp_data.to_csv(stock_pp_file_name)
+                np.save(stock_pp_file_name, pp_data)
             else:
                 print("UpdateStockPPData error: %s" % ts_code)
                 return
@@ -335,10 +340,10 @@ class DataSource():
     def LoadStockPPData(self, ts_code, cut_from_start_date=False):
         stock_pp_file_name = self.FileNameStockPPData(ts_code)
         if not os.path.exists(stock_pp_file_name):
-            return pd.DataFrame()
-        pp_data = pd.read_csv(stock_pp_file_name)
+            return []
+        pp_data = np.load(stock_pp_file_name)
         if cut_from_start_date:
-            pp_data = pp_data[pp_data['trade_date'] >= int(self.start_date)]
+            pp_data = pp_data[pp_data[:,PPI_trade_date] >= int(self.start_date)]
         return pp_data
 
     def UpdatePPData(self):
@@ -419,7 +424,11 @@ class DataSource():
 
 if __name__ == "__main__":
     data_source = DataSource(20000101, '', '', 1, 20000101, 20200106, False, False, True)
-    data_source.ShowStockCodes()
-    data_source.DownloadData()
-    data_source.UpdatePPData()
+    # data_source.ShowStockCodes()
+    # data_source.DownloadData()
+    # data_source.UpdatePPData()
+    start_time = time.time()
+    data_source.UpdateStockPPData('000001.SZ')
+    print(time.time() - start_time)
+
 

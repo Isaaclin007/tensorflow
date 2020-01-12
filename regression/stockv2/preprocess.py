@@ -9,6 +9,10 @@ import datetime
 import sys
 import math
 import tushare_data
+sys.path.append("..")
+from common import base_common
+from common import np_common
+from common.const_def import *
 
 preprocess_ref_days = 100
 
@@ -36,35 +40,31 @@ def StockDataPreProcess_AddAvg(src_df, target_name, avg_period):
 SUSPEND_BORDER_NONE = 0
 SUSPEND_BORDER_SUSPEND = 1
 SUSPEND_BORDER_RESUMPTION = 2
-def StockDataPreProcess_AddSuspendBorder(src_df, previous_df=[]):
-    if len(src_df) == 0:
-        print("Warning: StockDataPreProcess_AddSuspendBorder, len(src_df)==0")
-        return
-    src_df['suspend'] = SUSPEND_BORDER_NONE
+def StockDataPreProcess_AddSuspendBorder(pp_data, previous_data=[]):
     global g_trade_date_list
     if len(g_trade_date_list) == 0:
-        g_trade_date_list = tushare_data.TradeDateLowLevel(src_df.loc[0, 'trade_date']).astype(np.int64)
+        g_trade_date_list = tushare_data.TradeDateLowLevel(base_common.CurrentDate()).astype(np.int64)
     else:
-        if int(g_trade_date_list[0]) < int(src_df.loc[0, 'trade_date']):
+        if int(g_trade_date_list[0]) < int(pp_data[0][PPI_trade_date]):
             print("Error: StockDataPreProcess_AddSuspendBorder, len(src_df)==0")
             return
 
-    src_date_list = src_df['trade_date'].values.astype(np.int64)
+    src_date_list = pp_data[:, PPI_trade_date]
     dst_index = 0
 
     for iloop in range(0, len(src_date_list)):
         sync_flag = (g_trade_date_list[dst_index] == src_date_list[iloop])
         if not sync_flag:
             if iloop > 0:
-                src_df.loc[iloop, 'suspend'] = SUSPEND_BORDER_SUSPEND
-                src_df.loc[iloop-1, 'suspend'] = SUSPEND_BORDER_RESUMPTION
+                pp_data[iloop][PPI_suspend] = SUSPEND_BORDER_SUSPEND
+                pp_data[iloop - 1][PPI_suspend] = SUSPEND_BORDER_RESUMPTION
             dst_index = int(np.where(g_trade_date_list == src_date_list[iloop])[0])
         dst_index += 1
-    if len(previous_df) > 0:
-        sync_flag = (g_trade_date_list[dst_index] == int(previous_df.loc[0, 'trade_date']))
+    if len(previous_data) > 0:
+        sync_flag = (g_trade_date_list[dst_index] == int(previous_data[0][PPI_trade_date]))
         if not sync_flag:
-            previous_df.loc[0, 'suspend'] = SUSPEND_BORDER_SUSPEND
-            src_df.loc[len(src_date_list)-1, 'suspend'] = SUSPEND_BORDER_RESUMPTION
+            previous_data[0][PPI_suspend] = SUSPEND_BORDER_SUSPEND
+            pp_data[len(pp_data)-1][PPI_suspend] = SUSPEND_BORDER_RESUMPTION
 
 
 def StockDataPreProcess_AddAdjFlag(src_df, previous_df=[]):
@@ -82,19 +82,108 @@ def StockDataPreProcess_AddAdjFlag(src_df, previous_df=[]):
         if src_df.loc[len(src_df)-1, 'adj_factor'] != previous_df.loc[0, 'adj_factor']:
             src_df.loc[len(src_df)-1, 'adj_flag'] = 1
 
-def StockDataPreProcess_AdjForward(src_df):
-    if len(src_df) == 0:
-        print("Warning: StockDataPreProcess_AdjForward, len(src_df)==0")
-        return
+def PPSpread(pp_data, col_index, sum_days):
+    sum_len = len(pp_data) - (sum_days - 1)
+    spread_data = np.zeros((sum_len, sum_days))
+    for iloop in range(sum_days):
+        spread_data[:, iloop] = pp_data[iloop:iloop+sum_len, col_index]
+    return spread_data
 
-    for iloop in reversed(range(0, len(src_df))):
-        adj_factor = src_df.loc[iloop, 'adj_factor']
-        src_df.loc[iloop, 'open'] = src_df.loc[iloop, 'open'] * adj_factor
-        src_df.loc[iloop, 'close'] = src_df.loc[iloop, 'close'] * adj_factor
-        src_df.loc[iloop, 'high'] = src_df.loc[iloop, 'high'] * adj_factor
-        src_df.loc[iloop, 'low'] = src_df.loc[iloop, 'low'] * adj_factor
+def StockDataPreProcess(df, adj_mode):
+    data_len = len(df)
+    if data_len <= preprocess_ref_days:
+        print('Error:StockDataPreProcess:data_len=%u' % data_len)
+        return []
+
+    # get data use flag 
+    use_daily_basic = df.columns.contains('turnover_rate_f')
+    use_money_flow = df.columns.contains('buy_sm_vol')
+    use_adj_factor = df.columns.contains('adj_factor')
+    if (adj_mode != '') and (not use_adj_factor):
+        print('Error:StockDataPreProcess:adj_mode=%s,use_adj_factor=%u' % (adj_mode, int(use_adj_factor)))
+        return []
+
+    # copy df data to np data
+    ts_code = df.loc[0, 'ts_code']
+    pp_data = np.zeros((data_len, PPI_NUM))
+    pp_data[:,PPI_ts_code] = int(ts_code[:6])
+    pp_data[:,PPI_trade_date] = df['trade_date'].values
+    pp_data[:,PPI_open] = df['open'].values
+    pp_data[:,PPI_close] = df['close'].values
+    pp_data[:,PPI_high] = df['high'].values
+    pp_data[:,PPI_low] = df['low'].values
+    pp_data[:,PPI_vol] = df['vol'].values
+    if use_daily_basic:
+        pp_data[:,PPI_turnover_rate_f] = df['turnover_rate_f'].values
+    if use_money_flow:
+        pp_data[:,PPI_buy_sm_vol] = df['buy_sm_vol'].values
+        pp_data[:,PPI_sell_sm_vol] = df['sell_sm_vol'].values
+        pp_data[:,PPI_buy_md_vol] = df['buy_md_vol'].values
+        pp_data[:,PPI_sell_md_vol] = df['sell_md_vol'].values
+        pp_data[:,PPI_buy_lg_vol] = df['buy_lg_vol'].values
+        pp_data[:,PPI_sell_lg_vol] = df['sell_lg_vol'].values
+        pp_data[:,PPI_buy_elg_vol] = df['buy_elg_vol'].values
+        pp_data[:,PPI_sell_elg_vol] = df['sell_elg_vol'].values
+        pp_data[:,PPI_net_mf_vol] = df['net_mf_vol'].values
+    if use_adj_factor:
+        pp_data[:,PPI_adj_factor] = df['adj_factor'].values
+
+    # verify
+    if np.isnan(pp_data).sum() > 0:
+        print('Error: StockDataPreProcess invalid data nan')
+        return []
+    if np.isinf(pp_data).sum() > 0:
+        print('Error: StockDataPreProcess invalid data inf')
+        return []
+    if ((pp_data[:,PPI_trade_date] <= 0).sum() > 0) or \
+            ((pp_data[:,PPI_open] <= 0).sum() > 0) or \
+            ((pp_data[:,PPI_close] <= 0).sum() > 0) or \
+            ((pp_data[:,PPI_high] <= 0).sum() > 0) or \
+            ((pp_data[:,PPI_low] <= 0).sum() > 0):
+        print('Error: StockDataPreProcess invalid data 0')
+        return []
+
+    # adj forward
+    if adj_mode == 'f':  # forward
+        pp_data[:,PPI_open] *= pp_data[:,PPI_adj_factor]
+        pp_data[:,PPI_close] *= pp_data[:,PPI_adj_factor]
+        pp_data[:,PPI_high] *= pp_data[:,PPI_adj_factor]
+        pp_data[:,PPI_low] *= pp_data[:,PPI_adj_factor]
     
-def StockDataPreProcess(stock_data_df, adj_mode):
+    # pre_close
+    pp_data[:data_len-1,PPI_pre_close] = pp_data[1:data_len,PPI_close]
+    pp_data[data_len-1][PPI_pre_close] = pp_data[data_len-1][PPI_close]
+
+    # increase
+    pp_data[:,PPI_open_increase] = (pp_data[:,PPI_open] / pp_data[:,PPI_pre_close] - 1.0) * 100.0
+    pp_data[:,PPI_close_increase] = (pp_data[:,PPI_close] / pp_data[:,PPI_pre_close] - 1.0) * 100.0
+    pp_data[:,PPI_high_increase] = (pp_data[:,PPI_high] / pp_data[:,PPI_pre_close] - 1.0) * 100.0
+    pp_data[:,PPI_low_increase] = (pp_data[:,PPI_low] / pp_data[:,PPI_pre_close] - 1.0) * 100.0
+
+    # region 5
+    r5_len = data_len - 4
+    pp_data[:r5_len, PPI_open_5] = pp_data[4:4+r5_len, PPI_open]
+    pp_data[:r5_len, PPI_close_5] = pp_data[:r5_len, PPI_close]
+    pp_data[:r5_len, PPI_high_5] = np.max(PPSpread(pp_data, PPI_high, 5), axis=1)
+    pp_data[:r5_len, PPI_low_5] = np.min(PPSpread(pp_data, PPI_low, 5), axis=1)
+    pp_data[:r5_len, PPI_vol_5] = np.sum(PPSpread(pp_data, PPI_vol, 5), axis=1)
+    if use_daily_basic:
+        pp_data[:r5_len, PPI_turnover_rate_f_5] = np.sum(PPSpread(pp_data, PPI_turnover_rate_f, 5), axis=1)
+    
+    # avg
+    pp_data[:data_len-(5-1), PPI_close_5_avg] = np.mean(PPSpread(pp_data, PPI_close, 5), axis=1)
+    pp_data[:data_len-(10-1), PPI_close_10_avg] = np.mean(PPSpread(pp_data, PPI_close, 10), axis=1)
+    pp_data[:data_len-(30-1), PPI_close_30_avg] = np.mean(PPSpread(pp_data, PPI_close, 30), axis=1)
+    pp_data[:data_len-(100-1), PPI_close_100_avg] = np.mean(PPSpread(pp_data, PPI_close, 100), axis=1)
+    pp_data[:data_len-(5-1), PPI_vol_5_avg] = np.mean(PPSpread(pp_data, PPI_vol, 5), axis=1)
+    pp_data[:data_len-(10-1), PPI_vol_10_avg] = np.mean(PPSpread(pp_data, PPI_vol, 10), axis=1)
+    pp_data[:data_len-(30-1), PPI_vol_30_avg] = np.mean(PPSpread(pp_data, PPI_vol, 30), axis=1)
+    pp_data[:data_len-(100-1), PPI_vol_100_avg] = np.mean(PPSpread(pp_data, PPI_vol, 100), axis=1)
+    
+    StockDataPreProcess_AddSuspendBorder(pp_data)
+    return pp_data[:data_len - preprocess_ref_days]
+
+def StockDataPreProcessv1(stock_data_df, adj_mode):
     src_basic_col_names_str = [
         'ts_code',
         'trade_date'
