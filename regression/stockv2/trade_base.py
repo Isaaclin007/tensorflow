@@ -31,19 +31,22 @@ class TradeBase(object):
                  o_feature, 
                  class_name,
                  app_setting_name,
-                 predict_threshold):
+                 predict_threshold,
+                 dataset_sample_num):
         self.data_source = o_data_source
         self.feature = o_feature
         self.dataset_size = 0
         self.dataset_len = 0
         self.class_name = class_name
         self.app_setting_name = app_setting_name
-        self.setting_name = '%s_%s_%s_%s' % (self.class_name, 
-                                            self.app_setting_name, 
-                                            self.data_source.setting_name,
-                                            self.feature.setting_name)
-        
+        self.dataset_sample_num = dataset_sample_num
         self.predict_threshold = predict_threshold
+        self.setting_name = '%s_%s_%s_%s_%u' % (class_name, 
+                                                app_setting_name, 
+                                                o_data_source.setting_name,
+                                                o_feature.setting_name,
+                                                dataset_sample_num)
+        
         self.offset_increase     = 0
         self.offset_ts_code      = 1
         self.offset_pre_on_date  = 2
@@ -59,10 +62,13 @@ class TradeBase(object):
         self.index_pre_off_date = self.feature.feature_size + 4
         self.index_off_date     = self.feature.feature_size + 5
         self.index_holding_days = self.feature.feature_size + 6
-        self.rtest_max_holding_num = 2
+        self.rtest_max_holding_num = 4
 
     def FileNameDataset(self):
         return './data/dataset/%s.npy' % self.setting_name
+
+    def FileNameDSW3DDataset(self):
+        return './data/dataset/DSW3D_%s.npy' % self.setting_name
         
     def AppendDataUnit(self, data_unit):
         if self.dataset_len >= self.dataset_size:
@@ -98,37 +104,60 @@ class TradeBase(object):
             on_date = pp_data[on_day_index][PPI_trade_date]
             pre_off_date = INVALID_DATE
             off_date = INVALID_DATE
-            increase = pp_data[0][PPI_open] / pp_data[on_day_index][PPI_open] - 1.0
-            holding_days = on_day_index
+            off_price = pp_data[0][PPI_open]
+            increase = off_price / pp_data[on_day_index][PPI_open] - 1.0
+            holding_days = pre_on_day_index
         elif off_day_index == INVALID_INDEX:
             pre_on_date = pp_data[pre_on_day_index][PPI_trade_date]
             on_date = pp_data[on_day_index][PPI_trade_date]
             pre_off_date = pp_data[pre_off_day_index][PPI_trade_date]
             off_date = INVALID_DATE
-            increase = pp_data[0][PPI_open] / pp_data[on_day_index][PPI_open] - 1.0
-            holding_days = on_day_index
+            off_price = pp_data[0][PPI_open]
+            increase = off_price / pp_data[on_day_index][PPI_open] - 1.0
+            holding_days = pre_on_day_index - pre_off_day_index
         else:
             pre_on_date = pp_data[pre_on_day_index][PPI_trade_date]
             on_date = pp_data[on_day_index][PPI_trade_date]
             pre_off_date = pp_data[pre_off_day_index][PPI_trade_date]
             off_date = pp_data[off_day_index][PPI_trade_date]
-            increase = pp_data[off_day_index][PPI_open] / pp_data[on_day_index][PPI_open] - 1.0
-            holding_days = on_day_index - off_day_index
+            off_price = pp_data[off_day_index][PPI_open]
+            increase = off_price / pp_data[on_day_index][PPI_open] - 1.0
+            holding_days = pre_on_day_index - pre_off_day_index
         ts_code = int(pp_data[0][PPI_ts_code])
         if print_trade_record:
             base_common.PrintTrade(trade_count, ts_code, pre_on_date, on_date, pre_off_date, off_date, 
                                    increase, holding_days)
         if save_data_unit:
-            data_unit = []
-            if self.feature.AppendFeature(pp_data, pre_on_day_index, data_unit):
-                data_unit.append(float(increase))
-                data_unit.append(float(ts_code))
-                data_unit.append(float(pre_on_date))
-                data_unit.append(float(on_date))
-                data_unit.append(float(pre_off_date))
-                data_unit.append(float(off_date))
-                data_unit.append(float(holding_days))
-                self.AppendDataUnit(data_unit)
+            # sample num
+            if pre_off_day_index == INVALID_INDEX:
+                sample_num = pre_on_day_index + 1
+            else:
+                sample_num = pre_on_day_index - pre_off_day_index
+            if sample_num > self.dataset_sample_num:
+                sample_num = self.dataset_sample_num
+            # loop
+            for iloop in range(sample_num):
+                sample_pre_on_day_index = pre_on_day_index - iloop
+                sample_pre_on_date = pp_data[sample_pre_on_day_index][PPI_trade_date]
+                sample_on_day_index = sample_pre_on_day_index - 1
+                if sample_on_day_index < 0:
+                    sample_on_date = INVALID_DATE
+                    sample_increase = 0.0
+                    sample_holding_days = 0
+                else:
+                    sample_on_date = pp_data[sample_on_day_index][PPI_trade_date]
+                    sample_increase = off_price / pp_data[sample_on_day_index][PPI_open] - 1.0
+                    sample_holding_days = holding_days - iloop
+                data_unit = []
+                if self.feature.AppendFeature(pp_data, sample_pre_on_day_index, data_unit):
+                    data_unit.append(float(sample_increase))
+                    data_unit.append(float(ts_code))
+                    data_unit.append(float(sample_pre_on_date))
+                    data_unit.append(float(sample_on_date))
+                    data_unit.append(float(pre_off_date))
+                    data_unit.append(float(off_date))
+                    data_unit.append(float(sample_holding_days))
+                    self.AppendDataUnit(data_unit)
             # else:
             #     print('Error: TradeRecord AppendFeature False: %s' % ts_code)
         return increase, holding_days
@@ -136,13 +165,13 @@ class TradeBase(object):
     def TradePP(self, pp_data):
         a = 1
 
-    def TradeNextStatus(self, pp_data, day_index):
+    def TradeNextStatus(self, pp_data, day_index, on_day_index):
         return TS_NONE
 
     def TradeTest(self, pp_data, print_trade_record = False, save_data_unit=False):
         data_len = len(pp_data)
         if data_len == 0:
-            return 0.0
+            return 0.0, 0
         self.TradePP(pp_data)
         ts_code = int(pp_data[0][PPI_ts_code])
 
@@ -160,7 +189,7 @@ class TradeBase(object):
         off_day_index = INVALID_INDEX
 
         for day_index in reversed(range(0, data_len)):
-            next_status = self.TradeNextStatus(pp_data, day_index)
+            next_status = self.TradeNextStatus(pp_data, day_index, on_day_index)
 
             # OFF -> PRE_ON
             if trade_status == TS_OFF:
@@ -214,45 +243,36 @@ class TradeBase(object):
                                                     off_day_index, 
                                                     print_trade_record,
                                                     save_data_unit)
-        # if trade_status == TS_PRE_ON:
-        #     base_common.PrintTrade(trade_count, ts_code, pre_on_date, INVALID_DATE, INVALID_DATE, INVALID_DATE, '--', '--')
-        # elif trade_status == TS_ON:
-        #     day_index = 0
-        #     off_price = pp_data.loc[day_index, 'open']
-        #     increase = off_price / on_price - 1.0
-        #     holding_days = on_day_index - day_index
-        #     base_common.PrintTrade(trade_count, ts_code, pre_on_date, on_date, INVALID_DATE, INVALID_DATE, increase, holding_days)
-        # elif trade_status == TS_PRE_OFF:
-        #     day_index = 0
-        #     off_price = pp_data.loc[day_index, 'open']
-        #     increase = off_price / on_price - 1.0
-        #     holding_days = on_day_index - day_index
-        #     base_common.PrintTrade(trade_count, ts_code, pre_on_date, on_date, pre_off_date, INVALID_DATE, increase, holding_days)
 
         if print_trade_record:
-            base_common.PrintTrade('sum', ts_code, '--', '--', '--', '--', capital_ratio, sum_holding_days)
+            base_common.PrintTrade('sum', ts_code, '--', '--', '--', '--', sum_increase, sum_holding_days)
         else:
             code_index = self.data_source.code_index_map_int[ts_code]
-            base_common.PrintTrade(code_index, ts_code, '--', '--', '--', '--', capital_ratio, sum_holding_days)
+            base_common.PrintTrade(code_index, ts_code, '--', '--', '--', '--', sum_increase, sum_holding_days)
         return sum_increase, sum_holding_days
 
     def TradeTestAll(self):
+        sum_increase = 0.0
+        sum_holding_days = 0
         for iloop in range(len(self.data_source.code_list)):
             ts_code = self.data_source.code_list[iloop]
             pp_data = self.data_source.LoadStockPPData(ts_code, True)
-            self.TradeTest(pp_data, False, True)
-        
+            increase, holding_days = self.TradeTest(pp_data, False, True)
+            sum_increase += increase
+            sum_holding_days += holding_days
+        base_common.PrintTrade('sum', '--', '--', '--', '--', '--', sum_increase, sum_holding_days)
         file_name = self.FileNameDataset()
         base_common.MKFileDirs(file_name)
         np.save(file_name, self.dataset[:self.dataset_len])
 
     def TradeTestStock(self, ts_code):
         pp_data = self.data_source.LoadStockPPData(ts_code, True)
-        # self.TradeTest(pp_data, True, False)
-        self.TradeTest(pp_data, False, True)
+        self.TradeTest(pp_data, True, False)
+        # self.TradeTest(pp_data, False, True)
 
     def GetDataset(self, split_date):
         file_name = self.FileNameDataset()
+        # file_name = '../stock/data/dataset/wave_dataset_0_30_0_0_20120101_20000101_20000101_20190414___2_2_0_1_0_5_0.npy'
         dataset = np.load(file_name)
         print("dataset: {}".format(dataset.shape))
         pos = dataset[:,self.index_pre_on_date] < split_date
@@ -274,8 +294,70 @@ class TradeBase(object):
 
         return train_features, train_labels, test_features, test_labels, test_acture
 
+    def GetDSW3DDataset(self):
+        dataset_file_name = self.FileNameDSW3DDataset()
+        if not os.path.exists(dataset_file_name):
+            dataset = np.zeros((len(self.data_source.date_list), 
+                                len(self.data_source.code_list), 
+                                1))
+            for code_index in range(0, len(self.data_source.code_list)):
+                ts_code = self.data_source.code_list[code_index]
+                S_index = self.data_source.code_index_map[ts_code]
+                pp_data = self.data_source.LoadStockPPData(ts_code, True)
+                data_len = len(pp_data)
+                if data_len == 0:
+                    continue
+                self.TradePP(pp_data)
+                for iloop in range(data_len):
+                    D_index = self.data_source.date_index_map[int(pp_data[iloop][PPI_trade_date])]
+                    dataset[D_index][S_index][0] = self.wave_data[iloop]
+                sys.stdout.write("%-4d : %s 100%%\n" % (code_index, ts_code))
+            base_common.MKFileDirs(dataset_file_name)
+            np.save(dataset_file_name, dataset)
+        dataset = np.load(dataset_file_name)
+        print("dataset: {}".format(dataset.shape))
+        return dataset
+
+    def ShowTradePP(self, ts_code):
+        pp_data = self.data_source.LoadStockPPData(ts_code, True)
+        data_len = len(pp_data)
+        if data_len == 0:
+            print('Error: ShowTradePP data_len == 0')
+        self.TradePP(pp_data)
+        data_list = []
+        show_data = np.zeros((data_len, 2))
+        show_data[:, 0] = pp_data[:, PPI_trade_date]
+        show_data[:, 1] = pp_data[:, PPI_close]
+        data_list.append(show_data)
+
+        show_data = np.zeros((data_len, 2))
+        show_data[:, 0] = pp_data[:, PPI_trade_date]
+        show_data[:, 1] = pp_data[:, PPI_close_5_avg]
+        data_list.append(show_data)
+
+        up_pp_data = pp_data[self.wave_data == WS_UP]
+        show_data = np.zeros((len(up_pp_data), 2))
+        show_data[:, 0] = up_pp_data[:, PPI_trade_date]
+        show_data[:, 1] = up_pp_data[:, PPI_close]
+        data_list.append(show_data)
+        np_common.Show2DData('wave_data', data_list, [], True)
+
+    def ShowDSW3DDataset(self):
+        dataset = self.GetDSW3DDataset()
+        show_data = np.zeros((len(self.data_source.date_list), 2))
+        for iloop in range(len(self.data_source.date_list)):
+            show_data[iloop][0] = int(self.data_source.date_list[iloop])
+            show_data[iloop][1] = np.sum(dataset[iloop, :, 0] == WS_UP)
+            print('%-10u%u' % (int(show_data[iloop][0]), int(show_data[iloop][1])))
+        index_pp_data = self.data_source.LoadIndexPPData()
+        index_show_data = np.zeros((len(index_pp_data), 2))
+        index_show_data[:, 0] = index_pp_data[:, PPI_trade_date]
+        index_show_data[:, 1] = index_pp_data[:, PPI_close]
+        np_common.Show2DData('DSW3D', [show_data, index_show_data], [], True)
+
     def RTest(self, dl_model, test_features, test_acture, test_features_pretreated=False):
         predictions = dl_model.Predict(test_features, test_features_pretreated)
+        predictions = np.zeros(predictions.shape)
         pos = predictions.flatten() > self.predict_threshold
         predictions_f = predictions[pos]
         print('predictions_f:{}'.format(predictions_f.shape))
@@ -307,7 +389,7 @@ class TradeBase(object):
                                         merge_data[iloop][self.offset_off_date], 
                                         merge_data[iloop][self.offset_increase], 
                                         merge_data[iloop][self.offset_holding_days])
-                sum_increase += merge_data[iloop][self.offset_increase]
+                sum_increase += merge_data[iloop][self.offset_increase] / self.rtest_max_holding_num
                 sum_holding_days += merge_data[iloop][self.offset_holding_days]
                 trade_count += 1
         base_common.PrintTrade('sum', '--', '--', '--', '--', '--', sum_increase, sum_holding_days)

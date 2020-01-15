@@ -12,9 +12,6 @@ import random
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.python.keras import backend as K
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 import loss
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -29,6 +26,7 @@ def Plot2DArray(ax, arr, name, color=''):
             ax.plot(x, y, label=name)
 
 def PlotHistory(save_path, losses, val_losses, train_increase, test_increase):
+    plt, mdate, zhfont = base_common.ImportMatPlot(True)
     if len(losses) <= 1:
         return
     if not hasattr(PlotHistory, 'fig'):

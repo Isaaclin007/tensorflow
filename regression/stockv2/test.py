@@ -14,31 +14,37 @@ sys.path.append("..")
 from common import base_common
 from common import np_common
 
-stock_pp_file_name = './data/preprocessed/000001.SZ_20200106_0_0_1_f.csv'
-pp_data = pd.read_csv(stock_pp_file_name)
 
-count = 0
-start_time = time.time()
-test_col_np = np.zeros((len(pp_data), 1))
-for iloop in range(len(pp_data)):
-    a = pp_data.loc[iloop, 'open']
-    b = pp_data.loc[iloop, 'close']
-    test_col_np[iloop][0] = a + b
-new_col = pd.DataFrame(test_col_np, columns=['test'])
-pd.concat([pp_data, new_col], sort=False)
-print(time.time() - start_time)
 
-np_data = pp_data.values
+plt, mdate, zhfont = ImportMatPlot()
+fig1 = plt.figure(dpi=70,figsize=(32,10))
+# ImportMatPlot()
+
+# stock_pp_file_name = './data/preprocessed/000001.SZ_20200106_0_0_1_f.csv'
+# pp_data = pd.read_csv(stock_pp_file_name)
+
+# count = 0
+# start_time = time.time()
+# test_col_np = np.zeros((len(pp_data), 1))
+# for iloop in range(len(pp_data)):
+#     a = pp_data.loc[iloop, 'open']
+#     b = pp_data.loc[iloop, 'close']
+#     test_col_np[iloop][0] = a + b
+# new_col = pd.DataFrame(test_col_np, columns=['test'])
+# pd.concat([pp_data, new_col], sort=False)
+# print(time.time() - start_time)
+
+# np_data = pp_data.values
+# # print(np_data)
+# start_time = time.time()
+# test_col_np = np.zeros((len(np_data), 1))
+# for iloop in range(len(np_data)):
+#     a = np_data[iloop][3]
+#     b = np_data[iloop][4]
+#     test_col_np[iloop][0] = a + b
+# np_data = np.hstack((np_data, test_col_np))
+# print(time.time() - start_time)
 # print(np_data)
-start_time = time.time()
-test_col_np = np.zeros((len(np_data), 1))
-for iloop in range(len(np_data)):
-    a = np_data[iloop][3]
-    b = np_data[iloop][4]
-    test_col_np[iloop][0] = a + b
-np_data = np.hstack((np_data, test_col_np))
-print(time.time() - start_time)
-print(np_data)
 
 # test_np = np.zeros((len(pp_data), 2))
 # start_time = time.time()

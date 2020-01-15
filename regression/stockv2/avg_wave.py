@@ -38,7 +38,8 @@ class AvgWave(trade_base.TradeBase):
                  avg_cycle,
                  mode,
                  continue_up_num, 
-                 cut_loss_ratio):
+                 cut_loss_ratio,
+                 dataset_sample_num = 5):
         class_name = 'avg_wave'
         self.avg_cycle = avg_cycle
         self.mode = mode
@@ -49,18 +50,12 @@ class AvgWave(trade_base.TradeBase):
         self.dataset_size = 0
         self.dataset_len = 0
         app_setting_name = '%u_%u_%u_%.4f' % (avg_cycle, mode, continue_up_num, cut_loss_ratio)
-        self.index_increase     = self.feature.feature_size
-        self.index_ts_code      = self.feature.feature_size + 1
-        self.index_pre_on_date  = self.feature.feature_size + 2
-        self.index_on_date      = self.feature.feature_size + 3
-        self.index_pre_off_date = self.feature.feature_size + 4
-        self.index_off_date     = self.feature.feature_size + 5
-        self.index_holding_days = self.feature.feature_size + 6
         super(AvgWave, self).__init__(o_data_source, 
                                       o_feature, 
                                       class_name, 
                                       app_setting_name,
-                                      0.0)
+                                      -100.0,
+                                      dataset_sample_num)
 
     def TradePP(self, pp_data):
         data_len = len(pp_data)
@@ -74,7 +69,7 @@ class AvgWave(trade_base.TradeBase):
                     continue_up_count += 1
                 else:
                     continue_up_count = 0
-                if continue_up_count >= self.continue_up_num:
+                if continue_up_count > 0 and continue_up_count >= self.continue_up_num:
                     self.wave_data[day_loop] = WS_UP
                 else:
                     self.wave_data[day_loop] = WS_DOWN
@@ -91,7 +86,7 @@ class AvgWave(trade_base.TradeBase):
         #         else:
         #             pp_data.loc[day_loop, wave_data_name] = WS_DOWN
         
-    def TradeNextStatus(self, pp_data, day_index):
+    def TradeNextStatus(self, pp_data, day_index, on_day_index):
         if self.wave_data[day_index] == WS_UP:
             return TS_ON
         else:
@@ -101,11 +96,12 @@ def main(argv):
     del argv
 
     o_data_source = tushare_data.DataSource(20000101, '', '', 1, 20000101, 20200106, False, False, True)
+    o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
     # o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
-    # o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
-    o_feature = feature.Feature(30, feature.FUT_5REGION5_NORM, 5, False, False)
-    o_avg_wave = AvgWave(o_data_source, o_feature, PPI_close_30_avg, MODE_GRAD, 1, 0.1)
-    split_date = 20170101
+    # o_feature = feature.Feature(30, feature.FUT_5REGION5_NORM, 5, False, False)
+    # o_feature = feature.Feature(30, feature.FUT_2AVG5_NORM, 5, False, False)
+    o_avg_wave = AvgWave(o_data_source, o_feature, PPI_close_30_avg, MODE_GRAD, 0, 0.1)
+    split_date = 20180101
     o_dl_model = dl_model.DLModel('%s_%u' % (o_avg_wave.setting_name, split_date), 
                                   o_feature.feature_unit_num, 
                                   o_feature.feature_unit_size,
@@ -123,17 +119,22 @@ def main(argv):
         tf, tl, vf, vl, td = o_avg_wave.GetDataset(split_date)
         tl = tl * 100.0
         vl  = vl * 100.0
-        o_dl_model.Train(tf, tl, vf, vl, 100)
+        o_dl_model.Train(tf, tl, vf, vl, FLAGS.epoch)
     elif FLAGS.mode == 'rtest':
         tf, tl, tf, tl, ta = o_avg_wave.GetDataset(split_date)
-        o_dl_model.LoadModel()
+        o_dl_model.LoadModel(FLAGS.epoch)
         o_avg_wave.RTest(o_dl_model, tf, ta, False)
-        
+    elif FLAGS.mode == 'dsw':
+        dataset = o_avg_wave.ShowDSW3DDataset()
+    elif FLAGS.mode == 'show':
+        dataset = o_avg_wave.ShowTradePP(FLAGS.c)
+
     exit()
 
 if __name__ == "__main__":
     flags.DEFINE_string('mode', 'test', 'test | testall | train')
     flags.DEFINE_string('c', '000001.SZ', 'ts code')
+    flags.DEFINE_integer('epoch', 1000, 'train or rtest epoch')
     # flags.DEFINE_boolean('testall', False, 'test all stocks, save dataset')
     app.run(main)
     
