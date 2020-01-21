@@ -207,8 +207,7 @@ def main(argv):
         vl  = vl * 100.0
         o_dl_model.Train(tf, tl, vf, vl, FLAGS.epoch)
     elif FLAGS.mode == 'rtest':
-        tf, tl, tf, tl, ta = o_wave.GetDataset(20000101)
-        # tf, tl, tf, tl, ta = o_wave.GetDataset(split_date)
+        tf, tl, tf, tl, ta = o_wave.GetDataset(split_date)
         o_dl_model.LoadModel(FLAGS.epoch)
         o_wave.RTest(o_dl_model, tf, ta, False)
         

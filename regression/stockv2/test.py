@@ -14,10 +14,19 @@ sys.path.append("..")
 from common import base_common
 from common import np_common
 
+for iloop in range(0):
+        print(iloop)
+# test_np = np.zeros((5, 9))
+# for iloop in range(5):
+#     for kloop in range(9):
+#         test_np[iloop][kloop] = iloop * 10 + kloop
+# shape_list = [5, 3, 3]
+# test_np = test_np.reshape(shape_list)
+# print(test_np)
+# print(test_np[5:20, 0])
 
-
-plt, mdate, zhfont = ImportMatPlot()
-fig1 = plt.figure(dpi=70,figsize=(32,10))
+# plt, mdate, zhfont = ImportMatPlot()
+# fig1 = plt.figure(dpi=70,figsize=(32,10))
 # ImportMatPlot()
 
 # stock_pp_file_name = './data/preprocessed/000001.SZ_20200106_0_0_1_f.csv'

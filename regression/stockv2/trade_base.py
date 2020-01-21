@@ -80,6 +80,62 @@ class TradeBase(object):
         self.dataset[self.dataset_len] = data_unit
         self.dataset_len += 1
 
+    def GetShowData(self, 
+                    pp_data,
+                    start_index,
+                    end_index,
+                    max_num = -1,
+                    ppi_index = PPI_close):
+        data_len = len(pp_data)
+        if start_index >= 0 and end_index >= 0:
+            p1 = start_index
+            p2 = end_index
+        elif start_index >= 0 and end_index < 0:
+            p1 = start_index
+            if max_num > 0:
+                p2 = start_index + max_num
+            else:
+                p2 = data_len
+        elif start_index < 0 and end_index >= 0:
+            if max_num > 0:
+                p1 = end_index - max_num
+            else:
+                p1 = 0
+            p2 = end_index
+        else:
+            print('Error: GetShowData')
+            return []
+        if p1 < 0:
+            p1 = 0
+        if p2 > data_len:
+            p2 = data_len
+        show_data = np.zeros((p2 - p1, 2))
+        show_data[:, 0] = pp_data[p1:p2, PPI_trade_date]
+        show_data[:, 1] = pp_data[p1:p2, ppi_index]
+        return show_data
+
+    def TradeRecordShow(self, 
+                        pp_data,
+                        pre_on_day_index,
+                        on_day_index,
+                        pre_off_day_index,
+                        off_day_index):
+        if off_day_index == INVALID_INDEX:
+            return
+        ################### test ###################
+        # temp_data = pp_data[pre_on_day_index:pre_on_day_index+100, PPI_close]
+        # m = np.mean(temp_data)
+        # rmd = np.sum(np.abs(temp_data - m)) / float(len(temp_data)) / m
+        # print('rmd: %f' % rmd)
+        ############################################
+        data_list = []
+        data_list.append(self.GetShowData(pp_data, pre_on_day_index, -1, 100))
+        data_list.append(self.GetShowData(pp_data, pre_off_day_index, pre_on_day_index))
+        data_list.append(self.GetShowData(pp_data, -1, pre_off_day_index, 100))
+        data_list.append(self.GetShowData(pp_data, pre_off_day_index - 100, 
+                         pre_on_day_index + 100, -1, PPI_close_5_avg))
+        np_common.Show2DData('Trade', data_list, [], True)
+
     def TradeRecord(self, 
                     trade_count,
                     pp_data,
@@ -88,7 +144,8 @@ class TradeBase(object):
                     pre_off_day_index,
                     off_day_index,
                     print_trade_record,
-                    save_data_unit):
+                    save_data_unit,
+                    show_trade_record):
         if pre_on_day_index == INVALID_INDEX:
             print('Error: TradeRecord pre_on_day_index == INVALID_INDEX')
             return
@@ -127,6 +184,12 @@ class TradeBase(object):
         if print_trade_record:
             base_common.PrintTrade(trade_count, ts_code, pre_on_date, on_date, pre_off_date, off_date, 
                                    increase, holding_days)
+        if show_trade_record:
+            self.TradeRecordShow(pp_data,
+                                pre_on_day_index,
+                                on_day_index,
+                                pre_off_day_index,
+                                off_day_index)
         if save_data_unit:
             # sample num
             if pre_off_day_index == INVALID_INDEX:
@@ -168,7 +231,10 @@ class TradeBase(object):
     def TradeNextStatus(self, pp_data, day_index, on_day_index):
         return TS_NONE
 
-    def TradeTest(self, pp_data, print_trade_record = False, save_data_unit=False):
+    def TradeTest(self, pp_data, 
+                  print_trade_record = False, 
+                  save_data_unit=False, 
+                  show_trade_record = False):
         data_len = len(pp_data)
         if data_len == 0:
             return 0.0, 0
@@ -221,7 +287,8 @@ class TradeBase(object):
                                                           pre_off_day_index, 
                                                           off_day_index, 
                                                           print_trade_record,
-                                                          save_data_unit)
+                                                          save_data_unit,
+                                                          show_trade_record)
                 sum_increase += increase
                 capital_ratio *= (1.0 + increase)
                 sum_holding_days += holding_days
@@ -242,7 +309,8 @@ class TradeBase(object):
                                                     pre_off_day_index, 
                                                     off_day_index, 
                                                     print_trade_record,
-                                                    save_data_unit)
+                                                    save_data_unit,
+                                                    show_trade_record)
 
         if print_trade_record:
             base_common.PrintTrade('sum', ts_code, '--', '--', '--', '--', sum_increase, sum_holding_days)
@@ -261,13 +329,14 @@ class TradeBase(object):
             sum_increase += increase
             sum_holding_days += holding_days
         base_common.PrintTrade('sum', '--', '--', '--', '--', '--', sum_increase, sum_holding_days)
-        file_name = self.FileNameDataset()
-        base_common.MKFileDirs(file_name)
-        np.save(file_name, self.dataset[:self.dataset_len])
+        if self.dataset_len > 0:
+            file_name = self.FileNameDataset()
+            base_common.MKFileDirs(file_name)
+            np.save(file_name, self.dataset[:self.dataset_len])
 
-    def TradeTestStock(self, ts_code):
+    def TradeTestStock(self, ts_code, show_trade_record = False):
         pp_data = self.data_source.LoadStockPPData(ts_code, True)
-        self.TradeTest(pp_data, True, False)
+        self.TradeTest(pp_data, True, False, show_trade_record)
         # self.TradeTest(pp_data, False, True)
 
     def GetDataset(self, split_date):
@@ -279,6 +348,31 @@ class TradeBase(object):
         train_data = dataset[pos]
         test_data = dataset[~pos]
 
+        test_data = np_common.Sort2D(test_data, 
+                                     [self.index_pre_on_date, self.index_ts_code])
+
+        print("train: {}".format(train_data.shape))
+        print("test: {}".format(test_data.shape))
+
+        train_features = train_data[:, :self.feature.feature_size]
+        train_labels = train_data[:, self.feature.feature_size]
+
+        test_features = test_data[:, :self.feature.feature_size]
+        test_labels = test_data[:, self.feature.feature_size]
+        test_acture = test_data[:, self.feature.feature_size:]
+
+        return train_features, train_labels, test_features, test_labels, test_acture
+
+    def GetDatasetRandom(self, test_ratio):
+        file_name = self.FileNameDataset()
+        dataset = np.load(file_name)
+        print("dataset: {}".format(dataset.shape))
+        data_len = len(dataset)
+        test_data_len = int(data_len * test_ratio)
+        np.random.seed(0)
+        order = np.argsort(np.random.random(data_len))
+        train_data = dataset[order[test_data_len:]]
+        test_data = dataset[order[:test_data_len]]
         test_data = np_common.Sort2D(test_data, 
                                      [self.index_pre_on_date, self.index_ts_code])
 
@@ -317,6 +411,13 @@ class TradeBase(object):
         dataset = np.load(dataset_file_name)
         print("dataset: {}".format(dataset.shape))
         return dataset
+
+    def Clean(self):
+        dataset_file_name = self.FileNameDataset()
+        print(dataset_file_name)
+        if os.path.exists(dataset_file_name):
+            print('os.remove(%s)' % dataset_file_name)
+            os.remove(dataset_file_name)
 
     def ShowTradePP(self, ts_code):
         pp_data = self.data_source.LoadStockPPData(ts_code, True)
@@ -357,7 +458,6 @@ class TradeBase(object):
 
     def RTest(self, dl_model, test_features, test_acture, test_features_pretreated=False):
         predictions = dl_model.Predict(test_features, test_features_pretreated)
-        predictions = np.zeros(predictions.shape)
         pos = predictions.flatten() > self.predict_threshold
         predictions_f = predictions[pos]
         print('predictions_f:{}'.format(predictions_f.shape))

@@ -13,6 +13,8 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.python.keras import backend as K
 import loss
+sys.path.append("..")
+from common import base_common
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 def Plot2DArray(ax, arr, name, color=''):
@@ -158,7 +160,12 @@ class DLModel():
         return (os.path.exists(model_name) and os.path.exists(mean_name) and os.path.exists(std_name))
 
     def ReshapeRnnFeatures(self, features):
-        return features.reshape(features.shape[0], self.feature_unit_num, self.feature_unit_size)
+        output_shape = []
+        for iloop in range(features.ndim - 1):
+            output_shape.append(features.shape[iloop])
+        output_shape.append(self.feature_unit_num)
+        output_shape.append(self.feature_unit_size)
+        return features.reshape(output_shape)
 
     def FeaturesPretreat(self, features):
         features = (features - self.mean) / self.std
@@ -202,7 +209,15 @@ class DLModel():
 
         PlotHistory(path_name, losses, val_losses, train_increase, test_increase)
 
+    def Clean(self):
+        path_name = self.model_path
+        if os.path.exists(path_name):
+            base_common.RmDir(path_name)
+
     def Train(self, train_features, train_labels, val_features, val_labels, train_epochs):
+        if train_epochs == 0:
+            self.ShowHistory()
+            return
         print("reorder...")
         np.random.seed(0)
         order=np.argsort(np.random.random(len(train_labels)))
@@ -261,7 +276,19 @@ class DLModel():
     def Predict(self, features, features_pretreated=False):
         if not features_pretreated:
             features = self.FeaturesPretreat(features)
-        return self.model.predict(features, batch_size=10240)
+        feature_shape = [1]
+        output_prediction_shape = []
+        for iloop in range(features.ndim - 2):
+            feature_shape[0] *= features.shape[iloop]
+            output_prediction_shape.append(features.shape[iloop])
+        feature_shape.append(features.shape[features.ndim - 2])
+        feature_shape.append(features.shape[features.ndim - 1])
+        output_prediction_shape.append(1)
+        input_features = features.reshape(feature_shape)
+        print('features:{}'.format(input_features.shape))
+        predictions = self.model.predict(input_features, batch_size=10240)
+        predictions = predictions.reshape(output_prediction_shape)
+        return predictions
 
 
     

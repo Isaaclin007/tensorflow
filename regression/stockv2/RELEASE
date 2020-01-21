@@ -5,7 +5,10 @@ stock v2重构：
 3. dataset 封装 class Dataset（已完成）
 4. 增加并行计算接口 ListMultiThread（已完成）
 5. avg_wave 重构（已完成）
-6. dl_model 封装 class DLModel
+6. dl_model 封装 class DLModel（已完成）
+7. trade_base 封装 TradeBase 类（已完成）
+8. trade_base 支持显示每个交易的前后数据（已完成）
+9. stockv2 支持 dqn_fix 
 
 评估 Dataset 中的 acture data是否需要扩展以代替 pp data 在之后应用层中的应用
 如果不扩展则仅用于支持 DCFa3D data

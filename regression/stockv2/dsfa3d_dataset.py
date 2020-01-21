@@ -18,7 +18,7 @@ import feature
 def CreateDSFa3DSplitMTFunc(param, msg):
     param.CreateDSFa3DSplitStock(msg)
 
-class Dataset():
+class DSFa3DDataset():
     def __init__(self, 
                  o_data_source, 
                  o_feature):
@@ -26,8 +26,8 @@ class Dataset():
         self.feature = o_feature
         self.date_list = self.data_source.date_list
         self.code_list = self.data_source.code_list
-        self.date_index_map = base_common.ListToIndexMap(self.date_list, True)
-        self.code_index_map = base_common.ListToIndexMap(self.code_list, False)
+        self.date_index_map = self.data_source.date_index_map
+        self.code_index_map = self.data_source.code_index_map
 
 
     def FileNameDSFa3DDataset(self):
@@ -79,8 +79,8 @@ class Dataset():
             ts_code = self.code_list[code_index]
             dataset_split_file_name = self.FileNameDSFa3DSplit(ts_code)
             if not os.path.exists(dataset_split_file_name):
-                print('CreateDSFa3DDataset.Error: %s not exist' % dataset_split_file_name)
-                return
+                # print('CreateDSFa3DDataset.Error: %s not exist' % dataset_split_file_name)
+                continue
             split_data = np.load(dataset_split_file_name)
             dateset_index2 = self.code_index_map[ts_code]
             for iloop in range(len(self.date_list)):
@@ -98,12 +98,12 @@ class Dataset():
 
 
 if __name__ == "__main__":
-    data_source = tushare_data.DataSource(20000101, '软件服务', '', 1, 20000101, 20200106, False, False, True)
+    data_source = tushare_data.DataSource(20000101, '', '', 1, 20000101, 20200106, False, False, True)
     data_source.ShowStockCodes()
 
     o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
 
-    o_dataset = Dataset(data_source, o_feature)
+    o_dataset = DSFa3DDataset(data_source, o_feature)
     temp_dataset = o_dataset.GetDSFa3DDataset()
     print("dataset: {}".format(temp_dataset.shape))
 
