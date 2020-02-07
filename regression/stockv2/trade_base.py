@@ -32,7 +32,8 @@ class TradeBase(object):
                  class_name,
                  app_setting_name,
                  predict_threshold,
-                 dataset_sample_num):
+                 dataset_sample_num,
+                 cut_loss_ratio = 1.0):
         self.data_source = o_data_source
         self.feature = o_feature
         self.dataset_size = 0
@@ -41,11 +42,13 @@ class TradeBase(object):
         self.app_setting_name = app_setting_name
         self.dataset_sample_num = dataset_sample_num
         self.predict_threshold = predict_threshold
-        self.setting_name = '%s_%s_%s_%s_%u' % (class_name, 
+        self.cut_loss_ratio = cut_loss_ratio
+        self.setting_name = '%s_%s_%s_%s_%u_%.2f' % (class_name, 
                                                 app_setting_name, 
                                                 o_data_source.setting_name,
                                                 o_feature.setting_name,
-                                                dataset_sample_num)
+                                                dataset_sample_num,
+                                                cut_loss_ratio)
         
         self.offset_increase     = 0
         self.offset_ts_code      = 1
@@ -129,12 +132,25 @@ class TradeBase(object):
         # print('rmd: %f' % rmd)
         ############################################
         data_list = []
+        name_list = []
+
+        name_list.append('before')
         data_list.append(self.GetShowData(pp_data, pre_on_day_index, -1, 100))
+
+        name_list.append('on')
         data_list.append(self.GetShowData(pp_data, pre_off_day_index, pre_on_day_index))
+
+        name_list.append('after')
         data_list.append(self.GetShowData(pp_data, -1, pre_off_day_index, 100))
-        data_list.append(self.GetShowData(pp_data, pre_off_day_index - 100, 
-                         pre_on_day_index + 100, -1, PPI_close_5_avg))
-        np_common.Show2DData('Trade', data_list, [], True)
+
+        avg_index1 = pre_off_day_index - 100
+        avg_index2 = pre_on_day_index + 100
+        name_list.append('30_avg')
+        data_list.append(self.GetShowData(pp_data, avg_index1, avg_index2, -1, PPI_close_30_avg))
+
+        name_list.append('100_avg')
+        data_list.append(self.GetShowData(pp_data, avg_index1, avg_index2, -1, PPI_close_100_avg))
+        np_common.Show2DData('Trade', data_list, name_list, True)
 
     def TradeRecord(self, 
                     trade_count,
@@ -228,7 +244,7 @@ class TradeBase(object):
     def TradePP(self, pp_data):
         a = 1
 
-    def TradeNextStatus(self, pp_data, day_index, on_day_index):
+    def TradeNextStatus(self, pp_data, day_index):
         return TS_NONE
 
     def TradeTest(self, pp_data, 
@@ -237,7 +253,7 @@ class TradeBase(object):
                   show_trade_record = False):
         data_len = len(pp_data)
         if data_len == 0:
-            return 0.0, 0
+            return 0.0, 0, 0
         self.TradePP(pp_data)
         ts_code = int(pp_data[0][PPI_ts_code])
 
@@ -255,7 +271,12 @@ class TradeBase(object):
         off_day_index = INVALID_INDEX
 
         for day_index in reversed(range(0, data_len)):
-            next_status = self.TradeNextStatus(pp_data, day_index, on_day_index)
+            next_status = self.TradeNextStatus(pp_data, day_index)
+            # cut loss
+            if trade_status == TS_ON:
+                close = pp_data[day_index][PPI_close]
+                if close < (on_price * (1.0 - self.cut_loss_ratio)):
+                    next_status = TS_OFF
 
             # OFF -> PRE_ON
             if trade_status == TS_OFF:
@@ -267,6 +288,7 @@ class TradeBase(object):
             elif trade_status == TS_PRE_ON:
                 trade_status = TS_ON
                 on_day_index = day_index
+                on_price = pp_data[on_day_index][PPI_open]
 
             # ON -> PRE_OFF
             elif trade_status == TS_ON:
@@ -316,19 +338,29 @@ class TradeBase(object):
             base_common.PrintTrade('sum', ts_code, '--', '--', '--', '--', sum_increase, sum_holding_days)
         else:
             code_index = self.data_source.code_index_map_int[ts_code]
-            base_common.PrintTrade(code_index, ts_code, '--', '--', '--', '--', sum_increase, sum_holding_days)
-        return sum_increase, sum_holding_days
+            base_common.PrintTrade(trade_count, ts_code, '--', '--', '--', '--', sum_increase, sum_holding_days)
+        return sum_increase, trade_count, sum_holding_days
 
-    def TradeTestAll(self):
+    def TradeTestAll(self, save_data_unit=True, show_trade_record = False):
         sum_increase = 0.0
+        sum_trade_count = 0
         sum_holding_days = 0
         for iloop in range(len(self.data_source.code_list)):
             ts_code = self.data_source.code_list[iloop]
             pp_data = self.data_source.LoadStockPPData(ts_code, True)
-            increase, holding_days = self.TradeTest(pp_data, False, True)
+            increase, trade_count, holding_days = self.TradeTest(pp_data, False, save_data_unit, show_trade_record)
             sum_increase += increase
+            sum_trade_count += trade_count
             sum_holding_days += holding_days
-        base_common.PrintTrade('sum', '--', '--', '--', '--', '--', sum_increase, sum_holding_days)
+        base_common.PrintTrade(sum_trade_count, '--', '--', '--', '--', '--', sum_increase, sum_holding_days)
+        if sum_trade_count == 0:
+            avg_increase_day = 0.0
+            avg_increase_trade = 0.0
+        else:
+            avg_increase_day = sum_increase / sum_holding_days
+            avg_increase_trade = sum_increase / sum_trade_count
+        print('avg increase / day : %.4f' % avg_increase_day)
+        print('avg increase / trade : %.4f' % avg_increase_trade)
         if self.dataset_len > 0:
             file_name = self.FileNameDataset()
             base_common.MKFileDirs(file_name)
@@ -488,11 +520,20 @@ class TradeBase(object):
                                         merge_data[iloop][self.offset_pre_off_date], 
                                         merge_data[iloop][self.offset_off_date], 
                                         merge_data[iloop][self.offset_increase], 
-                                        merge_data[iloop][self.offset_holding_days])
+                                        merge_data[iloop][self.offset_holding_days],
+                                        merge_data[iloop][predictions_index])
                 sum_increase += merge_data[iloop][self.offset_increase] / self.rtest_max_holding_num
                 sum_holding_days += merge_data[iloop][self.offset_holding_days]
                 trade_count += 1
-        base_common.PrintTrade('sum', '--', '--', '--', '--', '--', sum_increase, sum_holding_days)
+        base_common.PrintTrade('sum', '--', '--', '--', '--', '--', sum_increase, sum_holding_days, '--')
+        if trade_count == 0:
+            avg_increase_day = 0.0
+            avg_increase_trade = 0.0
+        else:
+            avg_increase_day = sum_increase * self.rtest_max_holding_num / sum_holding_days
+            avg_increase_trade = sum_increase * self.rtest_max_holding_num / trade_count
+        print('avg increase / day : %.4f' % avg_increase_day)
+        print('avg increase / trade : %.4f' % avg_increase_trade)
             # pos = holding_status[:, self.offset_off_date] <= merge_data[iloop][self.offset_pre_on_date]
             # print('pos:{}'.format(pos))
             # holding_status[pos][self.offset_ts_code] = 0

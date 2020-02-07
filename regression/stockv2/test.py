@@ -14,8 +14,16 @@ sys.path.append("..")
 from common import base_common
 from common import np_common
 
-for iloop in range(0):
-        print(iloop)
+lst = [1,2,3]
+print(lst)
+
+lst.insert(0, 4)
+lst.pop()
+
+print(lst)
+
+# for iloop in range(0):
+#         print(iloop)
 # test_np = np.zeros((5, 9))
 # for iloop in range(5):
 #     for kloop in range(9):

@@ -30,6 +30,9 @@ def FloatStr(input_data):
     else:
         return '%.2f' % float(input_data)
 
+def IncPct(x, x_base):
+    return (x - x_base) / x_base * 100.0
+
 # ----------------------------------------------------------------------------------
 # Usage:
 #       PrintTrade(1, '000001.SZ', ...)
@@ -37,19 +40,33 @@ def FloatStr(input_data):
 #       PrintTrade(1, 600050.0, INVALID_DATE, 20190102.0, 20190103.0, INVALID_DATE, ...)
 #       PrintTrade('Sum', '--', '--', '--', '--', '--', ...)
 # ----------------------------------------------------------------------------------
-def PrintTrade(trade_index, ts_code, pre_on_date, on_date, pre_off_date, off_date, increase, holding_days):
+def PrintTrade(trade_index, 
+               ts_code, 
+               pre_on_date, on_date, 
+               pre_off_date, off_date, 
+               increase, holding_days, prediction=None):
     if type(ts_code) == str:
         ts_code_str = ts_code
     else:
         ts_code_str = '%06u' % int(ts_code)
     
-    print("%-6s%-10s%-12s%-12s%-10s%-10s" %( \
-            IntStr(trade_index), \
-            ts_code_str, \
-            TradeDateStr(pre_on_date, on_date), \
-            TradeDateStr(pre_off_date, off_date), \
-            FloatStr(increase), \
-            IntStr(holding_days)))
+    if prediction == None:
+        print("%-6s%-10s%-12s%-12s%-10s%-10s" %( \
+                IntStr(trade_index), \
+                ts_code_str, \
+                TradeDateStr(pre_on_date, on_date), \
+                TradeDateStr(pre_off_date, off_date), \
+                FloatStr(increase), \
+                IntStr(holding_days)))
+    else:
+        print("%-6s%-10s%-10s%-12s%-12s%-10s%-10s" %( \
+                IntStr(trade_index), \
+                ts_code_str, \
+                FloatStr(prediction), \
+                TradeDateStr(pre_on_date, on_date), \
+                TradeDateStr(pre_off_date, off_date), \
+                FloatStr(increase), \
+                IntStr(holding_days)))
 
 def CurrentDate():
     return time.strftime('%Y%m%d',time.localtime(time.time()))

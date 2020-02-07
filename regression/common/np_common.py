@@ -71,11 +71,19 @@ def ShowHist(np_data, step = 1, drop_ratio = 0.001):
     plt.title("histogram") 
     plt.show()
 
+def on_key(event, key_value):
+    key_value.insert(0, event.key)
+
 # data_list: np 2D data list, (x, y), data unit shape=(len, 2)
 def Show2DData(title, data_list, name_list, x_is_date = False):
     plt, mdate, zhfont = base_common.ImportMatPlot()
+    plt.ion()
     title = unicode(title, "utf-8")
     fig1 = plt.figure(dpi=70,figsize=(32,10))
+
+    key_value = []
+    fig1.canvas.mpl_connect('key_press_event', lambda event: on_key(event, key_value))
+
     ax1 = fig1.add_subplot(1,1,1) 
     ax1.xaxis.set_major_formatter(mdate.DateFormatter('%Y-%m-%d'))
     plt.title(title, fontproperties=zhfont)
@@ -95,8 +103,16 @@ def Show2DData(title, data_list, name_list, x_is_date = False):
             xs = x
         plt.plot(xs, y, label=name, linewidth=1)
     plt.gcf().autofmt_xdate()
-    # plt.legend()
+    plt.legend()
     plt.show()
+    while(1):
+        plt.pause(0.5)
+        if len(key_value) > 0:
+            break
+    # plt.pause(1)
+    plt.close()
+    if key_value[0] == 'escape':
+        exit()
 
 
 def Grad(np_data):

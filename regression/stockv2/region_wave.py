@@ -37,18 +37,18 @@ class RegionWave(trade_base.TradeBase):
         class_name = 'region_wave'
         self.region_days = region_days
         self.continue_up_num = continue_up_num
-        self.cut_loss_ratio = cut_loss_ratio
         self.data_source = o_data_source
         self.feature = o_feature
         self.dataset_size = 0
         self.dataset_len = 0
-        app_setting_name = '%u_%.4f' % (region_days, cut_loss_ratio)
+        app_setting_name = '%u' % (region_days)
         super(RegionWave, self).__init__(o_data_source, 
                                       o_feature, 
                                       class_name, 
                                       app_setting_name,
                                       -100.0,
-                                      dataset_sample_num)
+                                      dataset_sample_num,
+                                      cut_loss_ratio)
 
     def TradePP(self, pp_data):
         data_len = len(pp_data)
@@ -71,7 +71,7 @@ class RegionWave(trade_base.TradeBase):
                 self.wave_data[day_loop] = WS_NONE
             # print('%-12u%u' % (pp_data[day_loop][PPI_trade_date], self.wave_data[day_loop]))
         
-    def TradeNextStatus(self, pp_data, day_index, on_day_index):
+    def TradeNextStatus(self, pp_data, day_index):
         if self.wave_data[day_index] == WS_UP:
             return TS_ON
         elif self.wave_data[day_index] == WS_DOWN:

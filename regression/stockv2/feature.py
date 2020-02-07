@@ -16,6 +16,8 @@ from common.const_def import *
 
 # feature unit type 特征单元常量定义 NORM:数据归一化，计算与 avg100 的比例
 FUT_D5_NORM = 1  # 每天的5个数据归一化
+FUT_D5_NORM_PCT = 5
+FUT_D13_NORM = 4  # 每天的13个数据归一化
 FUT_5REGION5_NORM = 2  # 每天的5个 5日区间 数据归一化
 FUT_2AVG5_NORM = 3  # 每天的2个 avg5 数据归一化
 
@@ -53,6 +55,10 @@ class Feature():
     def UpdateFeatureSize(self):
         if self.feature_unit_type == FUT_D5_NORM:
             self.feature_unit_size = 5
+        if self.feature_unit_type == FUT_D5_NORM_PCT:
+            self.feature_unit_size = 5
+        elif self.feature_unit_type == FUT_D13_NORM:
+            self.feature_unit_size = 13
         elif self.feature_unit_type == FUT_5REGION5_NORM:
             self.feature_unit_size = 5
         elif self.feature_unit_type == FUT_2AVG5_NORM:
@@ -98,6 +104,42 @@ class Feature():
             data_unit.append(pp_data[temp_index][PPI_vol] / base_vol)
         return True
 
+    def AppendFeature_FUT_D5_NORM_PCT(self, pp_data, day_index, data_unit):
+        if not self.AppendFeature_Filter(pp_data, day_index):
+            return False
+        base_close = pp_data[day_index][PPI_close_100_avg]
+        base_vol = pp_data[day_index][PPI_vol_100_avg]
+        for iloop in reversed(range(self.feature_unit_num)):
+            temp_index = day_index + iloop * self.feature_unit_step
+            data_unit.append(base_common.IncPct(pp_data[temp_index][PPI_open], base_close))
+            data_unit.append(base_common.IncPct(pp_data[temp_index][PPI_close], base_close))
+            data_unit.append(base_common.IncPct(pp_data[temp_index][PPI_high], base_close))
+            data_unit.append(base_common.IncPct(pp_data[temp_index][PPI_low], base_close))
+            data_unit.append(base_common.IncPct(pp_data[temp_index][PPI_vol], base_vol))
+        return True
+
+    def AppendFeature_FUT_D13_NORM(self, pp_data, day_index, data_unit):
+        if not self.AppendFeature_Filter(pp_data, day_index):
+            return False
+        base_close = pp_data[day_index][PPI_close_100_avg]
+        base_vol = pp_data[day_index][PPI_vol_100_avg]
+        for iloop in reversed(range(self.feature_unit_num)):
+            temp_index = day_index + iloop * self.feature_unit_step
+            data_unit.append(pp_data[temp_index][PPI_open] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_close] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_high] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_low] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_vol] / base_vol)
+            data_unit.append(pp_data[temp_index][PPI_close_5_avg] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_close_10_avg] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_close_30_avg] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_close_100_avg] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_vol_5_avg] / base_vol)
+            data_unit.append(pp_data[temp_index][PPI_vol_10_avg] / base_vol)
+            data_unit.append(pp_data[temp_index][PPI_vol_30_avg] / base_vol)
+            data_unit.append(pp_data[temp_index][PPI_vol_100_avg] / base_vol)
+        return True
+
     def AppendFeature_FUT_5REGION5_NORM(self, pp_data, day_index, data_unit):
         if not self.AppendFeature_Filter(pp_data, day_index):
             return False
@@ -128,6 +170,10 @@ class Feature():
         data_len = len(pp_data)
         if self.feature_unit_type == FUT_D5_NORM:
             return self.AppendFeature_FUT_D5_NORM(pp_data, day_index, data_unit)
+        elif self.feature_unit_type == FUT_D5_NORM_PCT:
+            return self.AppendFeature_FUT_D5_NORM_PCT(pp_data, day_index, data_unit)
+        elif self.feature_unit_type == FUT_D13_NORM:
+            return self.AppendFeature_FUT_D13_NORM(pp_data, day_index, data_unit)
         elif self.feature_unit_type == FUT_5REGION5_NORM:
             return self.AppendFeature_FUT_5REGION5_NORM(pp_data, day_index, data_unit)
         elif self.feature_unit_type == FUT_2AVG5_NORM:
