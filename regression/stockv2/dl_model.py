@@ -13,9 +13,28 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.python.keras import backend as K
 import loss
-sys.path.append("..")
-from common import base_common
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+def ImportMatPlot(use_agg=False):
+    import matplotlib
+    font_name = r"/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
+    if use_agg:
+        matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    import matplotlib.dates as mdate
+    from matplotlib.font_manager import FontProperties
+    zhfont = FontProperties(fname=font_name, size=15)
+    return plt, mdate, zhfont
+
+def RmDir(path):
+    ls = os.listdir(path)
+    for i in ls:
+        c_path = os.path.join(path, i)
+        if os.path.isdir(c_path):
+            RmDir(c_path)
+        else:
+            os.remove(c_path)
+    os.rmdir(path)
 
 def Plot2DArray(ax, arr, name, color=''):
     np_arr = np.array(arr)
@@ -27,8 +46,10 @@ def Plot2DArray(ax, arr, name, color=''):
         else:
             ax.plot(x, y, label=name)
 
-def PlotHistory(save_path, losses, val_losses, train_increase, test_increase):
-    plt, mdate, zhfont = base_common.ImportMatPlot(True)
+MAX_TEST_FUNCS = 2
+# TFR: test funcs results
+def PlotHistory(save_path, losses, val_losses, TFR):
+    plt, mdate, zhfont = ImportMatPlot(True)
     if len(losses) <= 1:
         return
     if not hasattr(PlotHistory, 'fig'):
@@ -39,8 +60,8 @@ def PlotHistory(save_path, losses, val_losses, train_increase, test_increase):
     PlotHistory.ax2.cla()
     Plot2DArray(PlotHistory.ax1, losses, 'loss')
     Plot2DArray(PlotHistory.ax1, val_losses, 'val_loss')
-    Plot2DArray(PlotHistory.ax2, train_increase, 'train_increase', 'r-')
-    Plot2DArray(PlotHistory.ax2, test_increase, 'test_increase', 'g-')
+    for iloop in range(len(TFR)):
+        Plot2DArray(PlotHistory.ax2, TFR[iloop], 'TFR_%u' % iloop)
     PlotHistory.ax1.legend()
     # PlotHistory.ax2.legend()
     # plt.show()
@@ -59,8 +80,8 @@ class DLModel():
                  learning_rate,
                  loss,
                  save_step=1,
-                 test_func=None,
-                 test_param=None):
+                 test_funcs_list = None,
+                 test_params_list = None):
         self.setting_name = '%s_%u_%u_%u_%u_%f_%s' % (app_setting_name, 
                                                       feature_unit_num, 
                                                       feature_unit_size, 
@@ -75,22 +96,18 @@ class DLModel():
         self.learning_rate = learning_rate
         self.loss = loss
         self.model_path = './model/%s' % self.setting_name
+        if not os.path.exists(self.model_path):
+            os.makedirs(self.model_path)
         self.save_step = save_step
-        self.test_func = test_func
-        self.test_param = test_param
+        self.test_funcs_list = test_funcs_list
+        self.test_params_list = test_params_list
         self.continue_train = False
+        self.init_epoch = 0
         self.losses = []
         self.val_losses = []
-        self.test_increase = []
-        self.init_epoch = 0
-        
-# BATCH_SIZE = 10240
-# LSTM_SIZE = 8
-# LEARNING_RATE = 0.004
-# TRAIN_EPOCH = 500
-# use_test_data = False
-# loss_func_ = 'mean_absolute_tp0_max_ratio_error'
-# # loss_func_ = 'LossAbs'
+        self.TFR = []
+        for iloop in range(MAX_TEST_FUNCS):
+            self.TFR.append([])
 
     def ModelFileNames(self, epoch=-1):
         temp_path_name = self.model_path
@@ -129,6 +146,11 @@ class DLModel():
             return np.load(file_name).tolist()
         else:
             return []
+    
+    def SaveHistoryUnit(self, his_name, his_data):
+        if len(his_data) > 0:
+            file_name = '%s/%s.npy' % (self.model_path, his_name)
+            np.save(file_name, np.array(his_data))
 
     def MaxModelEpoch(self):
         losses = self.LoadHistoryUnit('loss')
@@ -151,7 +173,9 @@ class DLModel():
     def LoadHistory(self):
         self.losses = self.LoadHistoryUnit('loss')
         self.val_losses = self.LoadHistoryUnit('val_loss')
-        self.test_increase = self.LoadHistoryUnit('test')
+        self.TFR = []
+        for iloop in range(MAX_TEST_FUNCS):
+            self.TFR.append(self.LoadHistoryUnit('TFR_%u' % iloop))
         self.init_epoch = self.MaxModelEpoch()
 
 
@@ -168,61 +192,39 @@ class DLModel():
         return features.reshape(output_shape)
 
     def FeaturesPretreat(self, features):
-        features = (features - self.mean) / self.std
+        # features = (features - self.mean) / self.std
         features = self.ReshapeRnnFeatures(features)
         return features
 
-    def SaveHistory(self, losses, val_losses, test_increase):
-        temp_path_name = self.model_path
-        if not os.path.exists(temp_path_name):
-            os.makedirs(temp_path_name)
-        if len(losses) > 0:
-            np.save('%s/loss.npy' % temp_path_name, np.array(losses))
-        if len(val_losses) > 0:
-            np.save('%s/val_loss.npy' % temp_path_name, np.array(val_losses))
-        if len(test_increase):
-            np.save('%s/test.npy' % temp_path_name, np.array(test_increase))
+    def SaveHistory(self, losses, val_losses, TFR):
+        self.SaveHistoryUnit('loss', losses)
+        self.SaveHistoryUnit('val_loss', val_losses)
+        for iloop in range(MAX_TEST_FUNCS):
+            self.SaveHistoryUnit('TFR_%u' % iloop, TFR[iloop])    
 
     def ShowHistory(self):
         path_name = self.model_path
         if not os.path.exists(path_name):
             print("ShowHistory.Error: path (%s) not exist" % path_name)
             return
-        
-        losses = []
-        val_losses = []
-        test_increase = []
-        train_increase = []
-
-        temp_file_name = '%s/loss.npy' % path_name
-        if os.path.exists(temp_file_name):
-            losses = np.load(temp_file_name).tolist()
-        temp_file_name = '%s/val_loss.npy' % path_name
-        if os.path.exists(temp_file_name):
-            val_losses = np.load(temp_file_name).tolist()
-        temp_file_name = '%s/train.npy' % path_name
-        if os.path.exists(temp_file_name):
-            train_increase = np.load(temp_file_name).tolist()
-        temp_file_name = '%s/test.npy' % path_name
-        if os.path.exists(temp_file_name):
-            test_increase = np.load(temp_file_name).tolist()
-
-        PlotHistory(path_name, losses, val_losses, train_increase, test_increase)
+        losses = self.LoadHistoryUnit('loss')
+        val_losses = self.LoadHistoryUnit('val_loss')
+        TFR = []
+        for iloop in range(MAX_TEST_FUNCS):
+            TFR.append(self.LoadHistoryUnit('TFR_%u' % iloop))
+        PlotHistory(path_name, losses, val_losses, TFR)
 
     def Clean(self):
         path_name = self.model_path
         if os.path.exists(path_name):
-            base_common.RmDir(path_name)
+            RmDir(path_name)
 
     def Train(self, train_features, train_labels, val_features, val_labels, train_epochs):
-        if train_epochs == 0:
-            self.ShowHistory()
-            return
         print("reorder...")
         np.random.seed(0)
-        order=np.argsort(np.random.random(len(train_labels)))
-        train_features=train_features[order]
-        train_labels=train_labels[order]
+        order = np.argsort(np.random.random(len(train_labels)))
+        train_features = train_features[order]
+        train_labels = train_labels[order]
 
         print("pretreat...")
         where_are_nan = np.isnan(train_features)
@@ -231,11 +233,12 @@ class DLModel():
         train_features[where_are_inf] = 0.0
         self.mean = train_features.mean(axis=0)
         self.std = train_features.std(axis=0)
+        self.std[self.std < 0.0001] = 0.0001
         train_features = self.FeaturesPretreat(train_features)
         print("train_features: {}".format(train_features.shape))
         val_features = self.FeaturesPretreat(val_features)
         
-        if self.continue_train and (self.MaxModelEpoch > 0):
+        if self.continue_train and (self.MaxModelEpoch() > 0):
             self.LoadModel()
             self.LoadHistory()
             # self.model.compile()
@@ -249,7 +252,15 @@ class DLModel():
                 self.dl_model = o_dl_model
                 self.losses = o_dl_model.losses
                 self.val_losses = o_dl_model.val_losses
-                self.test_increase = o_dl_model.test_increase
+                self.TFR = o_dl_model.TFR
+
+            def run_test_funcs(self):
+                if self.dl_model.test_funcs_list != None:
+                    for iloop in range(len(self.dl_model.test_funcs_list)):
+                        test_func = self.dl_model.test_funcs_list[iloop]
+                        test_param = self.dl_model.test_params_list[iloop]
+                        test_result = test_func(test_param, self.model)
+                        self.TFR[iloop].append(test_result)
 
             def on_epoch_end(self, epoch, logs={}):
                 self.dl_model.current_epoch = epoch + 1
@@ -259,17 +270,20 @@ class DLModel():
                 self.losses.append([temp_epoch, logs.get('loss')])
                 self.val_losses.append([temp_epoch, logs.get('val_loss')])
                 if temp_epoch % self.dl_model.save_step == 0:
-                    if self.dl_model.test_func != None:
-                        self.test_increase.append([temp_epoch, self.dl_model.test_func(self.dl_model.test_param, self.model)])
+                    self.run_test_funcs()
                     self.dl_model.SaveModel(self.model, temp_epoch)
-                    self.dl_model.SaveHistory(self.losses, self.val_losses, self.test_increase)
+                    self.dl_model.SaveHistory(self.losses, self.val_losses, self.TFR)
+                    self.dl_model.ShowHistory()
 
         # The patience parameter is the amount of epochs to check for improvement.
         early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50)
-        history = self.model.fit(train_features, train_labels, epochs=train_epochs, batch_size=self.batch_size, 
-                            validation_data=(val_features, val_labels), verbose=0,
-                            # callbacks=[early_stop, TestCallback()])
-                            callbacks=[TrainCallback(self)])
+        history = self.model.fit(train_features,
+                                 train_labels, 
+                                 epochs=train_epochs, 
+                                 batch_size=self.batch_size, 
+                                 validation_data=(val_features, val_labels), 
+                                 verbose=0,
+                                 callbacks=[TrainCallback(self)])
 
         self.ShowHistory()
 
@@ -291,6 +305,75 @@ class DLModel():
         return predictions
 
 
+def GetDatasetSplitByDate(file_name, split_date):
+    dataset = np.load(file_name)
+    print("dataset: {}".format(dataset.shape))
+    pos = dataset[:, -1] < split_date
+    train_data = dataset[pos]
+    val_data = dataset[~pos]
+
+    print("train: {}".format(train_data.shape))
+    print("val: {}".format(val_data.shape))
+
+    feature_size = dataset.shape[1] - 2
+    train_features = train_data[:, :feature_size]
+    train_labels = train_data[:, feature_size]
+
+    val_features = val_data[:, :feature_size]
+    val_labels = val_data[:, feature_size]
+
+    return train_features, train_labels, val_features, val_labels
+
+def GetDatasetSplitRandom(file_name, val_ratio):
+    dataset = np.load(file_name)
+    print("dataset: {}".format(dataset.shape))
+    data_len = len(dataset)
+    val_data_len = int(data_len * val_ratio)
+    np.random.seed(0)
+    order = np.argsort(np.random.random(data_len))
+    train_data = dataset[order[val_data_len:]]
+    val_data = dataset[order[:val_data_len]]
+
+    feature_size = dataset.shape[1] - 2
+    print("train: {}".format(train_data.shape))
+    print("val: {}".format(val_data.shape))
+
+    train_features = train_data[:, :feature_size]
+    train_labels = train_data[:, feature_size]
+
+    val_features = val_data[:, :feature_size]
+    val_labels = val_data[:, feature_size]
+
+    return train_features, train_labels, val_features, val_labels
+
+if __name__ == "__main__":
+    data_split_mode = 'split_by_date'
+    if len(sys.argv) >= 2:
+        data_split_mode = sys.argv[1]
+
+    file_name = './data/dataset/20000101_20200106_10_0.npy'
+
+    if data_split_mode == 'split_random':
+        # 随机抽取指定比例的数据作为验证集，其他作为训练集
+        tf, tl, vf, vl = GetDatasetSplitRandom(file_name, 0.125)
+    elif data_split_mode == 'split_by_date':
+        # 根据数据时间切分训练集和验证集，数据时间大于split_date的作为验证集，其他作为训练集
+        tf, tl, vf, vl = GetDatasetSplitByDate(file_name, 20180101)
+    else:
+        exit()
+
+    o_dl_model = DLModel('%s' % data_split_mode, 
+                         30, 
+                         5,
+                         32, 
+                         10240, 
+                         0.01, 
+                         'mean_absolute_tp0_max_ratio_error',
+                         10)
+    start_time = time.time()
+    o_dl_model.Train(tf, tl, vf, vl, 500)
+    print('\n\nrun time: {}'.format(time.time() - start_time))
+    
     
 
 

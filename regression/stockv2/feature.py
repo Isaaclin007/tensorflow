@@ -15,11 +15,15 @@ from common import np_common
 from common.const_def import *
 
 # feature unit type 特征单元常量定义 NORM:数据归一化，计算与 avg100 的比例
-FUT_D5_NORM = 1  # 每天的5个数据归一化
-FUT_D5_NORM_PCT = 5
-FUT_D13_NORM = 4  # 每天的13个数据归一化
-FUT_5REGION5_NORM = 2  # 每天的5个 5日区间 数据归一化
-FUT_2AVG5_NORM = 3  # 每天的2个 avg5 数据归一化
+FUT_D2_NORM = 1
+FUT_D3_NORM = 5
+FUT_D5 = 10
+FUT_D5_NORM = 11  # 每天的5个数据归一化
+FUT_D5_NORM_PCT = 12
+FUT_5REGION5_NORM = 20  # 每天的5个 5日区间 数据归一化
+FUT_D13_NORM = 30  # 每天的13个数据归一化
+FUT_2AVG5_NORM = 40  # 每天的2个 avg5 数据归一化
+
 
 # acture data index 定义
 ADI_OPEN_INCREASE = 0
@@ -53,9 +57,15 @@ class Feature():
                                              int(filter_adj_flag_data))
 
     def UpdateFeatureSize(self):
-        if self.feature_unit_type == FUT_D5_NORM:
+        if self.feature_unit_type == FUT_D2_NORM:
+            self.feature_unit_size = 2
+        elif self.feature_unit_type == FUT_D3_NORM:
+            self.feature_unit_size = 3
+        elif self.feature_unit_type == FUT_D5:
             self.feature_unit_size = 5
-        if self.feature_unit_type == FUT_D5_NORM_PCT:
+        elif self.feature_unit_type == FUT_D5_NORM:
+            self.feature_unit_size = 5
+        elif self.feature_unit_type == FUT_D5_NORM_PCT:
             self.feature_unit_size = 5
         elif self.feature_unit_type == FUT_D13_NORM:
             self.feature_unit_size = 13
@@ -88,6 +98,47 @@ class Feature():
                 # if self.filter_adj_flag_data:
                 #     if pp_data['adj_flag'][iloop] != 0:
                 #         return False
+        return True
+
+    def AppendFeature_FUT_D2_NORM(self, pp_data, day_index, data_unit):
+        if not self.AppendFeature_Filter(pp_data, day_index):
+            return False
+        base_close = pp_data[day_index][PPI_close_100_avg]
+        base_vol = pp_data[day_index][PPI_vol_100_avg]
+        for iloop in reversed(range(self.feature_unit_num)):
+            temp_index = day_index + iloop * self.feature_unit_step
+            data_unit.append(pp_data[temp_index][PPI_close] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_vol] / base_vol)
+        return True
+
+    def AppendFeature_FUT_D3_NORM(self, pp_data, day_index, data_unit):
+        if not self.AppendFeature_Filter(pp_data, day_index):
+            return False
+        base_close = pp_data[day_index][PPI_close_100_avg]
+        base_vol = pp_data[day_index][PPI_vol_100_avg]
+        for iloop in reversed(range(self.feature_unit_num)):
+            temp_index = day_index + iloop * self.feature_unit_step
+            close = pp_data[temp_index][PPI_close]
+            pre_close = pp_data[temp_index][PPI_pre_close]
+            vol_norm = pp_data[temp_index][PPI_vol] / base_vol
+            data_unit.append(close / base_close)
+            data_unit.append(vol_norm)
+            if close > pre_close:
+                data_unit.append(vol_norm)
+            else:
+                data_unit.append(-vol_norm)
+        return True
+
+    def AppendFeature_FUT_D5(self, pp_data, day_index, data_unit):
+        if not self.AppendFeature_Filter(pp_data, day_index):
+            return False
+        for iloop in reversed(range(self.feature_unit_num)):
+            temp_index = day_index + iloop * self.feature_unit_step
+            data_unit.append(pp_data[temp_index][PPI_open])
+            data_unit.append(pp_data[temp_index][PPI_close])
+            data_unit.append(pp_data[temp_index][PPI_high])
+            data_unit.append(pp_data[temp_index][PPI_low])
+            data_unit.append(pp_data[temp_index][PPI_vol])
         return True
 
     def AppendFeature_FUT_D5_NORM(self, pp_data, day_index, data_unit):
@@ -168,7 +219,13 @@ class Feature():
     # 从 day_index 开始的前 feature_unit_num 组的数据，包含 day_index
     def AppendFeature(self, pp_data, day_index, data_unit):
         data_len = len(pp_data)
-        if self.feature_unit_type == FUT_D5_NORM:
+        if self.feature_unit_type == FUT_D2_NORM:
+            return self.AppendFeature_FUT_D2_NORM(pp_data, day_index, data_unit)
+        elif self.feature_unit_type == FUT_D3_NORM:
+            return self.AppendFeature_FUT_D3_NORM(pp_data, day_index, data_unit)
+        elif self.feature_unit_type == FUT_D5:
+            return self.AppendFeature_FUT_D5(pp_data, day_index, data_unit)
+        elif self.feature_unit_type == FUT_D5_NORM:
             return self.AppendFeature_FUT_D5_NORM(pp_data, day_index, data_unit)
         elif self.feature_unit_type == FUT_D5_NORM_PCT:
             return self.AppendFeature_FUT_D5_NORM_PCT(pp_data, day_index, data_unit)

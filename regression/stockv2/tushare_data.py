@@ -80,7 +80,7 @@ def StockCodeFilter(ts_code, code_filter_list):
             return True
     return False
 
-def StockCodesName(release_end_date, industry_filter, code_filter, sample_step):
+def StockCodesName(release_end_date, industry_filter, code_filter, sample_step, sample_start_offset=0):
     file_name = './data/' + 'stock_code' + '.csv'
     if os.path.exists(file_name):
         load_df = pd.read_csv(file_name)
@@ -92,7 +92,9 @@ def StockCodesName(release_end_date, industry_filter, code_filter, sample_step):
     if release_end_date > 0:
         load_df = load_df[load_df['list_date'] <= int(release_end_date)]
     if sample_step > 1:
-        load_df = load_df[::sample_step]
+        # load_df[::2] # 奇数行
+        # load_df[1::2] # 偶数行
+        load_df = load_df[sample_start_offset::sample_step]
     load_df = load_df.copy()
     load_df = load_df.reset_index(drop=True)
 
@@ -128,7 +130,7 @@ def StockCodes(release_end_date, industry_filter, code_filter, sample_step):
     code_list, name_list = StockCodesName(release_end_date, industry_filter, code_filter, sample_step)
     return code_list
 
-def StockName(ts_code):
+def StockNames(release_end_date, industry_filter, code_filter, sample_step):
     code_list, name_list = StockCodesName(release_end_date, industry_filter, code_filter, sample_step)
     for iloop in range(0, len(code_list)):
         if code_list[iloop] == ts_code:
@@ -147,9 +149,9 @@ class DataSource():
                  sample_step, 
                  start_date, 
                  end_date, 
-                 use_daily_basic, 
-                 use_money_flow, 
-                 use_adj_factor,
+                 use_daily_basic=False, 
+                 use_money_flow=False, 
+                 use_adj_factor=True,
                  adj_mode='f'):
         self.release_end_date = release_end_date
         self.industry_filter = industry_filter
@@ -177,7 +179,10 @@ class DataSource():
                             code_filter, \
                             sample_step, \
                             self.setting_name_stock)
-        self.code_list = StockCodes(self.release_end_date, self.industry_filter, self.code_filter, self.sample_step)
+        self.code_list, self.name_list = StockCodesName(self.release_end_date, 
+                                                        self.industry_filter, 
+                                                        self.code_filter, 
+                                                        self.sample_step)
         self.date_list = TradeDateListRange(self.start_date, self.end_date)
         self.code_index_map = base_common.ListToIndexMap(self.code_list, False)
         code_list_int = []
@@ -186,13 +191,18 @@ class DataSource():
         self.code_index_map_int = base_common.ListToIndexMap(code_list_int)
         self.date_index_map = base_common.ListToIndexMap(self.date_list, True)
         self.index_ts_code = '000001.SH'
+        self.code_name_map = base_common.ListToMap(self.code_list, self.name_list)
+        self.ShowStockCodes()
 
     def ShowStockCodes(self):
         print('%-7s%s' % ('index', 'ts_code'))
         print('-' * 32)
         for iloop in range(len(self.code_list)):
-            print('%-7u%s' % (iloop, self.code_list[iloop]))
+            print('%-7u%-14s%s' % (iloop, self.code_list[iloop], self.name_list[iloop]))
         print('\n')
+
+    def StockName(self, ts_code):
+        return self.code_name_map[ts_code]
 
     def FileNameStockDownloadData(self, ts_code):
         name_list = []

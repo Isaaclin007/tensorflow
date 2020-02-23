@@ -55,6 +55,12 @@ class Breakup(trade_base.TradeBase):
                                       dataset_sample_num,
                                       cut_loss_ratio)
 
+    def funcname(parameter_list):
+        pass
+
+    # 待优化：
+    #     1：continue down 的计算，如果没有大幅上涨计时breakup也不重置计数器
+    #     2：trade off 条件，如果increase是正的，breakdown不trade off
     def TradePP(self, pp_data):
         data_len = len(pp_data)
         if data_len == 0:
@@ -64,6 +70,9 @@ class Breakup(trade_base.TradeBase):
         continue_down_count = 0
         last_status = WS_NONE
         current_status = WS_NONE
+        current_ts = TS_NONE
+        min_down_value = 1000000.0
+        max_up_value = 0.0
         for day_loop in reversed(range(0, data_len)):
             close = pp_data[day_loop][PPI_close]
             avg = pp_data[day_loop][self.avg_cycle]
@@ -75,23 +84,45 @@ class Breakup(trade_base.TradeBase):
             
             # reset count
             if last_status == WS_UP and current_status == WS_DOWN:
+                if base_common.IncPct(max_up_value, min_down_value) > 50:
+                    continue_down_count = 0
+                    min_down_value = 1000000.0
                 continue_up_count = 0
-                continue_down_count = 0
+                max_up_value = 0.0
             last_status = current_status
 
             # count
             if current_status == WS_UP:
                 continue_up_count += 1
+                if max_up_value < close:
+                    max_up_value = close
             if current_status == WS_DOWN:
                 continue_down_count += 1
+                if min_down_value > close:
+                    min_down_value = close
             
             # wave data
-            if continue_up_count > 0 and \
-               continue_up_count >= self.continue_up_num and \
-               continue_down_count >= self.continue_down_num:
-                self.wave_data[day_loop] = TS_ON
-            elif current_status == WS_DOWN:
-                self.wave_data[day_loop] = TS_OFF
+            if current_ts != TS_ON:
+                if continue_up_count > 0 and \
+                   continue_up_count >= self.continue_up_num and \
+                   continue_down_count >= self.continue_down_num:
+                    self.wave_data[day_loop] = TS_ON
+                    current_ts = TS_ON
+            if current_ts != TS_OFF:
+                if current_status == WS_DOWN:
+                    self.wave_data[day_loop] = TS_OFF
+                    current_ts = TS_OFF
+                if max_up_value > 0 and base_common.IncPct(close, max_up_value) < -20.0:
+                    self.wave_data[day_loop] = TS_OFF
+                    current_ts = TS_OFF
+                    continue_down_count = 0
+                    min_down_value = 1000000.0
+
+            # print('%.0f, %.1f, %.1f, %.1f, %u' % (pp_data[day_loop][PPI_trade_date], 
+            #                                   max_up_value, 
+            #                                   close, 
+            #                                   base_common.IncPct(close, max_up_value),
+            #                                   self.wave_data[day_loop]))
         
     def TradeNextStatus(self, pp_data, day_index):
         return self.wave_data[day_index]
@@ -118,7 +149,6 @@ def main(argv):
     elif FLAGS.mode == 'test':
         start_time = time.time()
         o_trade.TradeTestStock(FLAGS.c, FLAGS.show)
-        print(time.time() - start_time)
     elif FLAGS.mode == 'train':
         tf, tl, vf, vl, td = o_trade.GetDataset(split_date)
         tl = tl * 100.0

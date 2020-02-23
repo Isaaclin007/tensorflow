@@ -147,32 +147,37 @@ def main(argv):
     del argv
 
     o_data_source = tushare_data.DataSource(20000101, '', '', 10, 20000101, 20200106, False, False, True)
-    # o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
+    o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
     # o_feature = feature.Feature(30, feature.FUT_5REGION5_NORM, 5, False, False)
-    o_feature = feature.Feature(100, feature.FUT_D5_NORM, 1, False, False)
-    o_dqn_fix = DQNFix(o_data_source, o_feature, 50, 0.95)
-    # o_dqn_fix = DQNFix(o_data_source, o_feature, 10, 0.8)
-    # split_date = 20180101
-    split_date = 20100101
+    # o_feature = feature.Feature(30, feature.FUT_D3_NORM, 1, False, False)
+    o_dqn_fix = DQNFix(o_data_source, o_feature, 10, 0.8)
+    split_date = 20180101
     o_dl_model = dl_model.DLModel('%s_%u' % (o_dqn_fix.setting_name, split_date), 
                                 o_feature.feature_unit_num, 
                                 o_feature.feature_unit_size,
-                                32, 10240, 0.04, 'mean_absolute_tp0_max_ratio_error')
+                                # 32, 10240, 0.04, 'mean_absolute_tp0_max_ratio_error') # rtest<0
+                                # 4, 10240, 0.04, 'mean_absolute_tp0_max_ratio_error') # rtest<0
+                                # 4, 10240, 0.01, 'mean_absolute_tp0_max_ratio_error') # rtest:0.14
+                                8, 10240, 0.01, 'mean_absolute_tp0_max_ratio_error') # rtest:0.62
+                                # 16, 10240, 0.01, 'mean_absolute_tp0_max_ratio_error') # rtest<0
     o_dqn_test = dqn_test.DQNTest(o_dqn_fix.dsfa, split_date, o_dl_model)
     if FLAGS.mode == 'data':
         o_data_source.DownloadData()
         o_data_source.UpdatePPData()
     elif FLAGS.mode == 'dataset':
         o_dqn_fix.CreateDataSet()
+    elif FLAGS.mode == 'public_dataset':
+        o_dqn_fix.CreateDataSet()
+        public_dataset = o_dqn_fix.PublicDataset()
+        file_name = './data/dataset/20000101_20200106_10_0.npy'
+        np.save(file_name, public_dataset)
     elif FLAGS.mode == 'train':
         tf, tl, vf, vl, td = o_dqn_fix.GetDataset(split_date)
         # tf, tl, vf, vl, va = o_dqn_fix.GetDatasetRandom(0.5)
-        tl = tl * 100.0
-        vl  = vl * 100.0
         o_dl_model.Train(tf, tl, vf, vl, FLAGS.epoch)
     elif FLAGS.mode == 'rtest':
-        # tf, tl, vf, vl, va = o_dqn_fix.GetDataset(split_date)
-        tf, tl, vf, vl, va = o_dqn_fix.GetDatasetRandom(0.5)
+        tf, tl, vf, vl, va = o_dqn_fix.GetDataset(split_date)
+        # tf, tl, vf, vl, va = o_dqn_fix.GetDatasetRandom(0.5)
         o_dl_model.LoadModel(FLAGS.epoch)
         o_dqn_fix.RTest(o_dl_model, vf, va, False)
     elif FLAGS.mode == 'dqntest':

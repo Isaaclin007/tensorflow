@@ -135,22 +135,34 @@ class TradeBase(object):
         name_list = []
 
         name_list.append('before')
-        data_list.append(self.GetShowData(pp_data, pre_on_day_index, -1, 100))
+        data_list.append(self.GetShowData(pp_data, on_day_index, -1, 100))
 
         name_list.append('on')
-        data_list.append(self.GetShowData(pp_data, pre_off_day_index, pre_on_day_index))
+        data_list.append(self.GetShowData(pp_data, pre_off_day_index, on_day_index + 1))
 
         name_list.append('after')
-        data_list.append(self.GetShowData(pp_data, -1, pre_off_day_index, 100))
+        data_list.append(self.GetShowData(pp_data, -1, pre_off_day_index + 1, 100))
 
         avg_index1 = pre_off_day_index - 100
-        avg_index2 = pre_on_day_index + 100
+        avg_index2 = on_day_index + 100
         name_list.append('30_avg')
         data_list.append(self.GetShowData(pp_data, avg_index1, avg_index2, -1, PPI_close_30_avg))
 
         name_list.append('100_avg')
-        data_list.append(self.GetShowData(pp_data, avg_index1, avg_index2, -1, PPI_close_100_avg))
+        show_data_100_avg = self.GetShowData(pp_data, avg_index1, avg_index2, -1, PPI_close_100_avg)
+        data_list.append(show_data_100_avg)
+
+        name_list.append('vol')
+        show_data_vol = self.GetShowData(pp_data, avg_index1, avg_index2, -1, PPI_vol)
+        close_max = max(show_data_100_avg[:, 1])
+        vol_max = max(show_data_vol[:, 1])
+        vol_ratio = 1.0 / vol_max * close_max / 2
+        show_data_vol[:, 1] *= vol_ratio
+        data_list.append(show_data_vol)
+
         np_common.Show2DData('Trade', data_list, name_list, True)
+
+
 
     def TradeRecord(self, 
                     trade_count,
@@ -371,6 +383,19 @@ class TradeBase(object):
         self.TradeTest(pp_data, True, False, show_trade_record)
         # self.TradeTest(pp_data, False, True)
 
+    def PublicDataset(self):
+        file_name = self.FileNameDataset()
+        dataset = np.load(file_name)
+        print("dataset: {}".format(dataset.shape))
+        feature_size = self.feature.feature_size
+        public_dataset = np.zeros((len(dataset), feature_size + 2))
+        public_dataset[:, 0:feature_size] = dataset[:, 0:feature_size]
+        public_dataset[:, feature_size] = dataset[:, self.index_increase] * 100.0
+        public_dataset[:, feature_size + 1] = dataset[:, self.index_pre_on_date]
+        print("public_dataset: {}".format(public_dataset.shape))
+        return public_dataset
+
+
     def GetDataset(self, split_date):
         file_name = self.FileNameDataset()
         # file_name = '../stock/data/dataset/wave_dataset_0_30_0_0_20120101_20000101_20000101_20190414___2_2_0_1_0_5_0.npy'
@@ -387,10 +412,10 @@ class TradeBase(object):
         print("test: {}".format(test_data.shape))
 
         train_features = train_data[:, :self.feature.feature_size]
-        train_labels = train_data[:, self.feature.feature_size]
+        train_labels = train_data[:, self.feature.feature_size] * 100.0
 
         test_features = test_data[:, :self.feature.feature_size]
-        test_labels = test_data[:, self.feature.feature_size]
+        test_labels = test_data[:, self.feature.feature_size] * 100.0
         test_acture = test_data[:, self.feature.feature_size:]
 
         return train_features, train_labels, test_features, test_labels, test_acture
@@ -412,10 +437,10 @@ class TradeBase(object):
         print("test: {}".format(test_data.shape))
 
         train_features = train_data[:, :self.feature.feature_size]
-        train_labels = train_data[:, self.feature.feature_size]
+        train_labels = train_data[:, self.feature.feature_size] * 100.0
 
         test_features = test_data[:, :self.feature.feature_size]
-        test_labels = test_data[:, self.feature.feature_size]
+        test_labels = test_data[:, self.feature.feature_size] * 100.0
         test_acture = test_data[:, self.feature.feature_size:]
 
         return train_features, train_labels, test_features, test_labels, test_acture

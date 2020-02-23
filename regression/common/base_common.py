@@ -88,6 +88,12 @@ def ListToIndexMap(input_list, to_int_value=False):
             temp_dict[input_list[iloop]] = iloop
     return temp_dict
 
+def ListToMap(list1, list2):
+    temp_dict = {}
+    for iloop in range(0, len(list1)):
+        temp_dict[list1[iloop]] = list2[iloop]
+    return temp_dict
+
 def ListMultiThreadFunc(func, param, msg_q):
     print('ListMultiThreadFunc')
     while(True):

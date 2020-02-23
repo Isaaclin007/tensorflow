@@ -38,12 +38,14 @@ class AvgWave(trade_base.TradeBase):
                  avg_cycle,
                  mode,
                  continue_up_num, 
+                 continue_down_num, 
                  cut_loss_ratio,
                  dataset_sample_num = 5):
         class_name = 'avg_wave'
         self.avg_cycle = avg_cycle
         self.mode = mode
         self.continue_up_num = continue_up_num
+        self.continue_down_num = continue_down_num
         self.data_source = o_data_source
         self.feature = o_feature
         self.dataset_size = 0
@@ -63,13 +65,17 @@ class AvgWave(trade_base.TradeBase):
             return
         self.wave_data = np.zeros((data_len), dtype=np.int)
         continue_up_count = 0
+        continue_down_count = 0
         if self.mode == MODE_GRAD:
             for day_loop in reversed(range(0, data_len-1)):
                 if pp_data[day_loop][self.avg_cycle] > pp_data[day_loop + 1][self.avg_cycle]:
                     continue_up_count += 1
                 else:
                     continue_up_count = 0
-                if continue_up_count > 0 and continue_up_count >= self.continue_up_num:
+                    continue_down_count += 1
+                if continue_up_count > 0 and \
+                    continue_up_count >= self.continue_up_num and \
+                    continue_down_count >= self.continue_down_num:
                     self.wave_data[day_loop] = WS_UP
                 else:
                     self.wave_data[day_loop] = WS_DOWN
@@ -95,12 +101,12 @@ class AvgWave(trade_base.TradeBase):
 def main(argv):
     del argv
 
-    o_data_source = tushare_data.DataSource(20000101, '', '', 10, 20000101, 20200106, False, False, True)
+    o_data_source = tushare_data.DataSource(20000101, '', '', 10, 20180101, 20200106, False, False, True)
     o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
     # o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
     # o_feature = feature.Feature(30, feature.FUT_5REGION5_NORM, 5, False, False)
     # o_feature = feature.Feature(30, feature.FUT_2AVG5_NORM, 5, False, False)
-    o_avg_wave = AvgWave(o_data_source, o_feature, PPI_close_30_avg, MODE_GRAD, 0, 0.1)
+    o_avg_wave = AvgWave(o_data_source, o_feature, PPI_close_30_avg, MODE_GRAD, 10, 0, 0.1)
     split_date = 20180101
     o_dl_model = dl_model.DLModel('%s_%u' % (o_avg_wave.setting_name, split_date), 
                                   o_feature.feature_unit_num, 
@@ -110,7 +116,7 @@ def main(argv):
         o_data_source.DownloadData()
         o_data_source.UpdatePPData()
     elif FLAGS.mode == 'testall':
-        o_avg_wave.TradeTestAll()
+        o_avg_wave.TradeTestAll(True, True)
     elif FLAGS.mode == 'test':
         start_time = time.time()
         o_avg_wave.TradeTestStock(FLAGS.c, FLAGS.show)
