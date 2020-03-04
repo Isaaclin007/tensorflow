@@ -33,7 +33,8 @@ class DQNFix(trade_base.TradeBase):
                  o_data_source,
                  o_feature,
                  label_days = 10,
-                 decay_ratio = 0.8):
+                 decay_ratio = 0.8,
+                 no_overlap_feature = True):
         class_name = 'dqn_fix'
         self.data_source = o_data_source
         self.feature = o_feature
@@ -41,7 +42,9 @@ class DQNFix(trade_base.TradeBase):
         self.dataset_len = 0
         self.label_days = label_days
         self.decay_ratio = decay_ratio
-        app_setting_name = '%u_%.4f' % (label_days, decay_ratio)
+        self.no_overlap_feature = no_overlap_feature
+
+        app_setting_name = '%u_%.4f_%u' % (label_days, decay_ratio, no_overlap_feature)
         super(DQNFix, self).__init__(o_data_source, 
                                       o_feature, 
                                       class_name, 
@@ -74,7 +77,12 @@ class DQNFix(trade_base.TradeBase):
         
         for code_index in range(0, code_num):
             ts_code = dqn_src_dataset[0][code_index][data_unit_tscode_index]
-            for day_loop in reversed(range(0, date_num)):
+            if self.no_overlap_feature:
+                start_index = random.randint(0, self.feature.feature_unit_num-1)
+                day_list = reversed(range(start_index, date_num, self.feature.feature_unit_num))
+            else:
+                day_list = reversed(range(0, date_num))
+            for day_loop in day_list:
                 pre_on_date = dqn_src_dataset[day_loop][code_index][data_unit_date_index]
                 # if temp_date > dqn_dataset.dataset_train_test_split_date:
                 #     break
@@ -146,21 +154,22 @@ class DQNFix(trade_base.TradeBase):
 def main(argv):
     del argv
 
-    o_data_source = tushare_data.DataSource(20000101, '', '', 10, 20000101, 20200106, False, False, True)
-    o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
+    o_data_source = tushare_data.DataSource(20000101, '', '', 1, 20000101, 20200106, False, False, True)
+    # o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
+    o_feature = feature.Feature(10, feature.FUT_D5_NORM, 1, False, False)
     # o_feature = feature.Feature(30, feature.FUT_5REGION5_NORM, 5, False, False)
     # o_feature = feature.Feature(30, feature.FUT_D3_NORM, 1, False, False)
-    o_dqn_fix = DQNFix(o_data_source, o_feature, 10, 0.8)
-    split_date = 20180101
+    o_dqn_fix = DQNFix(o_data_source, o_feature, 10, 0.8, not FLAGS.overlap_feature)
+    split_date = 20100101
     o_dl_model = dl_model.DLModel('%s_%u' % (o_dqn_fix.setting_name, split_date), 
                                 o_feature.feature_unit_num, 
                                 o_feature.feature_unit_size,
                                 # 32, 10240, 0.04, 'mean_absolute_tp0_max_ratio_error') # rtest<0
                                 # 4, 10240, 0.04, 'mean_absolute_tp0_max_ratio_error') # rtest<0
                                 # 4, 10240, 0.01, 'mean_absolute_tp0_max_ratio_error') # rtest:0.14
-                                8, 10240, 0.01, 'mean_absolute_tp0_max_ratio_error') # rtest:0.62
+                                32, 10240, 0.01, 'mean_absolute_tp_max_ratio_error_tanhmap', 100) # rtest:0.62
                                 # 16, 10240, 0.01, 'mean_absolute_tp0_max_ratio_error') # rtest<0
-    o_dqn_test = dqn_test.DQNTest(o_dqn_fix.dsfa, split_date, o_dl_model)
+    o_dqn_test = dqn_test.DQNTest(o_dqn_fix.dsfa, 20180101, o_dl_model)
     if FLAGS.mode == 'data':
         o_data_source.DownloadData()
         o_data_source.UpdatePPData()
@@ -169,7 +178,8 @@ def main(argv):
     elif FLAGS.mode == 'public_dataset':
         o_dqn_fix.CreateDataSet()
         public_dataset = o_dqn_fix.PublicDataset()
-        file_name = './data/dataset/20000101_20200106_10_0.npy'
+        # file_name = './data/dataset/20000101_20200106_10_0.npy'
+        file_name = './data/dataset/test.npy'
         np.save(file_name, public_dataset)
     elif FLAGS.mode == 'train':
         tf, tl, vf, vl, td = o_dqn_fix.GetDataset(split_date)
@@ -181,8 +191,8 @@ def main(argv):
         o_dl_model.LoadModel(FLAGS.epoch)
         o_dqn_fix.RTest(o_dl_model, vf, va, False)
     elif FLAGS.mode == 'dqntest':
-        o_dl_model.LoadModel(FLAGS.epoch)
-        o_dqn_test.Test(True)
+        o_dl_model.LoadModel()
+        o_dqn_test.Test(5, True)
     elif FLAGS.mode == 'dsw':
         dataset = o_dqn_fix.ShowDSW3DDataset()
     elif FLAGS.mode == 'show':
@@ -204,5 +214,6 @@ if __name__ == "__main__":
     flags.DEFINE_string('c', '000001.SZ', 'ts code')
     flags.DEFINE_integer('epoch', 100, 'train or rtest epoch')
     flags.DEFINE_boolean('show', False, 'show trade record')
+    flags.DEFINE_boolean('overlap_feature', True, 'overlap featrue')
     app.run(main)
     

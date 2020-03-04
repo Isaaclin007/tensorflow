@@ -52,23 +52,23 @@ def PlotHistory(save_path, losses, val_losses, TFR):
     plt, mdate, zhfont = ImportMatPlot(True)
     if len(losses) <= 1:
         return
-    if not hasattr(PlotHistory, 'fig'):
-        plt.ion()
-        PlotHistory.fig, PlotHistory.ax1 = plt.subplots()
-        PlotHistory.ax2 = PlotHistory.ax1.twinx()
-    PlotHistory.ax1.cla()
-    PlotHistory.ax2.cla()
-    Plot2DArray(PlotHistory.ax1, losses, 'loss')
-    Plot2DArray(PlotHistory.ax1, val_losses, 'val_loss')
+    plt.ion()
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+
+    Plot2DArray(ax1, losses, 'loss')
+    Plot2DArray(ax1, val_losses, 'val_loss')
     for iloop in range(len(TFR)):
-        Plot2DArray(PlotHistory.ax2, TFR[iloop], 'TFR_%u' % iloop)
-    PlotHistory.ax1.legend()
-    # PlotHistory.ax2.legend()
+        Plot2DArray(ax2, TFR[iloop], 'TFR_%u' % iloop)
+    ax1.legend()
+    # ax2.legend()
     # plt.show()
     # plt.pause(1)
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     plt.savefig('%s/figure.png' % save_path)
+    plt.close()
+
 
 class DLModel():
     def __init__(self, 
@@ -162,6 +162,7 @@ class DLModel():
     def LoadModel(self, epoch=-1):
         if epoch == -1:
             load_epoch = self.MaxModelEpoch()
+            print("load_epoch: %u" % load_epoch)
         else:
             load_epoch = epoch
         temp_path_name, model_name, mean_name, std_name = self.ModelFileNames(load_epoch)
@@ -351,7 +352,7 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         data_split_mode = sys.argv[1]
 
-    file_name = './data/dataset/20000101_20200106_10_0.npy'
+    file_name = './data/dataset.npy'
 
     if data_split_mode == 'split_random':
         # 随机抽取指定比例的数据作为验证集，其他作为训练集
@@ -363,9 +364,9 @@ if __name__ == "__main__":
         exit()
 
     o_dl_model = DLModel('%s' % data_split_mode, 
-                         30, 
+                         10, 
                          5,
-                         32, 
+                         8, 
                          10240, 
                          0.01, 
                          'mean_absolute_tp0_max_ratio_error',

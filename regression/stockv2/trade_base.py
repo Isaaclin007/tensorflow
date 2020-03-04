@@ -18,6 +18,7 @@ from common.const_def import *
 import tushare_data
 import feature
 import dl_model
+import preprocess
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -65,13 +66,16 @@ class TradeBase(object):
         self.index_pre_off_date = self.feature.feature_size + 4
         self.index_off_date     = self.feature.feature_size + 5
         self.index_holding_days = self.feature.feature_size + 6
-        self.rtest_max_holding_num = 4
+        self.rtest_max_holding_num = 1
 
     def FileNameDataset(self):
         return './data/dataset/%s.npy' % self.setting_name
 
     def FileNameDSW3DDataset(self):
         return './data/dataset/DSW3D_%s.npy' % self.setting_name
+
+    def FileNameDSWWsUpNumDataset(self):
+        return './data/dataset/DSWWsUpNum_%s.npy' % self.setting_name
         
     def AppendDataUnit(self, data_unit):
         if self.dataset_len >= self.dataset_size:
@@ -352,6 +356,7 @@ class TradeBase(object):
             code_index = self.data_source.code_index_map_int[ts_code]
             base_common.PrintTrade(trade_count, ts_code, '--', '--', '--', '--', sum_increase, sum_holding_days)
         return sum_increase, trade_count, sum_holding_days
+        # return capital_ratio - 1, trade_count, sum_holding_days
 
     def TradeTestAll(self, save_data_unit=True, show_trade_record = False):
         sum_increase = 0.0
@@ -366,13 +371,16 @@ class TradeBase(object):
             sum_holding_days += holding_days
         base_common.PrintTrade(sum_trade_count, '--', '--', '--', '--', '--', sum_increase, sum_holding_days)
         if sum_trade_count == 0:
+            avg_increase_stock = 0.0
             avg_increase_day = 0.0
             avg_increase_trade = 0.0
         else:
+            avg_increase_stock = sum_increase / len(self.data_source.code_list)
             avg_increase_day = sum_increase / sum_holding_days
             avg_increase_trade = sum_increase / sum_trade_count
-        print('avg increase / day : %.4f' % avg_increase_day)
-        print('avg increase / trade : %.4f' % avg_increase_trade)
+        print('%-24s: %.4f' % ('avg increase / stock', avg_increase_stock))
+        print('%-24s: %.4f' % ('avg increase / trade', avg_increase_trade))
+        print('%-24s: %.4f' % ('avg increase / day', avg_increase_day))
         if self.dataset_len > 0:
             file_name = self.FileNameDataset()
             base_common.MKFileDirs(file_name)
@@ -445,6 +453,7 @@ class TradeBase(object):
 
         return train_features, train_labels, test_features, test_labels, test_acture
 
+    # date, stock, wave_stats(up|down) dataset, shape:(date_num, stock_num, 1)
     def GetDSW3DDataset(self):
         dataset_file_name = self.FileNameDSW3DDataset()
         if not os.path.exists(dataset_file_name):
@@ -500,18 +509,49 @@ class TradeBase(object):
         data_list.append(show_data)
         np_common.Show2DData('wave_data', data_list, [], True)
 
+    # 显示 date-up_num, index_data
     def ShowDSW3DDataset(self):
         dataset = self.GetDSW3DDataset()
-        show_data = np.zeros((len(self.data_source.date_list), 2))
+        data_len = len(self.data_source.date_list)
+        dsw_show_data = np.zeros((data_len, 2))
+        dsw_avg_show_data = np.zeros((data_len, 2))
         for iloop in range(len(self.data_source.date_list)):
-            show_data[iloop][0] = int(self.data_source.date_list[iloop])
-            show_data[iloop][1] = np.sum(dataset[iloop, :, 0] == WS_UP)
-            print('%-10u%u' % (int(show_data[iloop][0]), int(show_data[iloop][1])))
-        index_pp_data = self.data_source.LoadIndexPPData()
+            dsw_avg_show_data[iloop][0] = int(self.data_source.date_list[iloop])
+            dsw_show_data[iloop][0] = int(self.data_source.date_list[iloop])
+            dsw_show_data[iloop][1] = np.sum(dataset[iloop, :, 0] == WS_UP)
+            print('%-10u%u' % (int(dsw_show_data[iloop][0]), int(dsw_show_data[iloop][1])))
+
+        index_pp_data = self.data_source.LoadIndexPPData(True)
         index_show_data = np.zeros((len(index_pp_data), 2))
         index_show_data[:, 0] = index_pp_data[:, PPI_trade_date]
         index_show_data[:, 1] = index_pp_data[:, PPI_close]
-        np_common.Show2DData('DSW3D', [show_data, index_show_data], [], True)
+
+        dsw_max = max(dsw_show_data[:,1])
+        index_max = max(index_show_data[:, 1])
+        dsw_ratio = 1.0 / dsw_max * index_max / 2
+        dsw_show_data[:,1] = dsw_show_data[:,1] * dsw_ratio
+
+        dsw_avg_show_data[:data_len-(5-1), 1] = np.mean(preprocess.PPSpread(dsw_show_data, 1, 5), axis=1)
+
+        np_common.Show2DData('DSW3D', [dsw_avg_show_data, index_show_data], [], True)
+
+    def InitDSWWsUpNumDataset(self):
+        dataset_file_name = self.FileNameDSWWsUpNumDataset()
+        if not os.path.exists(dataset_file_name):
+            dsw_dataset = self.GetDSW3DDataset()
+            date_num = len(self.data_source.date_list)
+            dataset = np.zeros((date_num))
+            for iloop in range(date_num):
+                dataset[iloop] = np.sum(dsw_dataset[iloop, :, 0] == WS_UP)
+            base_common.MKFileDirs(dataset_file_name)
+            np.save(dataset_file_name, dataset)
+        dataset = np.load(dataset_file_name)
+        self.dsw_ws_up_num = np.load(dataset_file_name)
+
+    def GetDSWWsUpNum(self, trade_date):
+        D_index = self.data_source.date_index_map[int(trade_date)]
+        return self.dsw_ws_up_num[D_index]
+
 
     def RTest(self, dl_model, test_features, test_acture, test_features_pretreated=False):
         predictions = dl_model.Predict(test_features, test_features_pretreated)

@@ -40,9 +40,8 @@ def ShowAStock(ts_code, show_values=[PPI_open,
                                      PPI_close_30_avg,
                                      PPI_close_100_avg,
                                      PPI_vol,
-                                     PPI_vol_5_avg,
                                      PPI_vol_10_avg,
-                                     PPI_vol_30_avg]):
+                                     PPI_vol_100_avg]):
     plt, mdate, zhfont = base_common.ImportMatPlot()
     current_date_int = int(base_common.CurrentDate())
     o_data_source = tushare_data.DataSource(current_date_int, 
@@ -51,12 +50,18 @@ def ShowAStock(ts_code, show_values=[PPI_open,
                                             1, 
                                             0, 
                                             current_date_int)
-    o_data_source.DownloadStockData(ts_code)
-    o_data_source.UpdateStockPPData(ts_code)
-    pp_data = o_data_source.LoadStockPPData(ts_code)
+    if ts_code == '000001.SH':
+        o_data_source.DownloadIndexData()
+        o_data_source.UpdateIndexPPData()
+        pp_data = o_data_source.LoadIndexPPData(ts_code)
+        stock_name = ''
+    else:
+        o_data_source.DownloadStockData(ts_code)
+        o_data_source.UpdateStockPPData(ts_code)
+        pp_data = o_data_source.LoadStockPPData(ts_code)
+        stock_name = o_data_source.StockName(ts_code)
     if len(pp_data) == 0:
         return
-    stock_name = o_data_source.StockName(ts_code)
     title = "%s - %s" % (ts_code, stock_name)
     title = unicode(title, "utf-8")
     fig1 = plt.figure(dpi=70,figsize=(32,10))
@@ -80,6 +85,7 @@ def ShowAStock(ts_code, show_values=[PPI_open,
     for col_index in show_values:
         name = ''
         if col_index in vol_list:
+            # plt.bar(xs, pp_data[:, col_index] * vol_ratio, 0.8)
             plt.plot(xs, pp_data[:, col_index] * vol_ratio, label=PPI_name[col_index], linewidth=1)
         else:
             plt.plot(xs, pp_data[:, col_index], label=PPI_name[col_index], linewidth=1)

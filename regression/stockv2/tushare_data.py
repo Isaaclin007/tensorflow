@@ -10,6 +10,7 @@ import time
 import datetime
 import sys
 import math
+import hashlib
 import preprocess
 sys.path.append("..")
 from common import base_common
@@ -173,10 +174,16 @@ class DataSource():
         self.setting_name_stock = '%s_%s' % (\
                             str(start_date), \
                             self.setting_name_stock_pp)
+        if code_filter == '':
+            self.code_filter_setting_name = ''
+        else:
+            md5 = hashlib.md5()
+            md5.update(code_filter.encode('utf-8'))
+            self.code_filter_setting_name = str(md5.hexdigest())
         self.setting_name = '%s_%s_%s_%u_%s' % (\
                             str(release_end_date), \
                             industry_filter, \
-                            code_filter, \
+                            self.code_filter_setting_name, \
                             sample_step, \
                             self.setting_name_stock)
         self.code_list, self.name_list = StockCodesName(self.release_end_date, 

@@ -85,7 +85,8 @@ def Show2DData(title, data_list, name_list, x_is_date = False):
     fig1.canvas.mpl_connect('key_press_event', lambda event: on_key(event, key_value))
 
     ax1 = fig1.add_subplot(1,1,1) 
-    ax1.xaxis.set_major_formatter(mdate.DateFormatter('%Y-%m-%d'))
+    if x_is_date:
+        ax1.xaxis.set_major_formatter(mdate.DateFormatter('%Y-%m-%d'))
     plt.title(title, fontproperties=zhfont)
     plt.xlabel('x')
     plt.ylabel('y')
@@ -102,7 +103,8 @@ def Show2DData(title, data_list, name_list, x_is_date = False):
         else:
             xs = x
         plt.plot(xs, y, label=name, linewidth=1)
-    plt.gcf().autofmt_xdate()
+    if x_is_date:
+        plt.gcf().autofmt_xdate()
     plt.legend()
     plt.show()
     while(1):

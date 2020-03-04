@@ -62,24 +62,28 @@ class DQNTest():
                 return dloop
         return -1
 
-    def Test(self, print_trade_detail=False):
+    def Test(self, pred_threshold, print_trade_detail=False):
         if self.test_dataset == None:
             self.LoadDataset()
         date_col_index = self.dsfa.feature.index_date
         open_col_index = self.dsfa.feature.index_open
         tscode_col_index = self.dsfa.feature.index_tscode
+        date_num = self.test_dataset.shape[0]
+        code_num = self.test_dataset.shape[1]
 
         print("test_features:{}".format(self.test_features.shape))
         predictions = self.dl_model.Predict(self.test_features, True)
+        for i in range(date_num):
+            for j in range(code_num):
+                if self.test_dataset[i][j][date_col_index] == 0.0:
+                    predictions[i][j][0] = 0.0
         print("predictions:{}".format(predictions.shape))
         max_Q_codes_index = np.argmax(predictions, axis=1).flatten()
-        # print("max_Q_codes_index:{}".format(max_Q_codes_index.shape))
+        print("max_Q_codes_index:{}".format(max_Q_codes_index.shape))
         max_Q_codes_value = np.amax(predictions, axis=1)
         max_Q_mean = np.mean(max_Q_codes_value)
         # print("max_Q_mean:{}".format(max_Q_mean))
         
-        date_num = self.test_dataset.shape[0]
-        code_num = self.test_dataset.shape[1]
         curren_status = TS_OFF
         trade_count = 0
         increase_sum = 0.0
@@ -97,12 +101,14 @@ class DQNTest():
                 continue
             
             Q = predictions[dloop][code_index]
-            if Q > 0:
+            if Q >= pred_threshold:
                 # print(Q)
                 next_status = TS_ON
             else:
                 next_status = TS_OFF
             
+            # print('%u, %u' % (dloop, next_status))
+
             if curren_status == TS_OFF:
                 if next_status == TS_ON:
                     curren_status = TS_ON
@@ -123,8 +129,13 @@ class DQNTest():
                     out_price = self.test_dataset[t2_date_index][code_index][open_col_index]
                     increase = out_price / in_price - 1.0
                     hold_days = t1_date_index - t2_date_index
+                    increase_sum += increase
+                    capital_ratio *= (increase + 1.0)
+                    trade_count += 1
+                    hold_days_sum += hold_days
+                    dloop = t2_date_index
                     if print_trade_detail:
-                        print('%-8u%-10.0f%-10.0f%-10s%-10.2f%-10.2f%-10.2f%-10.4f%-10u' % (trade_count, 
+                        print('%-8u%-10.0f%-10.0f%-10s%-10.2f%-10.2f%-10.2f%-10.4f%-10u%-10.4f' % (trade_count, 
                                 self.test_dataset[t1_date_index][code_index][date_col_index], 
                                 self.test_dataset[t2_date_index][code_index][date_col_index], 
                                 '%06u' % self.test_dataset[t1_date_index][code_index][tscode_col_index],
@@ -132,12 +143,8 @@ class DQNTest():
                                 in_price,
                                 out_price,
                                 increase,
-                                hold_days))
-                    increase_sum += increase
-                    capital_ratio *= (increase + 1.0)
-                    trade_count += 1
-                    hold_days_sum += hold_days
-                    dloop = t2_date_index
+                                hold_days,
+                                capital_ratio))
                 else:
                     dloop -= 1
         if print_trade_detail:
