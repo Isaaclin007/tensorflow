@@ -196,6 +196,7 @@ class DataSource():
         for iloop in range(len(self.code_list)):
             code_list_int.append(int(self.code_list[iloop][0:6]))
         self.code_index_map_int = base_common.ListToIndexMap(code_list_int)
+        # date_index_map: int -> int
         self.date_index_map = base_common.ListToIndexMap(self.date_list, True)
         self.index_ts_code = '000001.SH'
         self.code_name_map = base_common.ListToMap(self.code_list, self.name_list)
@@ -229,8 +230,8 @@ class DataSource():
             self.setting_name_stock_pp)
         return temp_file_name
 
-    def FileNameMergePPData(self):
-        return './data/preprocessed/merge_%s.npy' % self.setting_name
+    # def FileNameDSPPDataset(self, end_date):
+    #     return './data/dataset/dspp_%s_%u.npy' % (self.setting_name_stock, end_date)
 
     def InvalidFileClean(self, file_name):
         if os.path.exists(file_name):
@@ -477,14 +478,52 @@ class DataSource():
     def LoadIndexPPData(self, cut_from_start_date=False):
         return self.LoadStockPPData(self.index_ts_code, cut_from_start_date)
 
+    # # 含 create
+    # def LoadDSPPOriginDataset(self):
+    #     file_name = self.FileNameDSPPDataset(self.end_date)
+    #     if not os.path.exists(file_name):
+    #         dataset = np.zeros((len(self.date_list), len(self.code_list), PPI_NUM))
+    #         for ts_code in self.code_list:
+    #             pp_data = self.LoadStockPPData(ts_code, True)
+    #             s_index = self.code_index_map[ts_code]
+    #             for iloop in range(len(pp_data)):
+    #                 d_index = self.date_index_map[int(pp_data[iloop][PPI_trade_date])]
+    #                 dataset[d_index][s_index] = pp_data[iloop]
+    #         np.save(file_name, dataset)
+    #     return np.load(file_name)
+        
+
+    # # 含 create
+    # def LoadDSPPDataset(self, trade_date):
+    #     file_name = self.FileNameDSPPDataset(trade_date)
+    #     if not os.path.exists(file_name):
+    #         origin_dataset = self.LoadDSPPOriginDataset()
+            
+    #     load_dataset = np.load(file_name)
+    #     print("dspp_dataset_%u: {}".format(trade_date, load_dataset.shape))
+    #     return load_dataset
+
+    def SetPPDataDailyUpdate(self, trade_date):
+
+    def LoadStockPPDataDailyUpdate(self, ts_code, cut_from_start_date=False):
+
+
 if __name__ == "__main__":
     data_source = DataSource(20000101, '', '', 1, 20000101, 20200106, False, False, True)
     # data_source.ShowStockCodes()
-    data_source.DownloadData()
-    data_source.UpdatePPData()
-    # start_time = time.time()
-    # data_source.UpdateStockPPData('000001.SZ')
-    # print(time.time() - start_time)
-    print(data_source.LoadIndexPPData(True).shape)
+    # data_source.DownloadData()
+    # data_source.UpdatePPData()
+
+    ts_code = '000001.SZ'
+    file_name = data_source.FileNameStockPPData(ts_code)
+    if os.path.exists(file_name):
+        os.remove(file_name)
+
+    start_time = time.time()
+    data_source.UpdateStockPPData(ts_code)
+    print(time.time() - start_time)
+
+    # print(data_source.LoadIndexPPData(True).shape)
+    
 
 
