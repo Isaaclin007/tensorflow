@@ -164,33 +164,43 @@ class DataSource():
         self.use_money_flow = use_money_flow
         self.use_adj_factor = use_adj_factor
         self.adj_mode = adj_mode
+        self.pp_data_daily_update = False
+        self.UpdateSettings()
+        print('DataSource.__init__: ts_code num: %u' % len(self.code_list))
+        # self.ShowStockCodes()
+
+    def UpdateSettings(self):
+        if self.pp_data_daily_update:
+            setting_end_date = self.end_date_daily_update
+        else:
+            setting_end_date = self.end_date
         self.download_data_name_list = ['daily', 'daily_basic', 'moneyflow', 'adj_factor']
         self.setting_name_stock_pp = '%s_%u_%u_%u_%s' % (\
-                            str(end_date), \
-                            int(use_daily_basic), \
-                            int(use_money_flow), \
-                            int(use_adj_factor), \
-                            adj_mode)
+                            str(setting_end_date), \
+                            int(self.use_daily_basic), \
+                            int(self.use_money_flow), \
+                            int(self.use_adj_factor), \
+                            self.adj_mode)
         self.setting_name_stock = '%s_%s' % (\
-                            str(start_date), \
+                            str(self.start_date), \
                             self.setting_name_stock_pp)
-        if code_filter == '':
+        if self.code_filter == '':
             self.code_filter_setting_name = ''
         else:
             md5 = hashlib.md5()
-            md5.update(code_filter.encode('utf-8'))
+            md5.update(self.code_filter.encode('utf-8'))
             self.code_filter_setting_name = str(md5.hexdigest())
         self.setting_name = '%s_%s_%s_%u_%s' % (\
-                            str(release_end_date), \
-                            industry_filter, \
+                            str(self.release_end_date), \
+                            self.industry_filter, \
                             self.code_filter_setting_name, \
-                            sample_step, \
+                            self.sample_step, \
                             self.setting_name_stock)
         self.code_list, self.name_list = StockCodesName(self.release_end_date, 
                                                         self.industry_filter, 
                                                         self.code_filter, 
                                                         self.sample_step)
-        self.date_list = TradeDateListRange(self.start_date, self.end_date)
+        self.date_list = TradeDateListRange(self.start_date, setting_end_date)
         self.code_index_map = base_common.ListToIndexMap(self.code_list, False)
         code_list_int = []
         for iloop in range(len(self.code_list)):
@@ -200,7 +210,6 @@ class DataSource():
         self.date_index_map = base_common.ListToIndexMap(self.date_list, True)
         self.index_ts_code = '000001.SH'
         self.code_name_map = base_common.ListToMap(self.code_list, self.name_list)
-        self.ShowStockCodes()
 
     def ShowStockCodes(self):
         print('%-7s%s' % ('index', 'ts_code'))
@@ -352,13 +361,16 @@ class DataSource():
             sys.stdout.write("%-4d : %s 100%%\n" % (self.code_index_map[ts_code], ts_code))
 
     def LoadStockPPData(self, ts_code, cut_from_start_date=False):
-        stock_pp_file_name = self.FileNameStockPPData(ts_code)
-        if not os.path.exists(stock_pp_file_name):
-            return []
-        pp_data = np.load(stock_pp_file_name)
-        if cut_from_start_date:
-            pp_data = pp_data[pp_data[:,PPI_trade_date] >= int(self.start_date)]
-        return pp_data
+        if self.pp_data_daily_update:
+            return self.LoadStockPPDataDailyUpdate(ts_code, cut_from_start_date)
+        else:
+            stock_pp_file_name = self.FileNameStockPPData(ts_code)
+            if not os.path.exists(stock_pp_file_name):
+                return []
+            pp_data = np.load(stock_pp_file_name)
+            if cut_from_start_date:
+                pp_data = pp_data[pp_data[:,PPI_trade_date] >= int(self.start_date)]
+            return pp_data
 
     def UpdatePPData(self):
         base_common.ListMultiThread(UpdatePPDataMTFunc, self, 8, self.code_list)
@@ -504,9 +516,53 @@ class DataSource():
     #     return load_dataset
 
     def SetPPDataDailyUpdate(self, trade_date):
+        date_list = TradeDateListRange(self.end_date, trade_date)
+        if int(date_list[-1]) == self.end_date:
+            date_list.pop(-1)
+        self.merge_daily_data = pd.DataFrame()
+        for d in date_list:
+            self.DownloadTradeDayData(d)
+            df = self.LoadDownloadTradeDayData(d)
+            if len(df) == 0:
+                print('SetPPDataDailyUpdate.Error, len(df) == 0')
+                return
+            self.merge_daily_data = self.merge_daily_data.append(df, sort=False)
+            # print('%s : %u' % (d, len(self.merge_daily_data)))
+        self.pp_data_daily_update = True
+        self.end_date_daily_update = trade_date
+        self.UpdateSettings()
+
+
+    def CleanDFCols(self, df_data):
+        col_captions = df_data.columns.values.tolist()
+        for caption in col_captions:
+            if len(caption) >= 7:
+                if caption[0:7] == 'Unnamed':
+                    df_data = df_data.drop([caption], axis=1)
+        return df_data
 
     def LoadStockPPDataDailyUpdate(self, ts_code, cut_from_start_date=False):
+        self.DownloadStockData(ts_code)
+        df = self.LoadDownloadStockData(ts_code)
 
+        daily_data = self.merge_daily_data[self.merge_daily_data['ts_code'] == ts_code].copy()
+        daily_data = daily_data.sort_values(by=['trade_date'], ascending=(False))
+        daily_data = daily_data.reset_index(drop=True)
+
+        df = daily_data.append(df, sort=False).reset_index(drop=True)
+        df = self.CleanDFCols(df)
+
+        pp_data = preprocess.StockDataPreProcess(df, self.adj_mode)
+
+        if cut_from_start_date:
+            pp_data = pp_data[pp_data[:,PPI_trade_date] >= int(self.start_date)]
+        return pp_data
+
+    def EndDate(self):
+        if self.pp_data_daily_update:
+            return self.end_date_daily_update
+        else:
+            return self.end_date
 
 if __name__ == "__main__":
     data_source = DataSource(20000101, '', '', 1, 20000101, 20200106, False, False, True)
@@ -515,13 +571,28 @@ if __name__ == "__main__":
     # data_source.UpdatePPData()
 
     ts_code = '000001.SZ'
-    file_name = data_source.FileNameStockPPData(ts_code)
-    if os.path.exists(file_name):
-        os.remove(file_name)
+    # file_name = data_source.FileNameStockPPData(ts_code)
+    # if os.path.exists(file_name):
+    #     os.remove(file_name)
+    # start_time = time.time()
+    # data_source.UpdateStockPPData(ts_code)
+    # print(time.time() - start_time)
 
+    data_source.SetPPDataDailyUpdate(20200305)
     start_time = time.time()
-    data_source.UpdateStockPPData(ts_code)
+    pp_data = data_source.LoadStockPPDataDailyUpdate(ts_code, True)
     print(time.time() - start_time)
+    # print(pp_data)
+    # np.save('./1.npy', pp_data)
+
+    # data_source2 = DataSource(20000101, '', '', 1, 20000101, 20200305, False, False, True)
+    # data_source2.DownloadStockData(ts_code)
+    # df = data_source2.LoadDownloadStockData(ts_code)
+    # print(df)
+    # data_source2.UpdateStockPPData(ts_code)
+    # pp_data = data_source2.LoadStockPPData(ts_code, True)
+    # print(pp_data)
+    # np.save('./2.npy', pp_data)
 
     # print(data_source.LoadIndexPPData(True).shape)
     

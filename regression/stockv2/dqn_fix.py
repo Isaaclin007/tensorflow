@@ -154,23 +154,27 @@ class DQNFix(trade_base.TradeBase):
 def main(argv):
     del argv
 
-    o_data_source = tushare_data.DataSource(20000101, '', '', 1, 20000101, 20200106, False, False, True)
+    # end_date = 20200106
+    end_date = 20200306
+    # end_date = 20190221
+    split_date = 20100101
+    o_data_source = tushare_data.DataSource(20000101, '', '', 1, 20000101, end_date, False, False, True)
     # o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
     o_feature = feature.Feature(10, feature.FUT_D5_NORM, 1, False, False)
     # o_feature = feature.Feature(30, feature.FUT_5REGION5_NORM, 5, False, False)
     # o_feature = feature.Feature(30, feature.FUT_D3_NORM, 1, False, False)
     o_dqn_fix = DQNFix(o_data_source, o_feature, 10, 0.8, not FLAGS.overlap_feature)
-    split_date = 20100101
     o_dl_model = dl_model.DLModel('%s_%u' % (o_dqn_fix.setting_name, split_date), 
                                 o_feature.feature_unit_num, 
                                 o_feature.feature_unit_size,
                                 # 32, 10240, 0.04, 'mean_absolute_tp0_max_ratio_error') # rtest<0
                                 # 4, 10240, 0.04, 'mean_absolute_tp0_max_ratio_error') # rtest<0
                                 # 4, 10240, 0.01, 'mean_absolute_tp0_max_ratio_error') # rtest:0.14
-                                32, 10240, 0.01, 'mean_absolute_tp_max_ratio_error_tanhmap', 100) # rtest:0.62
+                                64, 10240, 0.01, 'mean_absolute_tp_max_ratio_error_tanhmap', 100) # rtest:0.62
                                 # 16, 10240, 0.01, 'mean_absolute_tp0_max_ratio_error') # rtest<0
+                                # 16, 10240, 0.01, 'mean_absolute_tp_max_ratio_error_tanhmap', 100)
     o_dqn_test = dqn_test.DQNTest(o_dqn_fix.dsfa, 20180101, o_dl_model)
-    if FLAGS.mode == 'data':
+    if FLAGS.mode == 'datasource':
         o_data_source.DownloadData()
         o_data_source.UpdatePPData()
     elif FLAGS.mode == 'dataset':
@@ -179,20 +183,28 @@ def main(argv):
         o_dqn_fix.CreateDataSet()
         public_dataset = o_dqn_fix.PublicDataset()
         # file_name = './data/dataset/20000101_20200106_10_0.npy'
-        file_name = './data/dataset/test.npy'
+        file_name = './public/data/dataset.npy'
         np.save(file_name, public_dataset)
     elif FLAGS.mode == 'train':
         tf, tl, vf, vl, td = o_dqn_fix.GetDataset(split_date)
         # tf, tl, vf, vl, va = o_dqn_fix.GetDatasetRandom(0.5)
-        o_dl_model.Train(tf, tl, vf, vl, FLAGS.epoch)
+        train_epoch = FLAGS.epoch if FLAGS.epoch > 0 else 500
+        o_dl_model.Train(tf, tl, vf, vl, train_epoch)
     elif FLAGS.mode == 'rtest':
         tf, tl, vf, vl, va = o_dqn_fix.GetDataset(split_date)
         # tf, tl, vf, vl, va = o_dqn_fix.GetDatasetRandom(0.5)
         o_dl_model.LoadModel(FLAGS.epoch)
         o_dqn_fix.RTest(o_dl_model, vf, va, False)
     elif FLAGS.mode == 'dqntest':
-        o_dl_model.LoadModel()
+        o_dl_model.LoadModel(FLAGS.epoch)
+        o_dqn_test = dqn_test.DQNTest(o_dqn_fix.dsfa, split_date, o_dl_model)
         o_dqn_test.Test(5, True)
+    elif FLAGS.mode == 'predict':
+        o_dl_model.LoadModel(FLAGS.epoch)
+        o_data_source.SetPPDataDailyUpdate(20200305)
+        o_dsfa = dsfa3d_dataset.DSFa3DDataset(o_data_source, o_feature)
+        o_dqn_test = dqn_test.DQNTest(o_dsfa, split_date, o_dl_model)
+        o_dqn_test.Test(5, True, FLAGS.show)
     elif FLAGS.mode == 'dsw':
         dataset = o_dqn_fix.ShowDSW3DDataset()
     elif FLAGS.mode == 'show':
@@ -212,7 +224,7 @@ def main(argv):
 if __name__ == "__main__":
     flags.DEFINE_string('mode', 'test', 'test | testall | train')
     flags.DEFINE_string('c', '000001.SZ', 'ts code')
-    flags.DEFINE_integer('epoch', 100, 'train or rtest epoch')
+    flags.DEFINE_integer('epoch', -1, 'train or rtest epoch')
     flags.DEFINE_boolean('show', False, 'show trade record')
     flags.DEFINE_boolean('overlap_feature', True, 'overlap featrue')
     app.run(main)

@@ -1,0 +1,21 @@
+data/dataset.npy 是数据集
+    2维numpy数据，shape：(319504, 152)
+        0-149列是特征（30天，每天5个特征值）
+        150列是label
+        151列是数据日期
+    
+预测相关需求：
+    期望结果是label值越大的数据预测越准确
+
+启动命令：
+    python dl_model.py split_by_date
+    
+当前训练结果：
+    model/split_by_date_30_5_8_10240_0.010000_mean_absolute_tp0_max_ratio_error/
+        其中figure.png是loss曲线
+
+需要解决的问题：
+    训练集和验证集是根据时间切分的，2000-2018年的数据做训练集，2018-2020年数据做验证集，
+    这样训练的val_loss不下降，需要改进模型或损失函数或其他设置
+        1. 使val_loss收敛
+        2. label值越大的数据预测越准确

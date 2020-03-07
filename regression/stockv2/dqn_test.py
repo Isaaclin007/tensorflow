@@ -62,7 +62,7 @@ class DQNTest():
                 return dloop
         return -1
 
-    def Test(self, pred_threshold, print_trade_detail=False):
+    def Test(self, pred_threshold, print_trade_detail=False, show_image=False):
         if self.test_dataset == None:
             self.LoadDataset()
         date_col_index = self.dsfa.feature.index_date
@@ -89,6 +89,8 @@ class DQNTest():
         increase_sum = 0.0
         hold_days_sum = 0
         capital_ratio = 1.0
+        capital_ratio_list = []
+        increase_sum_list = []
         if print_trade_detail:
             print('%-8s%-10s%-10s%-10s%-10s%-10s%-10s%-10s%-10s' % ('index', 'in_date', 'out_date', 'ts_code', 'pred','in', 'out', 'increase', 'hold_days'))
             print('-' * 80)
@@ -145,10 +147,17 @@ class DQNTest():
                                 increase,
                                 hold_days,
                                 capital_ratio))
+                    temp_date = self.test_dataset[t2_date_index][code_index][date_col_index]
+                    capital_ratio_list.append([temp_date, capital_ratio])
+                    increase_sum_list.append([temp_date, increase_sum])
                 else:
                     dloop -= 1
         if print_trade_detail:
             print('%-8s%-10s%-10s%-10s%-10s%-10s%-10s%-10.4f%-10u%-10.4f' % ('sum', '--', '--', '--', '--', '--', '--', increase_sum, hold_days_sum, capital_ratio))
+
+        if show_image:
+            # np_common.Show2DData('dqn_test', [np.array(capital_ratio_list)], [], True)
+            np_common.Show2DData('dqn_test', [np.array(increase_sum_list)], [], True)
         return increase_sum, trade_count, max_Q_mean
 
 # def main(argv):

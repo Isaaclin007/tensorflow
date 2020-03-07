@@ -146,3 +146,6 @@ def RmDir(path):
         else:
             os.remove(c_path)
     os.rmdir(path)
+
+def ShowDFDTypes(df):
+    print(df.dtypes)

@@ -57,7 +57,7 @@ class DSFa3DDataset():
                 if len(data_unit) == 0:
                     continue
                 temp_date = int(data_unit[data_unit_date_index])
-                if temp_date > self.data_source.end_date:
+                if temp_date > self.data_source.EndDate():
                     continue
                 if temp_date < self.data_source.start_date:
                     break
