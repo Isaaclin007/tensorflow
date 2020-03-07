@@ -365,13 +365,13 @@ if __name__ == "__main__":
     o_dl_model = DLModel('%s' % data_split_mode, 
                          10, 
                          5,
-                         128, 
+                         64, 
                          10240, 
                          0.01, 
                          'mean_absolute_tp_max_ratio_error_tanhmap',
                          100)
     start_time = time.time()
-    o_dl_model.Train(tf, tl, vf, vl, 1000)
+    o_dl_model.Train(tf, tl, vf, vl, 5000)
     print('\n\nrun time: {}'.format(time.time() - start_time))
     
     

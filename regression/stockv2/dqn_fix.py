@@ -198,13 +198,13 @@ def main(argv):
     elif FLAGS.mode == 'dqntest':
         o_dl_model.LoadModel(FLAGS.epoch)
         o_dqn_test = dqn_test.DQNTest(o_dqn_fix.dsfa, split_date, o_dl_model)
-        o_dqn_test.Test(5, True)
+        o_dqn_test.Test(1, 5, True, FLAGS.show)
     elif FLAGS.mode == 'predict':
         o_dl_model.LoadModel(FLAGS.epoch)
-        o_data_source.SetPPDataDailyUpdate(20200305)
+        o_data_source.SetPPDataDailyUpdate(20200306)
         o_dsfa = dsfa3d_dataset.DSFa3DDataset(o_data_source, o_feature)
         o_dqn_test = dqn_test.DQNTest(o_dsfa, split_date, o_dl_model)
-        o_dqn_test.Test(5, True, FLAGS.show)
+        o_dqn_test.Test(1, 5, True, FLAGS.show)
     elif FLAGS.mode == 'dsw':
         dataset = o_dqn_fix.ShowDSW3DDataset()
     elif FLAGS.mode == 'show':

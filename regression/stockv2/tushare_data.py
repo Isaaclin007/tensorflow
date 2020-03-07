@@ -382,9 +382,11 @@ class DataSource():
 
     def DownloadTradeDayData(self, trade_date):
         name_list = self.FileNameTradeDayDownloadData(trade_date)
+        download_flag = False
         while True:
             file_name = name_list[0]
             if not os.path.exists(file_name):
+                download_flag = True
                 df = pro.daily(trade_date = trade_date)
                 base_common.MKFileDirs(file_name)
                 df.to_csv(file_name)
@@ -393,6 +395,7 @@ class DataSource():
 
             file_name = name_list[1]
             if not os.path.exists(file_name) and self.use_daily_basic:
+                download_flag = True
                 df = pro.daily_basic(trade_date = trade_date)
                 base_common.MKFileDirs(file_name)
                 df.to_csv(file_name)
@@ -401,6 +404,7 @@ class DataSource():
             
             file_name = name_list[2]
             if not os.path.exists(file_name) and self.use_money_flow:
+                download_flag = True
                 df = pro.moneyflow(trade_date = trade_date)
                 base_common.MKFileDirs(file_name)
                 df.to_csv(file_name)
@@ -409,12 +413,15 @@ class DataSource():
 
             file_name = name_list[3]
             if not os.path.exists(file_name) and self.use_adj_factor:
+                download_flag = True
                 df = pro.adj_factor(ts_code='', trade_date=trade_date)
                 base_common.MKFileDirs(file_name)
                 df.to_csv(file_name)
                 if self.InvalidFileClean(file_name):
                     continue
             break
+        if download_flag:
+            sys.stdout.write("%u : 100%%\n" % trade_date)
 
     def LoadDownloadTradeDayData(self, trade_date):
         download_name_list = self.FileNameTradeDayDownloadData(trade_date)

@@ -18,6 +18,24 @@ def TradeDateStr(pre_trade_date, trade_date):
     else:
         return '--'
 
+def CodeStr(ts_code):
+    if type(ts_code) == str:
+        return ts_code
+    else:
+        return '%06u' % int(ts_code)
+
+def PriceStr(price):
+    if price <= 0.0:
+        return '--'
+    else:
+        return '%.2f' % price
+
+def IncreaseStr(on_price, off_price):
+    if on_price == 0 or off_price == 0:
+        return '--'
+    else:
+        return '%.4f' % (off_price / on_price - 1.0)
+
 def IntStr(input_data):
     if type(input_data) == str:
         return input_data
@@ -45,15 +63,11 @@ def PrintTrade(trade_index,
                pre_on_date, on_date, 
                pre_off_date, off_date, 
                increase, holding_days, prediction=None):
-    if type(ts_code) == str:
-        ts_code_str = ts_code
-    else:
-        ts_code_str = '%06u' % int(ts_code)
     
     if prediction == None:
         print("%-6s%-10s%-12s%-12s%-10s%-10s" %( \
                 IntStr(trade_index), \
-                ts_code_str, \
+                CodeStr(ts_code), \
                 TradeDateStr(pre_on_date, on_date), \
                 TradeDateStr(pre_off_date, off_date), \
                 FloatStr(increase), \
@@ -61,7 +75,7 @@ def PrintTrade(trade_index,
     else:
         print("%-6s%-10s%-10s%-12s%-12s%-10s%-10s" %( \
                 IntStr(trade_index), \
-                ts_code_str, \
+                CodeStr(ts_code), \
                 FloatStr(prediction), \
                 TradeDateStr(pre_on_date, on_date), \
                 TradeDateStr(pre_off_date, off_date), \
