@@ -380,6 +380,31 @@ class DataSource():
         #     print("%-4d : %s 100%%" % (code_index, ts_code))
         self.UpdateIndexPPData()
 
+    def ShowStockPPData(self, ts_code, start_date, data_num=10):
+        pp_data = self.LoadStockPPData(ts_code)
+        date_index = -1
+        for iloop in reversed(range(len(pp_data))):
+            if pp_data[iloop][PPI_trade_date] >= int(start_date):
+                date_index = iloop
+                break
+        print("%-10s%-10s%-10s%-10s%-10s%-10s" % ('date', 'pre_close', 'open', 'close', 'open_inc', 'vol'))
+        print('-' * 60)
+        data_cnt = 0
+        while date_index >= 0:
+            temp_data = pp_data[date_index]
+            print("%-10u%-10.2f%-10.2f%-10.2f%-10.2f%-10.2f" % (
+                int(temp_data[PPI_trade_date]),
+                temp_data[PPI_pre_close],
+                temp_data[PPI_open],
+                temp_data[PPI_close],
+                temp_data[PPI_open_increase],
+                temp_data[PPI_vol]
+            ))
+            date_index -= 1
+            data_cnt += 1
+            if data_cnt >= data_num:
+                break
+
     def DownloadTradeDayData(self, trade_date):
         name_list = self.FileNameTradeDayDownloadData(trade_date)
         download_flag = False
@@ -421,7 +446,7 @@ class DataSource():
                     continue
             break
         if download_flag:
-            sys.stdout.write("%u : 100%%\n" % trade_date)
+            sys.stdout.write("%s : 100%%\n" % trade_date)
 
     def LoadDownloadTradeDayData(self, trade_date):
         download_name_list = self.FileNameTradeDayDownloadData(trade_date)
@@ -522,7 +547,7 @@ class DataSource():
     #     print("dspp_dataset_%u: {}".format(trade_date, load_dataset.shape))
     #     return load_dataset
 
-    def SetPPDataDailyUpdate(self, trade_date):
+    def SetPPDataDailyUpdate(self, start_date, trade_date):
         date_list = TradeDateListRange(self.end_date, trade_date)
         if int(date_list[-1]) == self.end_date:
             date_list.pop(-1)
@@ -537,6 +562,7 @@ class DataSource():
             # print('%s : %u' % (d, len(self.merge_daily_data)))
         self.pp_data_daily_update = True
         self.end_date_daily_update = trade_date
+        self.start_date = start_date
         self.UpdateSettings()
 
 

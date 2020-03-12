@@ -351,7 +351,9 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         data_split_mode = sys.argv[1]
 
-    file_name = './data/dataset.npy'
+    data_setting_name = '7_5_0.5'
+    feature_unit_num = 7
+    file_name = './data/dataset_%s.npy' % data_setting_name
 
     if data_split_mode == 'split_random':
         # 随机抽取指定比例的数据作为验证集，其他作为训练集
@@ -362,16 +364,25 @@ if __name__ == "__main__":
     else:
         exit()
 
-    o_dl_model = DLModel('%s' % data_split_mode, 
-                         10, 
+    feature_size = 5 * feature_unit_num
+    origin_feature_size = tf.shape[1]
+    if feature_size < origin_feature_size:
+        temp_index = origin_feature_size - feature_size
+        tf = tf[:, temp_index:].copy()
+        vf = vf[:, temp_index:].copy()
+        print("train feature: {}".format(tf.shape))
+        print("val feature: {}".format(vf.shape))
+
+    o_dl_model = DLModel('%s_%u_%s' % (data_setting_name, feature_unit_num, data_split_mode), 
+                         feature_unit_num, 
                          5,
                          64, 
                          10240, 
                          0.01, 
                          'mean_absolute_tp_max_ratio_error_tanhmap',
-                         100)
+                         50)
     start_time = time.time()
-    o_dl_model.Train(tf, tl, vf, vl, 5000)
+    o_dl_model.Train(tf, tl, vf, vl, 250)
     print('\n\nrun time: {}'.format(time.time() - start_time))
     
     

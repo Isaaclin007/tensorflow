@@ -45,50 +45,32 @@ class DSFa3DDataset():
 
     def CreateDSFa3DSplitStock(self, ts_code):
         data_unit_date_index = self.feature.index_date
-        split_file_name = self.FileNameDSFa3DSplit(ts_code)
-        if not os.path.exists(split_file_name):
-            pp_data = self.data_source.LoadStockPPData(ts_code)
-            if len(pp_data) == 0:
-                return
-            
-            dataset = np.zeros((len(self.date_list), 1, self.feature.unit_size))
-            for day_loop in range(0, len(pp_data)):
-                data_unit = self.feature.GetDataUnit(pp_data, day_loop)
-                if len(data_unit) == 0:
-                    continue
-                temp_date = int(data_unit[data_unit_date_index])
-                if temp_date > self.data_source.EndDate():
-                    continue
-                if temp_date < self.data_source.start_date:
-                    break
-                dateset_index1 = self.date_index_map[temp_date]
-                dataset[dateset_index1][0] = data_unit
-
-            base_common.MKFileDirs(split_file_name)
-            np.save(split_file_name, dataset)
-            sys.stdout.write("%-4d : %s 100%%\n" % (self.code_index_map[ts_code], ts_code))
-
-    def CreateDSFa3DSplit(self):
-        base_common.ListMultiThread(CreateDSFa3DSplitMTFunc, self, 8, self.code_list)
+        pp_data = self.data_source.LoadStockPPData(ts_code)
+        if len(pp_data) == 0:
+            return
+        dateset_index2 = self.code_index_map[ts_code]
+        for day_loop in range(0, len(pp_data)):
+            data_unit = self.feature.GetDataUnit(pp_data, day_loop)
+            if len(data_unit) == 0:
+                continue
+            temp_date = int(data_unit[data_unit_date_index])
+            if temp_date > self.data_source.EndDate():
+                continue
+            if temp_date < self.data_source.start_date:
+                break
+            dateset_index1 = self.date_index_map[temp_date]
+            self.dataset[dateset_index1][dateset_index2] = data_unit
+        sys.stdout.write("DSFa - %-4d : %s 100%%\n" % (self.code_index_map[ts_code], ts_code))
 
     def CreateDSFa3DDataset(self):
-        self.CreateDSFa3DSplit()
         dataset_file_name = self.FileNameDSFa3DDataset()
-        dataset = np.zeros((len(self.date_list), len(self.code_list), self.feature.unit_size))
-        for code_index in range(0, len(self.code_list)):
-            ts_code = self.code_list[code_index]
-            dataset_split_file_name = self.FileNameDSFa3DSplit(ts_code)
-            if not os.path.exists(dataset_split_file_name):
-                # print('CreateDSFa3DDataset.Error: %s not exist' % dataset_split_file_name)
-                continue
-            split_data = np.load(dataset_split_file_name)
-            dateset_index2 = self.code_index_map[ts_code]
-            for iloop in range(len(self.date_list)):
-                dataset[iloop][dateset_index2] = split_data[iloop][0]
-        # print("dataset: {}".format(dataset.shape))
-        # print("file_name: %s" % dataset_file_name)
+        self.dataset = np.zeros((len(self.date_list), len(self.code_list), self.feature.unit_size))
+        # base_common.ListMultiThread(CreateDSFa3DSplitMTFunc, self, 1, self.code_list)
+        for ts_code in self.code_list:
+            self.CreateDSFa3DSplitStock(ts_code)
         base_common.MKFileDirs(dataset_file_name)
-        np.save(dataset_file_name, dataset)
+        np.save(dataset_file_name, self.dataset)
+        self.dataset = None
 
     def GetDSFa3DDataset(self):
         dataset_file_name = self.FileNameDSFa3DDataset()

@@ -43,7 +43,8 @@ def ShowAStock(ts_code, show_values=[PPI_open,
                                      PPI_vol_10_avg,
                                      PPI_vol_100_avg]):
     plt, mdate, zhfont = base_common.ImportMatPlot()
-    current_date_int = int(base_common.CurrentDate())
+    # current_date_int = int(base_common.CurrentDate())
+    current_date_int = 20200306
     o_data_source = tushare_data.DataSource(current_date_int, 
                                             '', 
                                             '', 

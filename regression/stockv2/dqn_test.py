@@ -132,6 +132,25 @@ class DQNTest():
             if temp_date != INVALID_DATE:
                 return temp_date
 
+    def ResetMaxDrawdown(self):
+        self.capital_ratio_max_value = 1.0
+        self.capital_ratio_max_drawdown = 0.0
+
+    def UpdateMaxDrawdown(self, capital_ratio):
+        if capital_ratio > self.capital_ratio_max_value:
+            self.capital_ratio_max_value = capital_ratio
+        drawdown = 1.0 - (capital_ratio / self.capital_ratio_max_value)
+        if drawdown > self.capital_ratio_max_drawdown:
+            self.capital_ratio_max_drawdown = drawdown
+
+    def NextOpenIncrease(self, date_index, code_index):
+        temp_index = date_index - 1
+        while temp_index > 0:
+            if INVALID_DATE != self.test_dataset[temp_index][code_index][self.dsfa.feature.index_date]:
+                return self.test_dataset[temp_index][code_index][self.dsfa.feature.index_open_increase]
+            temp_index -= 1
+        return 0.0
+            
 
     def Test(self, pool_size, pred_threshold, print_trade_detail=False, show_image=False):
         if self.test_dataset == None:
@@ -162,6 +181,7 @@ class DQNTest():
         capital_ratio = 1.0
         capital_ratio_list = []
         increase_sum_list = []
+        self.ResetMaxDrawdown()
         if print_trade_detail:
             pool[0].PrintCaption()
         for dloop in reversed(range(date_num)):  # 遍历dataset的日期
@@ -191,6 +211,7 @@ class DQNTest():
                             trade_count += 1
                             increase_sum += p.inc / pool_size
                             capital_ratio += capital_ratio / pool_size * p.inc
+                            self.UpdateMaxDrawdown(capital_ratio)
                             hold_days_sum += p.holding_days
                             global_status_update_flag = True
                             if print_trade_detail:
@@ -212,6 +233,8 @@ class DQNTest():
                     p = FreePool(pool)
                     if p == None:
                         break
+                    open_inc = self.NextOpenIncrease(dloop, c_index)
+                    # if (not CodeInPool(ts_code, pool)) and (open_inc > 9.5):
                     if not CodeInPool(ts_code, pool):
                         p.status = TS_PRE_ON
                         p.ts_code = ts_code
@@ -225,6 +248,7 @@ class DQNTest():
                 if p.status != TS_OFF:
                     p.Print(trade_count, increase_sum, capital_ratio)
             print('hold_days_sum: %u' % (hold_days_sum / pool_size))
+            print('capital_ratio_max_drawdown: %.2f' % self.capital_ratio_max_drawdown)
 
         if show_image:
             np_common.Show2DData('dqn_test', [np.array(capital_ratio_list)], [], True)
