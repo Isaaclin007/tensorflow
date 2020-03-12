@@ -1,0 +1,13 @@
+*.pyc
+*.csv
+*.ods
+*.png
+*.zip
+*.tar.gz
+*.user
+*.sh
+data/
+model/
+backup/
+log/
+.vscode/
