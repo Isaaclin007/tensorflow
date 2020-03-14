@@ -37,6 +37,7 @@ class DQNTestCodeStatus():
         self.pre_off_date = INVALID_DATE
         self.off_date = INVALID_DATE
         self.on_price = 0.0
+        self.on_open_inc = 0.0
         self.off_price = 0.0
         self.current_price = 0.0
         self.holding_days = 0
@@ -51,13 +52,14 @@ class DQNTestCodeStatus():
             self.inc = self.off_price / self.on_price - 1.0
 
     def Print(self, trade_index, sum_increase, capital_ratio):
-        print('%-8u%-12s%-12s%-10s%-8.2f%-8.2f%-10s%-10s%-10s%-6u%-8.2f%-8.2f' % (
+        print('%-8u%-12s%-12s%-10s%-8.2f%-8.2f%-8.2f%-10s%-10s%-10s%-6u%-8.2f%-8.2f' % (
                 trade_index, 
                 base_common.TradeDateStr(self.pre_on_date, self.on_date),
                 base_common.TradeDateStr(self.pre_off_date, self.off_date),
                 base_common.CodeStr(self.ts_code),
                 self.pre_on_pred,
                 self.current_pred,
+                self.on_open_inc,
                 base_common.PriceStr(self.on_price),
                 base_common.PriceStr(self.off_price),
                 base_common.IncreaseStr(self.on_price, self.off_price),
@@ -66,19 +68,21 @@ class DQNTestCodeStatus():
                 capital_ratio))
 
     def PrintCaption(self):
-        print('%-8s%-12s%-12s%-10s%-16s%-10s%-10s%-10s%-6s%-8s%-8s' % (
+        print('%-8s%-12s%-12s%-10s%-8s%-8s%-8s%-10s%-10s%-10s%-6s%-8s%-8s' % (
             'index', 
             'on_date', 
             'off_date', 
             'ts_code', 
-            'pred',
-            'in', 
-            'out', 
+            'p_pred',
+            'c_pred',
+            'oo_inc',
+            'on', 
+            'off', 
             'inc', 
             'hold',
             'inc_sum',
             'capi'))
-        print('-' * 100)
+        print('-' * 120)
 
 def CodeInPool(ts_code, pool):
     for p in pool:
@@ -157,6 +161,7 @@ class DQNTest():
             self.LoadDataset()
         date_col_index = self.dsfa.feature.index_date
         open_col_index = self.dsfa.feature.index_open
+        open_inc_col_index = self.dsfa.feature.index_open_increase
         tscode_col_index = self.dsfa.feature.index_tscode
         self.date_num = self.test_dataset.shape[0]
         self.code_num = self.test_dataset.shape[1]
@@ -197,6 +202,7 @@ class DQNTest():
                             p.status = TS_ON
                             p.on_date = temp_date
                             p.on_price = p.current_price
+                            p.on_open_inc = self.test_dataset[dloop][p.code_index][open_inc_col_index]
                         if p.status == TS_ON:
                             p.holding_days += 1
                             if p.current_pred < pred_threshold:

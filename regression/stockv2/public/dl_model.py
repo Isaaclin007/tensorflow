@@ -351,8 +351,9 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         data_split_mode = sys.argv[1]
 
-    data_setting_name = '7_5_0.5'
+    data_setting_name = 'D5_7_6_0_0.6'
     feature_unit_num = 7
+    feature_unit_size = 5
     file_name = './data/dataset_%s.npy' % data_setting_name
 
     if data_split_mode == 'split_random':
@@ -364,7 +365,7 @@ if __name__ == "__main__":
     else:
         exit()
 
-    feature_size = 5 * feature_unit_num
+    feature_size = feature_unit_size * feature_unit_num
     origin_feature_size = tf.shape[1]
     if feature_size < origin_feature_size:
         temp_index = origin_feature_size - feature_size
@@ -375,7 +376,7 @@ if __name__ == "__main__":
 
     o_dl_model = DLModel('%s_%u_%s' % (data_setting_name, feature_unit_num, data_split_mode), 
                          feature_unit_num, 
-                         5,
+                         feature_unit_size,
                          64, 
                          10240, 
                          0.01, 

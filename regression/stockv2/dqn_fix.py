@@ -28,11 +28,15 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 FLAGS = flags.FLAGS
 
+DECAY_MODE_EXP = 0
+DECAY_MODE_LINE = 1
+
 class DQNFix(trade_base.TradeBase):
     def __init__(self,
                  o_data_source,
                  o_feature,
                  label_days = 10,
+                 decay_mode = DECAY_MODE_EXP,
                  decay_ratio = 0.8,
                  no_overlap_feature = True):
         class_name = 'dqn_fix'
@@ -41,10 +45,11 @@ class DQNFix(trade_base.TradeBase):
         self.dataset_size = 0
         self.dataset_len = 0
         self.label_days = label_days
+        self.decay_mode = decay_mode
         self.decay_ratio = decay_ratio
         self.no_overlap_feature = no_overlap_feature
 
-        app_setting_name = '%u_%.4f_%u' % (label_days, decay_ratio, no_overlap_feature)
+        app_setting_name = '%u_%u_%.4f_%u' % (label_days, decay_mode, decay_ratio, no_overlap_feature)
         super(DQNFix, self).__init__(o_data_source, 
                                       o_feature, 
                                       class_name, 
@@ -107,11 +112,21 @@ class DQNFix(trade_base.TradeBase):
                                 on_date = temp_date
                                 current_price = temp_open
                                 temp_status = TS_ON
+                                # if self.decay_mode == DECAY_MODE_LINE:
+                                #     # 开盘涨幅低的优先
+                                #     open_increase = dqn_src_dataset[temp_index][code_index][self.feature.index_open_increase]
+                                #     open_increase *= 0.01
+                                #     temp_price_ratio -= open_increase
                             elif temp_status == TS_ON:
                                 temp_price = temp_open
                                 temp_increase = temp_price / current_price - 1.0
                                 temp_price_ratio *= (temp_increase * temp_effect_ratio + 1.0)
-                                temp_effect_ratio *= self.decay_ratio
+                                if self.decay_mode == DECAY_MODE_EXP:
+                                    temp_effect_ratio *= self.decay_ratio
+                                elif self.decay_mode == DECAY_MODE_LINE:
+                                    temp_effect_ratio -= self.decay_ratio
+                                    if temp_effect_ratio < 0.0:
+                                        temp_effect_ratio = 0.0
                                 current_price = temp_price
                                 temp_count += 1
                                 if temp_count == self.label_days:
@@ -163,14 +178,15 @@ def main(argv):
     o_feature = feature.Feature(7, feature.FUT_D5_NORM, 1, False, False)
     # o_feature = feature.Feature(30, feature.FUT_5REGION5_NORM, 5, False, False)
     # o_feature = feature.Feature(30, feature.FUT_D3_NORM, 1, False, False)
-    o_dqn_fix = DQNFix(o_data_source, o_feature, 6, 0.6, not FLAGS.overlap_feature)
+    # o_dqn_fix = DQNFix(o_data_source, o_feature, 6, DECAY_MODE_EXP, 0.6, not FLAGS.overlap_feature)
+    o_dqn_fix = DQNFix(o_data_source, o_feature, 6, DECAY_MODE_EXP, 0.6, not FLAGS.overlap_feature)
     o_dl_model = dl_model.DLModel('%s_%u' % (o_dqn_fix.setting_name, split_date), 
                                 o_feature.feature_unit_num, 
                                 o_feature.feature_unit_size,
                                 # 32, 10240, 0.04, 'mean_absolute_tp0_max_ratio_error') # rtest<0
                                 # 4, 10240, 0.04, 'mean_absolute_tp0_max_ratio_error') # rtest<0
                                 # 4, 10240, 0.01, 'mean_absolute_tp0_max_ratio_error') # rtest:0.14
-                                64, 10240, 0.01, 'mean_absolute_tp_max_ratio_error_tanhmap', 100) # rtest:0.62
+                                64, 10240, 0.03, 'mean_absolute_tp_max_ratio_error_tanhmap', 100) # rtest:0.62
                                 # 16, 10240, 0.01, 'mean_absolute_tp0_max_ratio_error') # rtest<0
                                 # 16, 10240, 0.01, 'mean_absolute_tp_max_ratio_error_tanhmap', 100)
     o_dqn_test = dqn_test.DQNTest(o_dqn_fix.dsfa, 20180101, o_dl_model)
@@ -183,7 +199,7 @@ def main(argv):
         o_dqn_fix.CreateDataSet()
         public_dataset = o_dqn_fix.PublicDataset()
         # file_name = './data/dataset/20000101_20200106_10_0.npy'
-        file_name = './public/data/dataset_7_5_0.5.npy'
+        file_name = './public/data/dataset_D5_7_6_0_0.6.npy'
         np.save(file_name, public_dataset)
     elif FLAGS.mode == 'train':
         tf, tl, vf, vl, td = o_dqn_fix.GetDataset(split_date)
@@ -201,7 +217,7 @@ def main(argv):
         o_dqn_test.Test(1, 5, True, FLAGS.show)
     elif FLAGS.mode == 'predict':
         o_dl_model.LoadModel(FLAGS.epoch)
-        o_data_source.SetPPDataDailyUpdate(20100101, 20200311)
+        o_data_source.SetPPDataDailyUpdate(20180101, 20200313)
         o_dsfa = dsfa3d_dataset.DSFa3DDataset(o_data_source, o_feature)
         o_dqn_test = dqn_test.DQNTest(o_dsfa, split_date, o_dl_model)
         o_dqn_test.Test(1, 5, True, FLAGS.show)

@@ -23,6 +23,9 @@ FUT_D5_NORM_PCT = 12
 FUT_5REGION5_NORM = 20  # 每天的5个 5日区间 数据归一化
 FUT_D13_NORM = 30  # 每天的13个数据归一化
 FUT_2AVG5_NORM = 40  # 每天的2个 avg5 数据归一化
+FUT_D9_NORM = 50
+FUT_D7_NORM = 51
+FUT_D5_INC = 52
 
 
 # acture data index 定义
@@ -73,6 +76,10 @@ class Feature():
             self.feature_unit_size = 5
         elif self.feature_unit_type == FUT_2AVG5_NORM:
             self.feature_unit_size = 2
+        elif self.feature_unit_type == FUT_D9_NORM:
+            self.feature_unit_size = 9
+        elif self.feature_unit_type == FUT_D7_NORM:
+            self.feature_unit_size = 7
         self.feature_size = self.feature_unit_size * self.feature_unit_num
         self.acture_size = 7
         self.index_open_increase = self.feature_size + ADI_OPEN_INCREASE
@@ -155,6 +162,40 @@ class Feature():
             data_unit.append(pp_data[temp_index][PPI_vol] / base_vol)
         return True
 
+    def AppendFeature_FUT_D9_NORM(self, pp_data, day_index, data_unit):
+        if not self.AppendFeature_Filter(pp_data, day_index):
+            return False
+        base_close = pp_data[day_index][PPI_close_100_avg]
+        base_vol = pp_data[day_index][PPI_vol_100_avg]
+        for iloop in reversed(range(self.feature_unit_num)):
+            temp_index = day_index + iloop * self.feature_unit_step
+            data_unit.append(pp_data[temp_index][PPI_open] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_close] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_high] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_low] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_vol] / base_vol)
+            data_unit.append(pp_data[temp_index][PPI_open_increase])
+            data_unit.append(pp_data[temp_index][PPI_close_increase])
+            data_unit.append(pp_data[temp_index][PPI_high_increase])
+            data_unit.append(pp_data[temp_index][PPI_low_increase])
+        return True
+
+    def AppendFeature_FUT_D7_NORM(self, pp_data, day_index, data_unit):
+        if not self.AppendFeature_Filter(pp_data, day_index):
+            return False
+        base_close = pp_data[day_index][PPI_close_100_avg]
+        base_vol = pp_data[day_index][PPI_vol_100_avg]
+        for iloop in reversed(range(self.feature_unit_num)):
+            temp_index = day_index + iloop * self.feature_unit_step
+            data_unit.append(pp_data[temp_index][PPI_open] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_close] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_high] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_low] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_vol] / base_vol)
+            data_unit.append(pp_data[temp_index][PPI_open_increase])
+            data_unit.append(pp_data[temp_index][PPI_close_increase])
+        return True
+
     def AppendFeature_FUT_D5_NORM_PCT(self, pp_data, day_index, data_unit):
         if not self.AppendFeature_Filter(pp_data, day_index):
             return False
@@ -235,6 +276,10 @@ class Feature():
             return self.AppendFeature_FUT_5REGION5_NORM(pp_data, day_index, data_unit)
         elif self.feature_unit_type == FUT_2AVG5_NORM:
             return self.AppendFeature_FUT_2AVG5_NORM(pp_data, day_index, data_unit)
+        elif self.feature_unit_type == FUT_D9_NORM:
+            return self.AppendFeature_FUT_D9_NORM(pp_data, day_index, data_unit)
+        elif self.feature_unit_type == FUT_D7_NORM:
+            return self.AppendFeature_FUT_D7_NORM(pp_data, day_index, data_unit)
         else:
             return False
 
