@@ -76,6 +76,14 @@ def mean_absolute_tp_max_ratio_error_tanhmap(y_true, y_pred):
     p_map = (K.tanh((y_pred - 5.0) * 0.4) + 1.00001) * 5.0
     return K.mean(math_ops.abs(t_map - p_map) * math_ops.maximum(t_map, p_map))
 
+def mean_absolute_tp_max_ratio_error_tanhmap_0_15(y_true, y_pred):
+    # y:[0 ~ 10], map:[0.2 ~ 9.8]
+    # y < 0     , map:[0 ~ 0.2]
+    # y > 10    , map:[9.8 ~ 10]
+    t_map = (K.tanh((y_true - 7.5) * 0.267) + 1.00001) * 5.0
+    p_map = (K.tanh((y_pred - 7.5) * 0.267) + 1.00001) * 5.0
+    return K.mean(math_ops.abs(t_map - p_map) * math_ops.maximum(t_map, p_map))
+
 loss_dict = {'LossAbs': LossAbs,
              'LossTanhDiff': LossTanhDiff,
              'LossTP0MaxRatio': LossTP0MaxRatio,
@@ -84,7 +92,8 @@ loss_dict = {'LossAbs': LossAbs,
              'LossTanhDiffP1MaxRatio': LossTanhDiffP1MaxRatio,
              'mean_absolute_error':mean_absolute_error,
              'mean_absolute_tp0_max_ratio_error':mean_absolute_tp0_max_ratio_error,
-             'mean_absolute_tp_max_ratio_error_tanhmap':mean_absolute_tp_max_ratio_error_tanhmap}
+             'mean_absolute_tp_max_ratio_error_tanhmap':mean_absolute_tp_max_ratio_error_tanhmap,
+             'mean_absolute_tp_max_ratio_error_tanhmap_0_15':mean_absolute_tp_max_ratio_error_tanhmap_0_15}
 
 def LossDict():
     return loss_dict

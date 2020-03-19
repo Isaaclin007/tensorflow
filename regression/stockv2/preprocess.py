@@ -312,6 +312,7 @@ def StockDataPreProcess(df, adj_mode):
         pp_data[:,PPI_buy_elg_vol] = df['buy_elg_vol'].values
         pp_data[:,PPI_sell_elg_vol] = df['sell_elg_vol'].values
         pp_data[:,PPI_net_mf_vol] = df['net_mf_vol'].values
+        pp_data[np.isnan(pp_data)] = 0.0
     if use_adj_factor:
         pp_data[:,PPI_adj_factor] = df['adj_factor'].values
 

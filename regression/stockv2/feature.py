@@ -26,6 +26,7 @@ FUT_2AVG5_NORM = 40  # 每天的2个 avg5 数据归一化
 FUT_D9_NORM = 50
 FUT_D7_NORM = 51
 FUT_D5_INC = 52
+FUT_D13_NORM_MF = 53
 
 
 # acture data index 定义
@@ -80,6 +81,8 @@ class Feature():
             self.feature_unit_size = 9
         elif self.feature_unit_type == FUT_D7_NORM:
             self.feature_unit_size = 7
+        elif self.feature_unit_type == FUT_D13_NORM_MF:
+            self.feature_unit_size = 13
         self.feature_size = self.feature_unit_size * self.feature_unit_num
         self.acture_size = 7
         self.index_open_increase = self.feature_size + ADI_OPEN_INCREASE
@@ -257,6 +260,30 @@ class Feature():
             data_unit.append(pp_data[temp_index][PPI_vol_5_avg] / base_vol)
         return True
 
+    def AppendFeature_FUT_D13_NORM_MF(self, pp_data, day_index, data_unit):
+        if not self.AppendFeature_Filter(pp_data, day_index):
+            return False
+        base_close = pp_data[day_index][PPI_close_100_avg]
+        base_vol = pp_data[day_index][PPI_vol_100_avg]
+        for iloop in reversed(range(self.feature_unit_num)):
+            temp_index = day_index + iloop * self.feature_unit_step
+            data_unit.append(pp_data[temp_index][PPI_open] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_close] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_high] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_low] / base_close)
+            data_unit.append(pp_data[temp_index][PPI_vol] / base_vol)
+            trade_date_vol = pp_data[temp_index][PPI_vol]
+            data_unit.append(pp_data[temp_index][PPI_buy_sm_vol] / trade_date_vol)
+            data_unit.append(pp_data[temp_index][PPI_sell_sm_vol] / trade_date_vol)
+            data_unit.append(pp_data[temp_index][PPI_buy_md_vol] / trade_date_vol)
+            data_unit.append(pp_data[temp_index][PPI_sell_md_vol] / trade_date_vol)
+            data_unit.append(pp_data[temp_index][PPI_buy_lg_vol] / trade_date_vol)
+            data_unit.append(pp_data[temp_index][PPI_sell_lg_vol] / trade_date_vol)
+            data_unit.append(pp_data[temp_index][PPI_buy_elg_vol] / trade_date_vol)
+            data_unit.append(pp_data[temp_index][PPI_sell_elg_vol] / trade_date_vol)
+
+        return True
+
     # 从 day_index 开始的前 feature_unit_num 组的数据，包含 day_index
     def AppendFeature(self, pp_data, day_index, data_unit):
         data_len = len(pp_data)
@@ -280,6 +307,8 @@ class Feature():
             return self.AppendFeature_FUT_D9_NORM(pp_data, day_index, data_unit)
         elif self.feature_unit_type == FUT_D7_NORM:
             return self.AppendFeature_FUT_D7_NORM(pp_data, day_index, data_unit)
+        elif self.feature_unit_type == FUT_D13_NORM_MF:
+            return self.AppendFeature_FUT_D13_NORM_MF(pp_data, day_index, data_unit)
         else:
             return False
 

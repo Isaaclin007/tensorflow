@@ -1,4 +1,10 @@
-# dqn_test 重构方案：
+
+# LSTM state 重构方案（keras不支持，推理过程不同的batch size结果一样）：
+## 需求
+- 支持 LSTM batch state 特性，LSTM 每个 batch 过程中 state 不会重置，因此每个 batch 需要改为一个 tscode 的顺序数据，训练过程中每个 tscode 的数据作为一个 batch fit 一次
+
+
+# dqn_test 重构方案（已完成）：
 ## 需求：
 - 支持daily update（已完成）
 - 支持持有多个 code

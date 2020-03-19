@@ -52,7 +52,13 @@ class DQNTestCodeStatus():
             self.inc = self.off_price / self.on_price - 1.0
 
     def Print(self, trade_index, sum_increase, capital_ratio):
-        print('%-8u%-12s%-12s%-10s%-8.2f%-8.2f%-8.2f%-10s%-10s%-10s%-6u%-8.2f%-8.2f' % (
+        if capital_ratio < 1e4:
+            capi_str = '%.2f' % capital_ratio
+        elif capital_ratio < 1e8:
+            capi_str = '%.2f e4' % (capital_ratio / 1.0e4)
+        else:
+            capi_str = '%.2f e8' % (capital_ratio / 1.0e8)
+        print('%-8u%-12s%-12s%-10s%-8.2f%-8.2f%-8.2f%-10s%-10s%-10s%-6u%-8.2f%-8s' % (
                 trade_index, 
                 base_common.TradeDateStr(self.pre_on_date, self.on_date),
                 base_common.TradeDateStr(self.pre_off_date, self.off_date),
@@ -65,7 +71,7 @@ class DQNTestCodeStatus():
                 base_common.IncreaseStr(self.on_price, self.off_price),
                 self.holding_days,
                 sum_increase,
-                capital_ratio))
+                capi_str))
 
     def PrintCaption(self):
         print('%-8s%-12s%-12s%-10s%-8s%-8s%-8s%-10s%-10s%-10s%-6s%-8s%-8s' % (
@@ -154,7 +160,26 @@ class DQNTest():
                 return self.test_dataset[temp_index][code_index][self.dsfa.feature.index_open_increase]
             temp_index -= 1
         return 0.0
-            
+
+    def ShowAvgPred(self, predictions):
+        avg_pred_list = []
+        for iloop in range(self.date_num):
+            valid_pos = self.test_dataset[iloop,:,self.dsfa.feature.index_date] > 0
+            valid_pred = predictions[iloop,:,0][valid_pos]
+            temp_date = self.Date(iloop)
+            avg_pred = np.mean(valid_pred)
+            avg_pred_list.append([temp_date, avg_pred])
+        if show_image:
+            np_common.Show2DData('dqn_test_avg_pred', [np.array(avg_pred_list)], [], True)
+
+    def AvgPredList(self, predictions):
+        avg_pred_list = []
+        for iloop in range(self.date_num):
+            valid_pos = self.test_dataset[iloop,:,self.dsfa.feature.index_date] > 0
+            valid_pred = predictions[iloop,:,0][valid_pos]
+            avg_pred = np.mean(valid_pred)
+            avg_pred_list.append(avg_pred)
+        return avg_pred_list
 
     def Test(self, pool_size, pred_threshold, print_trade_detail=False, show_image=False):
         if self.test_dataset == None:
@@ -187,6 +212,10 @@ class DQNTest():
         capital_ratio_list = []
         increase_sum_list = []
         self.ResetMaxDrawdown()
+        pos_num = 0
+        pos_sum = 0.0
+        neg_num = 0
+        neg_sum = 0.0
         if print_trade_detail:
             pool[0].PrintCaption()
         for dloop in reversed(range(date_num)):  # 遍历dataset的日期
@@ -213,6 +242,13 @@ class DQNTest():
                             p.off_date = temp_date
                             p.off_price = p.current_price
                             p.UpdateInc()
+                            if p.inc > 0:
+                                pos_num += 1
+                                pos_sum += p.inc
+                            else:
+                                neg_num += 1
+                                neg_sum += p.inc
+
                             # 更新全局状态
                             trade_count += 1
                             increase_sum += p.inc / pool_size
@@ -255,6 +291,24 @@ class DQNTest():
                     p.Print(trade_count, increase_sum, capital_ratio)
             print('hold_days_sum: %u' % (hold_days_sum / pool_size))
             print('capital_ratio_max_drawdown: %.2f' % self.capital_ratio_max_drawdown)
+            print('pos: %6.2f, %4u, %6.2f' % (pos_sum, pos_num, pos_sum / pos_num))
+            print('neg: %6.2f, %4u, %6.2f' % (neg_sum, neg_num, neg_sum / neg_num))
+
+        dloop = 0
+        order_list = np.argsort(predictions[dloop], axis=None).tolist()[::-1]
+        cnt = 0
+        for c_index in order_list:
+            pred = predictions[dloop][c_index][0]
+            ts_code = self.test_dataset[dloop][c_index][tscode_col_index]
+            date = self.test_dataset[dloop][c_index][date_col_index]
+            print('%-8s%-12s%-12s%-10.2f' % (
+                '--', 
+                '%u+1' % int(date),
+                '%06u' % int(ts_code), 
+                pred))
+            cnt += 1
+            if cnt > 10:
+                break
 
         if show_image:
             np_common.Show2DData('dqn_test', [np.array(capital_ratio_list)], [], True)

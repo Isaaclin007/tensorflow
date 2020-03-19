@@ -30,9 +30,6 @@ sys.setdefaultencoding('utf-8')
 # train_a_stock_min_data_num = 400
 # train_a_stock_max_data_num = 1000000
 
-use_daily_basic = False
-use_money_flow = False
-use_adj_factor = True
 
 
 
