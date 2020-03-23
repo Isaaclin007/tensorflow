@@ -157,16 +157,16 @@ class DLModel():
         if len(losses) == 0:
             return 0
         else:
-            return losses[-1][0]
+            return int(losses[-1][0])
 
     def LoadModel(self, epoch=-1):
         if epoch == -1:
             load_epoch = self.MaxModelEpoch()
-            print("load_epoch: %u" % load_epoch)
+            # print("load_epoch: %u" % load_epoch)
         else:
             load_epoch = epoch
         temp_path_name, model_name, mean_name, std_name = self.ModelFileNames(load_epoch)
-        print('LoadModel:%s' % model_name)
+        # print('LoadModel:%s' % model_name)
         self.model = keras.models.load_model(model_name, custom_objects=loss.LossDict())
         self.mean = np.load(mean_name)
         self.std = np.load(std_name)
@@ -181,7 +181,7 @@ class DLModel():
 
 
     def ModelExist(self, epoch=-1):
-        temp_path_name, model_name, mean_name, std_name = self.ModelFileNames()
+        temp_path_name, model_name, mean_name, std_name = self.ModelFileNames(epoch)
         return (os.path.exists(model_name) and os.path.exists(mean_name) and os.path.exists(std_name))
 
     def ReshapeRnnFeatures(self, features):
@@ -300,7 +300,7 @@ class DLModel():
         feature_shape.append(features.shape[features.ndim - 1])
         output_prediction_shape.append(1)
         input_features = features.reshape(feature_shape)
-        print('features:{}'.format(input_features.shape))
+        # print('features:{}'.format(input_features.shape))
         predictions = self.model.predict(input_features, batch_size=10240)
         predictions = predictions.reshape(output_prediction_shape)
         return predictions

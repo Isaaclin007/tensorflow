@@ -52,13 +52,7 @@ class DQNTestCodeStatus():
             self.inc = self.off_price / self.on_price - 1.0
 
     def Print(self, trade_index, sum_increase, capital_ratio):
-        if capital_ratio < 1e4:
-            capi_str = '%.2f' % capital_ratio
-        elif capital_ratio < 1e8:
-            capi_str = '%.2f e4' % (capital_ratio / 1.0e4)
-        else:
-            capi_str = '%.2f e8' % (capital_ratio / 1.0e8)
-        print('%-8u%-12s%-12s%-10s%-8.2f%-8.2f%-8.2f%-10s%-10s%-10s%-6u%-8.2f%-8s' % (
+        print('%-8u%-12s%-12s%-10s%-8.2f%-8.2f%-8.2f%-10s%-10s%-10s%-6u%-8.2f%-8.2E' % (
                 trade_index, 
                 base_common.TradeDateStr(self.pre_on_date, self.on_date),
                 base_common.TradeDateStr(self.pre_off_date, self.off_date),
@@ -71,7 +65,7 @@ class DQNTestCodeStatus():
                 base_common.IncreaseStr(self.on_price, self.off_price),
                 self.holding_days,
                 sum_increase,
-                capi_str))
+                capital_ratio))
 
     def PrintCaption(self):
         print('%-8s%-12s%-12s%-10s%-8s%-8s%-8s%-10s%-10s%-10s%-6s%-8s%-8s' % (
@@ -109,7 +103,7 @@ class DQNTest():
         self.dsfa = dsfa
         self.split_date = split_date
         self.dl_model = o_dl_model
-        self.test_dataset = None
+        self.test_dataset = []
     
     def SplitDateIndex(self, dataset, train_test_split_date):
         date_col_index = self.dsfa.feature.index_date
@@ -182,7 +176,7 @@ class DQNTest():
         return avg_pred_list
 
     def Test(self, pool_size, pred_threshold, print_trade_detail=False, show_image=False):
-        if self.test_dataset == None:
+        if len(self.test_dataset) == 0:
             self.LoadDataset()
         date_col_index = self.dsfa.feature.index_date
         open_col_index = self.dsfa.feature.index_open
@@ -193,13 +187,15 @@ class DQNTest():
         date_num = self.date_num
         code_num = self.code_num
 
-        print("test_features:{}".format(self.test_features.shape))
+        if print_trade_detail:
+            print("test_features:{}".format(self.test_features.shape))
         predictions = self.dl_model.Predict(self.test_features, True)
         for i in range(date_num):
             for j in range(code_num):
                 if self.test_dataset[i][j][date_col_index] == 0.0:
                     predictions[i][j][0] = 0.0
-        print("predictions:{}".format(predictions.shape))
+        if print_trade_detail:
+            print("predictions:{}".format(predictions.shape))
 
         pool = []
         for iloop in range(pool_size):
@@ -272,6 +268,9 @@ class DQNTest():
                     ts_code = self.test_dataset[dloop][c_index][tscode_col_index]
                     if pred < pred_threshold:
                         break
+                    # if self.test_dataset[dloop][c_index][self.dsfa.feature.index_close] < \
+                    #    self.test_dataset[dloop][c_index][self.dsfa.feature.index_close_100_avg]:
+                    #     continue
                     p = FreePool(pool)
                     if p == None:
                         break
@@ -291,31 +290,53 @@ class DQNTest():
                     p.Print(trade_count, increase_sum, capital_ratio)
             print('hold_days_sum: %u' % (hold_days_sum / pool_size))
             print('capital_ratio_max_drawdown: %.2f' % self.capital_ratio_max_drawdown)
-            print('pos: %6.2f, %4u, %6.2f' % (pos_sum, pos_num, pos_sum / pos_num))
-            print('neg: %6.2f, %4u, %6.2f' % (neg_sum, neg_num, neg_sum / neg_num))
+            pos_avg = pos_sum / pos_num if pos_num > 0 else 0.0
+            neg_avg = neg_sum / neg_num if neg_num > 0 else 0.0
+            print('pos: %6.2f, %4u, %6.2f' % (pos_sum, pos_num, pos_avg))
+            print('neg: %6.2f, %4u, %6.2f' % (neg_sum, neg_num, neg_avg))
 
-        dloop = 0
-        order_list = np.argsort(predictions[dloop], axis=None).tolist()[::-1]
-        cnt = 0
-        for c_index in order_list:
-            pred = predictions[dloop][c_index][0]
-            ts_code = self.test_dataset[dloop][c_index][tscode_col_index]
-            date = self.test_dataset[dloop][c_index][date_col_index]
-            print('%-8s%-12s%-12s%-10.2f' % (
-                '--', 
-                '%u+1' % int(date),
-                '%06u' % int(ts_code), 
-                pred))
-            cnt += 1
-            if cnt > 10:
-                break
+            dloop = 0
+            order_list = np.argsort(predictions[dloop], axis=None).tolist()[::-1]
+            cnt = 0
+            for c_index in order_list:
+                pred = predictions[dloop][c_index][0]
+                ts_code = self.test_dataset[dloop][c_index][tscode_col_index]
+                date = self.test_dataset[dloop][c_index][date_col_index]
+                if date != INVALID_DATE:
+                    print('%-8s%-12s%-12s%-10.2f' % (
+                        '--', 
+                        '%u+1' % int(date),
+                        '%06u' % int(ts_code), 
+                        pred))
+                    cnt += 1
+                    if cnt > 10:
+                        break
 
         if show_image:
             np_common.Show2DData('dqn_test', [np.array(capital_ratio_list)], [], True)
             # np_common.Show2DData('dqn_test', [np.array(increase_sum_list)], [], True)
-        return increase_sum, capital_ratio, trade_count
+        return increase_sum,\
+               capital_ratio,\
+               trade_count,\
+               int((hold_days_sum / pool_size)),\
+               self.capital_ratio_max_drawdown
 
 
+    def TestAllModels(self, pool_size, pred_threshold):
+        if len(self.test_dataset) == 0:
+            self.LoadDataset()
+        print('%-10s%-10s%-10s%-10s%-10s%-10s' % ('epoch', 'sum_inc', 'capital', 'capi_MDD', 'trd_cnt', 'h_days'))
+        print('-' * 60)
+        for epoch in range(1, self.dl_model.MaxModelEpoch() + 1):
+            if self.dl_model.ModelExist(epoch):
+                self.dl_model.LoadModel(epoch)
+                sum_inc,capital,trd_cnt,h_days,capi_MDD = self.Test(pool_size, pred_threshold, False, False)
+                print('%-10u%-10.2f%-10.2E%-10.2f%-10u%-10u' % (epoch,
+                                                            sum_inc, 
+                                                            capital, 
+                                                            capi_MDD, 
+                                                            trd_cnt, 
+                                                            h_days))
 
 
 

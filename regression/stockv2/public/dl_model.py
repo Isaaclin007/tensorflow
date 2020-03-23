@@ -127,8 +127,10 @@ class DLModel():
                                     return_sequences=False))
         model.add(keras.layers.Dense(1))
 
+        # my_optimizer = keras.optimizers.RMSprop(lr=self.learning_rate, rho=0.9, epsilon=1e-06, decay=0.0001)
         my_optimizer = keras.optimizers.RMSprop(lr=self.learning_rate, rho=0.9, epsilon=1e-06)
         active_loss = loss.LossFunc(self.loss)
+
         model.compile(loss=active_loss, optimizer=my_optimizer, metrics=[active_loss])
         return model
 
@@ -351,14 +353,14 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         data_split_mode = sys.argv[1]
 
-    data_setting_name = 'D13_MF_7_6_0_0.6'
+    data_setting_name = 'D5_7_6_0_0.6'
     feature_unit_num = 7
-    feature_unit_size = 13
+    feature_unit_size = 5
     file_name = './data/dataset_%s.npy' % data_setting_name
 
     if data_split_mode == 'split_random':
         # 随机抽取指定比例的数据作为验证集，其他作为训练集
-        tf, tl, vf, vl = GetDatasetSplitRandom(file_name, 0.125)
+        tf, tl, vf, vl = GetDatasetSplitRandom(file_name, 0.5)
     elif data_split_mode == 'split_by_date':
         # 根据数据时间切分训练集和验证集，数据时间大于split_date的作为验证集，其他作为训练集
         tf, tl, vf, vl = GetDatasetSplitByDate(file_name, 20100101)

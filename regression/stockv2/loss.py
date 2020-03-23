@@ -12,9 +12,9 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.python.keras import backend as K
 from tensorflow.python.ops import math_ops
-sys.path.append("..")
-from common import base_common
-from common import np_common
+# sys.path.append("..")
+# from common import base_common
+# from common import np_common
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('loss', 'mae', 'loss func name')
@@ -34,7 +34,7 @@ def TanhTest():
     show_data[:, 0] = x
     show_data[:, 1] = y
     print(show_data)
-    np_common.Show2DData('Tanh', [show_data], [])
+    # np_common.Show2DData('Tanh', [show_data], [])
 
 def LossAbs(y_true, y_pred, e=0.1):
     return K.abs(y_true - y_pred)
@@ -76,13 +76,26 @@ def mean_absolute_tp_max_ratio_error_tanhmap(y_true, y_pred):
     p_map = (K.tanh((y_pred - 5.0) * 0.4) + 1.00001) * 5.0
     return K.mean(math_ops.abs(t_map - p_map) * math_ops.maximum(t_map, p_map))
 
-def mean_absolute_tp_max_ratio_error_tanhmap_0_15(y_true, y_pred):
-    # y:[0 ~ 10], map:[0.2 ~ 9.8]
+def mean_absolute_tp_max_ratio_error_tanhmap_0_7(y_true, y_pred):
+    # y:[0 ~ 7], map:[0.2 ~ 9.8]
     # y < 0     , map:[0 ~ 0.2]
-    # y > 10    , map:[9.8 ~ 10]
+    # y > 7    , map:[9.8 ~ 10]
+    t_map = (K.tanh((y_true - 3.5) * 0.57) + 1.00001) * 5.0
+    p_map = (K.tanh((y_pred - 3.5) * 0.57) + 1.00001) * 5.0
+    return K.mean(math_ops.abs(t_map - p_map) * math_ops.maximum(t_map, p_map))
+
+def mean_absolute_tp_max_ratio_error_tanhmap_0_15(y_true, y_pred):
+    # y:[0 ~ 15], map:[0.2 ~ 9.8]
+    # y < 0     , map:[0 ~ 0.2]
+    # y > 15    , map:[9.8 ~ 10]
     t_map = (K.tanh((y_true - 7.5) * 0.267) + 1.00001) * 5.0
     p_map = (K.tanh((y_pred - 7.5) * 0.267) + 1.00001) * 5.0
     return K.mean(math_ops.abs(t_map - p_map) * math_ops.maximum(t_map, p_map))
+
+def mean_absolute_tp_max_p_ratio_error_tanhmap(y_true, y_pred):
+    t_map = (K.tanh((y_true - 7.5) * 0.267) + 1.00001) * 5.0
+    p_map = (K.tanh((y_pred - 7.5) * 0.267) + 1.00001) * 5.0
+    return K.mean(math_ops.abs(t_map - p_map) * math_ops.maximum(t_map, p_map) * (p_map / 10.0 + 1.0))
 
 loss_dict = {'LossAbs': LossAbs,
              'LossTanhDiff': LossTanhDiff,
@@ -93,7 +106,9 @@ loss_dict = {'LossAbs': LossAbs,
              'mean_absolute_error':mean_absolute_error,
              'mean_absolute_tp0_max_ratio_error':mean_absolute_tp0_max_ratio_error,
              'mean_absolute_tp_max_ratio_error_tanhmap':mean_absolute_tp_max_ratio_error_tanhmap,
-             'mean_absolute_tp_max_ratio_error_tanhmap_0_15':mean_absolute_tp_max_ratio_error_tanhmap_0_15}
+             'mean_absolute_tp_max_ratio_error_tanhmap_0_7':mean_absolute_tp_max_ratio_error_tanhmap_0_7,
+             'mean_absolute_tp_max_ratio_error_tanhmap_0_15':mean_absolute_tp_max_ratio_error_tanhmap_0_15,
+             'mean_absolute_tp_max_p_ratio_error_tanhmap':mean_absolute_tp_max_p_ratio_error_tanhmap}
 
 def LossDict():
     return loss_dict

@@ -214,13 +214,18 @@ def main(argv):
         o_dl_model.LoadModel(FLAGS.epoch)
         o_dsfa = dsfa3d_dataset.DSFa3DDataset(o_data_source, o_feature)
         o_dqn_test = dqn_test.DQNTest(o_dsfa, split_date, o_dl_model)
-        o_dqn_test.Test(1, 5, True, FLAGS.show)
-    elif FLAGS.mode == 'predict':
+        o_dqn_test.Test(1, FLAGS.pt, True, FLAGS.show)
+    elif FLAGS.mode == 'dqntestall':
         o_dl_model.LoadModel(FLAGS.epoch)
-        o_data_source.SetPPDataDailyUpdate(20180101, 20200318)
         o_dsfa = dsfa3d_dataset.DSFa3DDataset(o_data_source, o_feature)
         o_dqn_test = dqn_test.DQNTest(o_dsfa, split_date, o_dl_model)
-        o_dqn_test.Test(1, 5, True, FLAGS.show)
+        o_dqn_test.TestAllModels(1, FLAGS.pt)
+    elif FLAGS.mode == 'predict':
+        o_dl_model.LoadModel(FLAGS.epoch)
+        o_data_source.SetPPDataDailyUpdate(20180101, 20200323)
+        o_dsfa = dsfa3d_dataset.DSFa3DDataset(o_data_source, o_feature)
+        o_dqn_test = dqn_test.DQNTest(o_dsfa, split_date, o_dl_model)
+        o_dqn_test.Test(1, FLAGS.pt, True, FLAGS.show)
     elif FLAGS.mode == 'dsw':
         dataset = o_dqn_fix.ShowDSW3DDataset()
     elif FLAGS.mode == 'show':
@@ -246,5 +251,6 @@ if __name__ == "__main__":
     flags.DEFINE_boolean('show', False, 'show trade record')
     flags.DEFINE_boolean('overlap_feature', True, 'overlap featrue')
     flags.DEFINE_integer('date', 20000101, 'trade date')
+    flags.DEFINE_integer('pt', 5, 'predict threshold')
     app.run(main)
     
