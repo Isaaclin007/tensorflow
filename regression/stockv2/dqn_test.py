@@ -23,6 +23,21 @@ import dsfa3d_dataset
 
 FLAGS = flags.FLAGS
 
+class MaxDrawdown():
+    def __init__(self):
+        self.ResetMaxDrawdown()
+
+    def ResetMaxDrawdown(self):
+        self.capital_ratio_max_value = 1.0
+        self.capital_ratio_max_drawdown = 0.0
+
+    def UpdateMaxDrawdown(self, capital_ratio):
+        if capital_ratio > self.capital_ratio_max_value:
+            self.capital_ratio_max_value = capital_ratio
+        drawdown = 1.0 - (capital_ratio / self.capital_ratio_max_value)
+        if drawdown > self.capital_ratio_max_drawdown:
+            self.capital_ratio_max_drawdown = drawdown
+
 class DQNTestCodeStatus():
     # DQN Agent
     def __init__(self):
@@ -96,6 +111,157 @@ def FreePool(pool):
             return p
     return None
 
+def NextOpenIncrease(acture_data, date_index, code_index):
+    temp_index = date_index - 1
+    while temp_index > 0:
+        if INVALID_DATE != acture_data[temp_index][code_index][feature.ADI_DATE]:
+            return acture_data[temp_index][code_index][feature.ADI_OPEN_INCREASE]
+        temp_index -= 1
+    return 0.0
+
+def Date(acture_data, date_index):
+    for iloop in range(acture_data.shape[1]):
+        temp_date = acture_data[date_index][iloop][feature.ADI_DATE]
+        if temp_date != INVALID_DATE:
+            return temp_date
+
+# acture_data: 3D data
+# predictions: 2D data
+def TestLowLevel(pool_size, acture_data, predictions, pred_threshold, print_trade_detail=False, show_image=False):
+    date_num = acture_data.shape[0]
+    code_num = acture_data.shape[1]
+    
+    predictions[acture_data[:,:,feature.ADI_DATE] == INVALID_DATE] = 0.0
+    if print_trade_detail:
+        print("predictions:{}".format(predictions.shape))
+
+    pool = []
+    for iloop in range(pool_size):
+        pool.append(DQNTestCodeStatus())
+    
+    trade_count = 0
+    increase_sum = 0.0
+    hold_days_sum = 0
+    capital_ratio = 1.0
+    capital_ratio_list = []
+    increase_sum_list = []
+    MDD = MaxDrawdown()
+    pos_num = 0
+    pos_sum = 0.0
+    neg_num = 0
+    neg_sum = 0.0
+    if print_trade_detail:
+        pool[0].PrintCaption()
+    for dloop in reversed(range(date_num)):  # 遍历dataset的日期
+        # 更新 code_pool 内 status 非 OFF 的数据
+        global_status_update_flag = False
+        for p in pool:
+            if p.status != TS_OFF:
+                temp_date = acture_data[dloop][p.code_index][feature.ADI_DATE]
+                if temp_date != INVALID_DATE:  # 未停牌
+                    p.current_price = acture_data[dloop][p.code_index][feature.ADI_OPEN]
+                    p.current_pred = predictions[dloop][p.code_index]
+                    if p.status == TS_PRE_ON:
+                        p.status = TS_ON
+                        p.on_date = temp_date
+                        p.on_price = p.current_price
+                        p.on_open_inc = acture_data[dloop][p.code_index][feature.ADI_OPEN_INCREASE]
+                    if p.status == TS_ON:
+                        p.holding_days += 1
+                        if p.current_pred < pred_threshold:
+                            p.status = TS_PRE_OFF
+                            p.pre_off_date = temp_date
+                    elif p.status == TS_PRE_OFF:
+                        p.status = TS_OFF
+                        p.off_date = temp_date
+                        p.off_price = p.current_price
+                        p.UpdateInc()
+                        if p.inc > 0:
+                            pos_num += 1
+                            pos_sum += p.inc
+                        else:
+                            neg_num += 1
+                            neg_sum += p.inc
+
+                        # 更新全局状态
+                        trade_count += 1
+                        increase_sum += p.inc / pool_size
+                        capital_ratio += capital_ratio / pool_size * p.inc
+                        MDD.UpdateMaxDrawdown(capital_ratio)
+                        hold_days_sum += p.holding_days
+                        global_status_update_flag = True
+                        if print_trade_detail:
+                            p.Print(trade_count, increase_sum, capital_ratio)
+                        p.Reset()
+        if global_status_update_flag:
+            temp_date = Date(acture_data, dloop)
+            increase_sum_list.append([temp_date, increase_sum])
+            capital_ratio_list.append([temp_date, capital_ratio])
+
+        # AppendNewCode
+        if FreePool(pool) != None:
+            order_list = np.argsort(predictions[dloop], axis=None).tolist()[::-1]
+            for c_index in order_list:
+                pred = predictions[dloop][c_index]
+                ts_code = acture_data[dloop][c_index][feature.ADI_TSCODE]
+                if pred < pred_threshold:
+                    break
+                # if acture_data[dloop][c_index][feature.ADI_CLOSE] < \
+                #    acture_data[dloop][c_index][feature.ADI_CLOSE_100_AVG]:
+                #     continue
+                # if dloop > 0:
+                if acture_data[dloop][c_index][feature.ADI_VOL] < 10000:
+                    continue
+                p = FreePool(pool)
+                if p == None:
+                    break
+                open_inc = NextOpenIncrease(acture_data, dloop, c_index)
+                # if (not CodeInPool(ts_code, pool)) and (open_inc > 9.5):
+                if not CodeInPool(ts_code, pool):
+                    p.status = TS_PRE_ON
+                    p.ts_code = ts_code
+                    p.code_index = c_index
+                    p.pre_on_pred = pred
+                    p.current_pred = pred
+                    p.pre_on_date = acture_data[dloop][c_index][feature.ADI_DATE]
+
+    if print_trade_detail:
+        for p in pool:
+            if p.status != TS_OFF:
+                p.Print(trade_count, increase_sum, capital_ratio)
+        print('hold_days_sum: %u' % (hold_days_sum / pool_size))
+        print('capital_ratio_max_drawdown: %.2f' % MDD.capital_ratio_max_drawdown)
+        pos_avg = pos_sum / pos_num if pos_num > 0 else 0.0
+        neg_avg = neg_sum / neg_num if neg_num > 0 else 0.0
+        print('pos: %6.2f, %4u, %6.2f' % (pos_sum, pos_num, pos_avg))
+        print('neg: %6.2f, %4u, %6.2f' % (neg_sum, neg_num, neg_avg))
+
+        dloop = 0
+        order_list = np.argsort(predictions[dloop], axis=None).tolist()[::-1]
+        cnt = 0
+        for c_index in order_list:
+            pred = predictions[dloop][c_index]
+            ts_code = acture_data[dloop][c_index][feature.ADI_TSCODE]
+            date = acture_data[dloop][c_index][feature.ADI_DATE]
+            if date != INVALID_DATE:
+                print('%-8s%-12s%-12s%-10.2f' % (
+                    '--', 
+                    '%u+1' % int(date),
+                    '%06u' % int(ts_code), 
+                    pred))
+                cnt += 1
+                if cnt > 10:
+                    break
+
+    if show_image:
+        np_common.Show2DData('dqn_test', [np.array(capital_ratio_list)], [], True)
+        # np_common.Show2DData('dqn_test', [np.array(increase_sum_list)], [], True)
+    return increase_sum,\
+            capital_ratio,\
+            trade_count,\
+            int((hold_days_sum / pool_size)),\
+            MDD.capital_ratio_max_drawdown
+
 class DQNTest():
     # DQN Agent
     def __init__(self, dsfa, split_date, o_dl_model):
@@ -128,32 +294,9 @@ class DQNTest():
         print("test: {}".format(self.test_dataset.shape))
         self.test_features = self.test_dataset[:,:,0:self.dsfa.feature.feature_size]
         self.test_features = self.dl_model.FeaturesPretreat(self.test_features)
-
-
-    def Date(self, date_index):
-        for iloop in range(self.code_num):
-            temp_date = self.test_dataset[date_index][iloop][self.dsfa.feature.index_date]
-            if temp_date != INVALID_DATE:
-                return temp_date
-
-    def ResetMaxDrawdown(self):
-        self.capital_ratio_max_value = 1.0
-        self.capital_ratio_max_drawdown = 0.0
-
-    def UpdateMaxDrawdown(self, capital_ratio):
-        if capital_ratio > self.capital_ratio_max_value:
-            self.capital_ratio_max_value = capital_ratio
-        drawdown = 1.0 - (capital_ratio / self.capital_ratio_max_value)
-        if drawdown > self.capital_ratio_max_drawdown:
-            self.capital_ratio_max_drawdown = drawdown
-
-    def NextOpenIncrease(self, date_index, code_index):
-        temp_index = date_index - 1
-        while temp_index > 0:
-            if INVALID_DATE != self.test_dataset[temp_index][code_index][self.dsfa.feature.index_date]:
-                return self.test_dataset[temp_index][code_index][self.dsfa.feature.index_open_increase]
-            temp_index -= 1
-        return 0.0
+        print("test_features:{}".format(self.test_features.shape))
+        self.acture_data = self.test_dataset[:,:,self.dsfa.feature.feature_size:]
+        print("acture_data:{}".format(self.acture_data.shape))
 
     def ShowAvgPred(self, predictions):
         avg_pred_list = []
@@ -178,148 +321,9 @@ class DQNTest():
     def Test(self, pool_size, pred_threshold, print_trade_detail=False, show_image=False):
         if len(self.test_dataset) == 0:
             self.LoadDataset()
-        date_col_index = self.dsfa.feature.index_date
-        open_col_index = self.dsfa.feature.index_open
-        open_inc_col_index = self.dsfa.feature.index_open_increase
-        tscode_col_index = self.dsfa.feature.index_tscode
-        self.date_num = self.test_dataset.shape[0]
-        self.code_num = self.test_dataset.shape[1]
-        date_num = self.date_num
-        code_num = self.code_num
-
-        if print_trade_detail:
-            print("test_features:{}".format(self.test_features.shape))
         predictions = self.dl_model.Predict(self.test_features, True)
-        for i in range(date_num):
-            for j in range(code_num):
-                if self.test_dataset[i][j][date_col_index] == 0.0:
-                    predictions[i][j][0] = 0.0
-        if print_trade_detail:
-            print("predictions:{}".format(predictions.shape))
-
-        pool = []
-        for iloop in range(pool_size):
-            pool.append(DQNTestCodeStatus())
-        
-        trade_count = 0
-        increase_sum = 0.0
-        hold_days_sum = 0
-        capital_ratio = 1.0
-        capital_ratio_list = []
-        increase_sum_list = []
-        self.ResetMaxDrawdown()
-        pos_num = 0
-        pos_sum = 0.0
-        neg_num = 0
-        neg_sum = 0.0
-        if print_trade_detail:
-            pool[0].PrintCaption()
-        for dloop in reversed(range(date_num)):  # 遍历dataset的日期
-            # 更新 code_pool 内 status 非 OFF 的数据
-            global_status_update_flag = False
-            for p in pool:
-                if p.status != TS_OFF:
-                    temp_date = self.test_dataset[dloop][p.code_index][date_col_index]
-                    if temp_date != INVALID_DATE:  # 未停牌
-                        p.current_price = self.test_dataset[dloop][p.code_index][open_col_index]
-                        p.current_pred = predictions[dloop][p.code_index][0]
-                        if p.status == TS_PRE_ON:
-                            p.status = TS_ON
-                            p.on_date = temp_date
-                            p.on_price = p.current_price
-                            p.on_open_inc = self.test_dataset[dloop][p.code_index][open_inc_col_index]
-                        if p.status == TS_ON:
-                            p.holding_days += 1
-                            if p.current_pred < pred_threshold:
-                                p.status = TS_PRE_OFF
-                                p.pre_off_date = temp_date
-                        elif p.status == TS_PRE_OFF:
-                            p.status = TS_OFF
-                            p.off_date = temp_date
-                            p.off_price = p.current_price
-                            p.UpdateInc()
-                            if p.inc > 0:
-                                pos_num += 1
-                                pos_sum += p.inc
-                            else:
-                                neg_num += 1
-                                neg_sum += p.inc
-
-                            # 更新全局状态
-                            trade_count += 1
-                            increase_sum += p.inc / pool_size
-                            capital_ratio += capital_ratio / pool_size * p.inc
-                            self.UpdateMaxDrawdown(capital_ratio)
-                            hold_days_sum += p.holding_days
-                            global_status_update_flag = True
-                            if print_trade_detail:
-                                p.Print(trade_count, increase_sum, capital_ratio)
-                            p.Reset()
-            if global_status_update_flag:
-                temp_date = self.Date(dloop)
-                increase_sum_list.append([temp_date, increase_sum])
-                capital_ratio_list.append([temp_date, capital_ratio])
-
-            # AppendNewCode
-            if FreePool(pool) != None:
-                order_list = np.argsort(predictions[dloop], axis=None).tolist()[::-1]
-                for c_index in order_list:
-                    pred = predictions[dloop][c_index][0]
-                    ts_code = self.test_dataset[dloop][c_index][tscode_col_index]
-                    if pred < pred_threshold:
-                        break
-                    # if self.test_dataset[dloop][c_index][self.dsfa.feature.index_close] < \
-                    #    self.test_dataset[dloop][c_index][self.dsfa.feature.index_close_100_avg]:
-                    #     continue
-                    p = FreePool(pool)
-                    if p == None:
-                        break
-                    open_inc = self.NextOpenIncrease(dloop, c_index)
-                    # if (not CodeInPool(ts_code, pool)) and (open_inc > 9.5):
-                    if not CodeInPool(ts_code, pool):
-                        p.status = TS_PRE_ON
-                        p.ts_code = ts_code
-                        p.code_index = c_index
-                        p.pre_on_pred = pred
-                        p.current_pred = pred
-                        p.pre_on_date = self.test_dataset[dloop][c_index][date_col_index]
-
-        if print_trade_detail:
-            for p in pool:
-                if p.status != TS_OFF:
-                    p.Print(trade_count, increase_sum, capital_ratio)
-            print('hold_days_sum: %u' % (hold_days_sum / pool_size))
-            print('capital_ratio_max_drawdown: %.2f' % self.capital_ratio_max_drawdown)
-            pos_avg = pos_sum / pos_num if pos_num > 0 else 0.0
-            neg_avg = neg_sum / neg_num if neg_num > 0 else 0.0
-            print('pos: %6.2f, %4u, %6.2f' % (pos_sum, pos_num, pos_avg))
-            print('neg: %6.2f, %4u, %6.2f' % (neg_sum, neg_num, neg_avg))
-
-            dloop = 0
-            order_list = np.argsort(predictions[dloop], axis=None).tolist()[::-1]
-            cnt = 0
-            for c_index in order_list:
-                pred = predictions[dloop][c_index][0]
-                ts_code = self.test_dataset[dloop][c_index][tscode_col_index]
-                date = self.test_dataset[dloop][c_index][date_col_index]
-                if date != INVALID_DATE:
-                    print('%-8s%-12s%-12s%-10.2f' % (
-                        '--', 
-                        '%u+1' % int(date),
-                        '%06u' % int(ts_code), 
-                        pred))
-                    cnt += 1
-                    if cnt > 10:
-                        break
-
-        if show_image:
-            np_common.Show2DData('dqn_test', [np.array(capital_ratio_list)], [], True)
-            # np_common.Show2DData('dqn_test', [np.array(increase_sum_list)], [], True)
-        return increase_sum,\
-               capital_ratio,\
-               trade_count,\
-               int((hold_days_sum / pool_size)),\
-               self.capital_ratio_max_drawdown
+        predictions = predictions.reshape(predictions.shape[0:2])
+        return TestLowLevel(pool_size, self.acture_data, predictions, pred_threshold, print_trade_detail, show_image)
 
 
     def TestAllModels(self, pool_size, pred_threshold):
