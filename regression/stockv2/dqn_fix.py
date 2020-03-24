@@ -36,6 +36,7 @@ class DQNFix(trade_base.TradeBase):
                  o_data_source,
                  o_feature,
                  label_days = 10,
+                 label_times_vol_ratio = False,
                  decay_mode = DECAY_MODE_EXP,
                  decay_ratio = 0.8,
                  no_overlap_feature = True):
@@ -45,11 +46,14 @@ class DQNFix(trade_base.TradeBase):
         self.dataset_size = 0
         self.dataset_len = 0
         self.label_days = label_days
+        self.label_times_vol_ratio = label_times_vol_ratio
         self.decay_mode = decay_mode
         self.decay_ratio = decay_ratio
         self.no_overlap_feature = no_overlap_feature
 
         app_setting_name = '%u_%u_%.4f_%u' % (label_days, decay_mode, decay_ratio, no_overlap_feature)
+        if label_times_vol_ratio:
+            app_setting_name = '%s_%u' % (app_setting_name, label_times_vol_ratio)
         super(DQNFix, self).__init__(o_data_source, 
                                       o_feature, 
                                       class_name, 
@@ -96,22 +100,27 @@ class DQNFix(trade_base.TradeBase):
                     temp_count = 0
                     temp_date_count = 0
                     temp_effect_ratio = 1.0
-                    temp_index = day_loop - 1
-                    # 从 T1 open 开始计算 increase
-                    # if temp_index < 0:
-                    #     continue
-                    # on_date = dqn_src_dataset[temp_index][code_index][data_unit_date_index]
-                    # current_price = dqn_src_dataset[temp_index][code_index][data_unit_open_index]
-                    # temp_index -= 1
+                    temp_index = day_loop
                     temp_status = TS_PRE_ON
-                    while(temp_index >= 0):
+                    while(1):
+                        temp_index -= 1
+                        if temp_index < 0:
+                            break
                         temp_date = dqn_src_dataset[temp_index][code_index][data_unit_date_index]
                         if temp_date > 0:
                             temp_open = dqn_src_dataset[temp_index][code_index][data_unit_open_index]
                             if temp_status == TS_PRE_ON:
+                                # T+1 日状态切换为 TS_ON
                                 on_date = temp_date
                                 current_price = temp_open
                                 temp_status = TS_ON
+                                if self.label_times_vol_ratio:
+                                    vol = dqn_src_dataset[temp_index][code_index][self.feature.index_vol]
+                                    vol_100_avg = dqn_src_dataset[temp_index][code_index][self.feature.index_vol_100_avg]
+                                    vol_threshold = vol_100_avg * 0.1  # 相对值
+                                    # vol_threshold = 10000  # 绝对值
+                                    if vol < vol_threshold:
+                                        temp_price_ratio *= vol / vol_threshold
                                 # if self.decay_mode == DECAY_MODE_LINE:
                                 #     # 开盘涨幅低的优先
                                 #     open_increase = dqn_src_dataset[temp_index][code_index][self.feature.index_open_increase]
@@ -176,10 +185,12 @@ def main(argv):
     o_data_source = tushare_data.DataSource(20000101, '', '', 1, 20000101, end_date, False, False, True)
     # o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
     o_feature = feature.Feature(7, feature.FUT_D5_NORM, 1, False, False)
+    # o_feature = feature.Feature(7, feature.FUT_5REGION5_NORM, 5, False, False)
     # o_feature = feature.Feature(30, feature.FUT_5REGION5_NORM, 5, False, False)
     # o_feature = feature.Feature(30, feature.FUT_D3_NORM, 1, False, False)
     # o_dqn_fix = DQNFix(o_data_source, o_feature, 6, DECAY_MODE_EXP, 0.6, not FLAGS.overlap_feature)
-    o_dqn_fix = DQNFix(o_data_source, o_feature, 6, DECAY_MODE_EXP, 0.6, not FLAGS.overlap_feature)
+    o_dqn_fix = DQNFix(o_data_source, o_feature, 6, False, DECAY_MODE_EXP, 0.6, not FLAGS.overlap_feature)
+    # o_dqn_fix = DQNFix(o_data_source, o_feature, 30, DECAY_MODE_EXP, 0.9, not FLAGS.overlap_feature)
     o_dl_model = dl_model.DLModel('%s_%u' % (o_dqn_fix.setting_name, split_date), 
                                 o_feature.feature_unit_num, 
                                 o_feature.feature_unit_size,
@@ -197,8 +208,7 @@ def main(argv):
     elif FLAGS.mode == 'public_dataset':
         o_dqn_fix.CreateDataSet()
         public_dataset = o_dqn_fix.PublicDataset()
-        # file_name = './data/dataset/20000101_20200106_10_0.npy'
-        file_name = './public/data/dataset_D13_MF_7_6_0_0.6.npy'
+        file_name = './public/data/dataset_D5_7_6_0.6_times_vol_ratio.npy'
         np.save(file_name, public_dataset)
     elif FLAGS.mode == 'train':
         tf, tl, vf, vl, td = o_dqn_fix.GetDataset(split_date)

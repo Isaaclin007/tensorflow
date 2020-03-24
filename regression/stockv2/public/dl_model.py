@@ -353,7 +353,7 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         data_split_mode = sys.argv[1]
 
-    data_setting_name = 'D5_7_6_0_0.6'
+    data_setting_name = 'D5_7_6_0.6_times_vol_ratio'
     feature_unit_num = 7
     feature_unit_size = 5
     file_name = './data/dataset_%s.npy' % data_setting_name
