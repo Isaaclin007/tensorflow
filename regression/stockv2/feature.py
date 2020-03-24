@@ -36,8 +36,10 @@ ADI_OPEN = 2
 ADI_LOW = 3
 ADI_CLOSE = 4
 ADI_CLOSE_100_AVG = 5
-ADI_TSCODE = 6
-ADI_DATE = 7
+ADI_VOL = 6
+ADI_VOL_100_AVG = 7
+ADI_TSCODE = 8
+ADI_DATE = 9
 
 INVALID_DATE = 0.0
 
@@ -85,13 +87,15 @@ class Feature():
         elif self.feature_unit_type == FUT_D13_NORM_MF:
             self.feature_unit_size = 13
         self.feature_size = self.feature_unit_size * self.feature_unit_num
-        self.acture_size = 8
+        self.acture_size = 10
         self.index_open_increase = self.feature_size + ADI_OPEN_INCREASE
         self.index_low_increase = self.feature_size + ADI_LOW_INCREASE
         self.index_open = self.feature_size + ADI_OPEN
         self.index_low = self.feature_size + ADI_LOW
         self.index_close = self.feature_size + ADI_CLOSE
         self.index_close_100_avg = self.feature_size + ADI_CLOSE_100_AVG
+        self.index_vol = self.feature_size + ADI_VOL
+        self.index_vol_100_avg = self.feature_size + ADI_VOL_100_AVG
         self.index_tscode = self.feature_size + ADI_TSCODE
         self.index_date = self.feature_size + ADI_DATE
 
@@ -326,6 +330,8 @@ class Feature():
         data_unit.append(pp_data[day_index][PPI_low])
         data_unit.append(pp_data[day_index][PPI_close])
         data_unit.append(pp_data[day_index][PPI_close_100_avg])
+        data_unit.append(pp_data[day_index][PPI_vol])
+        data_unit.append(pp_data[day_index][PPI_vol_100_avg])
         data_unit.append(pp_data[day_index][PPI_ts_code])
         data_unit.append(pp_data[day_index][PPI_trade_date])
         return True
