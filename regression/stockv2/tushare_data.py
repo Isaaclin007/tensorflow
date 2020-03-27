@@ -402,6 +402,18 @@ class DataSource():
             if data_cnt >= data_num:
                 break
 
+    def ShowAvgVol(self, threshold):
+        avg_vol_list = []
+        cnt = 0
+        for ts_code in self.code_list:
+            pp_data = self.LoadStockPPData(ts_code)
+            avg_vol = np.mean(pp_data[:, PPI_vol])
+            avg_vol_list.append(avg_vol)
+            if avg_vol > threshold:
+                cnt += 1
+                print("%-4d  %s %.0f" % (cnt, ts_code, avg_vol))
+        # np_common.ShowHist(np.array(avg_vol_list), step=10000)
+
     def DownloadTradeDayData(self, trade_date):
         name_list = self.FileNameTradeDayDownloadData(trade_date)
         download_flag = False

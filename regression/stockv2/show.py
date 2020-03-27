@@ -75,14 +75,18 @@ def ShowAStock(ts_code, show_values=[PPI_open,
     xs = [datetime.strptime(d, '%Y%m%d').date() for d in date_str_arr]
     plt.grid(True)
 
-    close_max = max(pp_data[:,PPI_close])
-    vol_max = max(pp_data[:,PPI_vol])
-    vol_ratio = 1.0 / vol_max * close_max / 2
     vol_list = [PPI_vol,
                 PPI_vol_5_avg,
                 PPI_vol_10_avg,
                 PPI_vol_30_avg,
                 PPI_vol_100_avg]
+    print(set(show_values) - set(vol_list))
+    if len(set(show_values) - set(vol_list)) > 0:
+        close_max = max(pp_data[:,PPI_close])
+        vol_max = max(pp_data[:,PPI_vol])
+        vol_ratio = 1.0 / vol_max * close_max / 2
+    else:
+        vol_ratio = 1.0
     for col_index in show_values:
         name = ''
         if col_index in vol_list:
@@ -102,7 +106,7 @@ if __name__ == "__main__":
         code_list = [sys.argv[1]]
     for ts_code in code_list:
         # ShowAStock(ts_code, [PPI_close, PPI_close_30_avg, PPI_vol_5_avg, PPI_vol_30_avg])
-        ShowAStock(ts_code)
+        ShowAStock(ts_code, [PPI_vol, PPI_vol_100_avg])
 
     
 

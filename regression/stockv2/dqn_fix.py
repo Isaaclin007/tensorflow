@@ -117,7 +117,7 @@ class DQNFix(trade_base.TradeBase):
                                 if self.label_times_vol_ratio:
                                     vol = dqn_src_dataset[temp_index][code_index][self.feature.index_vol]
                                     vol_100_avg = dqn_src_dataset[temp_index][code_index][self.feature.index_vol_100_avg]
-                                    vol_threshold = vol_100_avg * 0.1  # 相对值
+                                    vol_threshold = vol_100_avg * 0.2  # 相对值
                                     # vol_threshold = 10000  # 绝对值
                                     if vol < vol_threshold:
                                         temp_price_ratio *= vol / vol_threshold
@@ -178,11 +178,247 @@ class DQNFix(trade_base.TradeBase):
 def main(argv):
     del argv
 
+    code_filter = '\
+000001.SZ,\
+000002.SZ,\
+000005.SZ,\
+000006.SZ,\
+000009.SZ,\
+000012.SZ,\
+000016.SZ,\
+000021.SZ,\
+000027.SZ,\
+000031.SZ,\
+000036.SZ,\
+000039.SZ,\
+000050.SZ,\
+000059.SZ,\
+000060.SZ,\
+000063.SZ,\
+000066.SZ,\
+000069.SZ,\
+000078.SZ,\
+000088.SZ,\
+000089.SZ,\
+000401.SZ,\
+000402.SZ,\
+000410.SZ,\
+000413.SZ,\
+000422.SZ,\
+000425.SZ,\
+000503.SZ,\
+000507.SZ,\
+000510.SZ,\
+000518.SZ,\
+000520.SZ,\
+000528.SZ,\
+000540.SZ,\
+000554.SZ,\
+000559.SZ,\
+000563.SZ,\
+000571.SZ,\
+000572.SZ,\
+000592.SZ,\
+000598.SZ,\
+000601.SZ,\
+000616.SZ,\
+000625.SZ,\
+000627.SZ,\
+000629.SZ,\
+000630.SZ,\
+000636.SZ,\
+000650.SZ,\
+000651.SZ,\
+000652.SZ,\
+000656.SZ,\
+000659.SZ,\
+000667.SZ,\
+000670.SZ,\
+000680.SZ,\
+000682.SZ,\
+000683.SZ,\
+000686.SZ,\
+000690.SZ,\
+000709.SZ,\
+000717.SZ,\
+000718.SZ,\
+000720.SZ,\
+000723.SZ,\
+000727.SZ,\
+000728.SZ,\
+000735.SZ,\
+000750.SZ,\
+000751.SZ,\
+000758.SZ,\
+000767.SZ,\
+000768.SZ,\
+000776.SZ,\
+000778.SZ,\
+000783.SZ,\
+000789.SZ,\
+000793.SZ,\
+000795.SZ,\
+000800.SZ,\
+000806.SZ,\
+000807.SZ,\
+000816.SZ,\
+000822.SZ,\
+000823.SZ,\
+000825.SZ,\
+000829.SZ,\
+000830.SZ,\
+000831.SZ,\
+000839.SZ,\
+000851.SZ,\
+000858.SZ,\
+000859.SZ,\
+000868.SZ,\
+000876.SZ,\
+000877.SZ,\
+000878.SZ,\
+000882.SZ,\
+000886.SZ,\
+000897.SZ,\
+000898.SZ,\
+000917.SZ,\
+000927.SZ,\
+000930.SZ,\
+000931.SZ,\
+000932.SZ,\
+000933.SZ,\
+000937.SZ,\
+000959.SZ,\
+600000.SH,\
+600006.SH,\
+600060.SH,\
+600063.SH,\
+600067.SH,\
+600068.SH,\
+600069.SH,\
+600078.SH,\
+600089.SH,\
+600100.SH,\
+600103.SH,\
+600104.SH,\
+600108.SH,\
+600109.SH,\
+600110.SH,\
+600111.SH,\
+600115.SH,\
+600122.SH,\
+600123.SH,\
+600125.SH,\
+600127.SH,\
+600151.SH,\
+600153.SH,\
+600157.SH,\
+600158.SH,\
+600160.SH,\
+600162.SH,\
+600166.SH,\
+600169.SH,\
+600170.SH,\
+600171.SH,\
+600175.SH,\
+600176.SH,\
+600177.SH,\
+600183.SH,\
+600186.SH,\
+600187.SH,\
+600188.SH,\
+600196.SH,\
+600198.SH,\
+600200.SH,\
+600206.SH,\
+600208.SH,\
+600209.SH,\
+600210.SH,\
+600212.SH,\
+600216.SH,\
+600219.SH,\
+600220.SH,\
+600221.SH,\
+600226.SH,\
+600239.SH,\
+600266.SH,\
+600601.SH,\
+600606.SH,\
+600609.SH,\
+600611.SH,\
+600624.SH,\
+600630.SH,\
+600635.SH,\
+600642.SH,\
+600643.SH,\
+600649.SH,\
+600651.SH,\
+600652.SH,\
+600653.SH,\
+600660.SH,\
+600662.SH,\
+600664.SH,\
+600667.SH,\
+600673.SH,\
+600674.SH,\
+600675.SH,\
+600677.SH,\
+600688.SH,\
+600690.SH,\
+600703.SH,\
+600704.SH,\
+600705.SH,\
+600711.SH,\
+600717.SH,\
+600718.SH,\
+600720.SH,\
+600736.SH,\
+600737.SH,\
+600739.SH,\
+600740.SH,\
+600741.SH,\
+600755.SH,\
+600759.SH,\
+600770.SH,\
+600776.SH,\
+600777.SH,\
+600782.SH,\
+600787.SH,\
+600789.SH,\
+600795.SH,\
+600797.SH,\
+600800.SH,\
+600804.SH,\
+600805.SH,\
+600808.SH,\
+600811.SH,\
+600812.SH,\
+600816.SH,\
+600820.SH,\
+600837.SH,\
+600839.SH,\
+600846.SH,\
+600851.SH,\
+600863.SH,\
+600868.SH,\
+600871.SH,\
+600872.SH,\
+600873.SH,\
+600874.SH,\
+600875.SH,\
+600877.SH,\
+600879.SH,\
+600881.SH,\
+600886.SH,\
+600887.SH,\
+600895.SH,\
+601607.SH\
+'
+
     # end_date = 20200106
     end_date = 20200306
     # end_date = 20190221
     split_date = 20100101
-    o_data_source = tushare_data.DataSource(20000101, '', '', 1, 20000101, end_date, False, False, True)
+    o_data_source = tushare_data.DataSource(20000101, '', code_filter, 1, 20000101, end_date, False, False, True)
     # o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
     o_feature = feature.Feature(7, feature.FUT_D5_NORM, 1, False, False)
     # o_feature = feature.Feature(7, feature.FUT_5REGION5_NORM, 5, False, False)
@@ -197,7 +433,7 @@ def main(argv):
                                 # 32, 10240, 0.04, 'mean_absolute_tp0_max_ratio_error') # rtest<0
                                 # 4, 10240, 0.04, 'mean_absolute_tp0_max_ratio_error') # rtest<0
                                 # 4, 10240, 0.01, 'mean_absolute_tp0_max_ratio_error') # rtest:0.14
-                                64, 10240, 0.03, 'mean_absolute_tp_max_ratio_error_tanhmap', 100) # rtest:0.62
+                                0, 10240, 0.03, 'mean_absolute_tp_max_ratio_error_tanhmap', 50) # rtest:0.62
                                 # 16, 10240, 0.01, 'mean_absolute_tp0_max_ratio_error') # rtest<0
                                 # 16, 10240, 0.01, 'mean_absolute_tp_max_ratio_error_tanhmap', 100)
     if FLAGS.mode == 'datasource':
@@ -208,12 +444,12 @@ def main(argv):
     elif FLAGS.mode == 'public_dataset':
         o_dqn_fix.CreateDataSet()
         public_dataset = o_dqn_fix.PublicDataset()
-        file_name = './public/data/dataset_D5_7_6_0.6_times_vol_ratio.npy'
+        file_name = './public/data/dataset.npy'
         np.save(file_name, public_dataset)
     elif FLAGS.mode == 'train':
         tf, tl, vf, vl, td = o_dqn_fix.GetDataset(split_date)
         # tf, tl, vf, vl, va = o_dqn_fix.GetDatasetRandom(0.5)
-        train_epoch = FLAGS.epoch if FLAGS.epoch > 0 else 500
+        train_epoch = FLAGS.epoch if FLAGS.epoch > 0 else 250
         o_dl_model.Train(tf, tl, vf, vl, train_epoch)
     elif FLAGS.mode == 'rtest':
         tf, tl, vf, vl, va = o_dqn_fix.GetDataset(split_date)
@@ -240,6 +476,8 @@ def main(argv):
         dataset = o_dqn_fix.ShowDSW3DDataset()
     elif FLAGS.mode == 'show':
         dataset = o_dqn_fix.ShowTradePP(FLAGS.c)
+    elif FLAGS.mode == 'showlabel':
+        dataset = o_dqn_fix.ShowLabel()
     elif FLAGS.mode == 'debug':
         dataset = np.load(o_dqn_fix.FileNameDataset())
         print("dataset: {}".format(dataset.shape))
@@ -251,6 +489,8 @@ def main(argv):
         o_dl_model.Clean()
     elif FLAGS.mode == 'pp':
         o_data_source.ShowStockPPData(FLAGS.c, FLAGS.date)
+    elif FLAGS.mode == 'vol':
+        o_data_source.ShowAvgVol(100000)
 
     exit()
 

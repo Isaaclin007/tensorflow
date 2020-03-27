@@ -82,13 +82,16 @@ class DLModel():
                  save_step=1,
                  test_funcs_list = None,
                  test_params_list = None):
-        self.setting_name = '%s_%u_%u_%u_%u_%f_%s' % (app_setting_name, 
-                                                      feature_unit_num, 
-                                                      feature_unit_size, 
-                                                      lstm_size, 
-                                                      batch_size, 
-                                                      learning_rate, 
-                                                      loss)
+        if lstm_size == 0:
+            self.setting_name = '0'
+        else:
+            self.setting_name = '%s_%u_%u_%u_%u_%f_%s' % (app_setting_name, 
+                                                        feature_unit_num, 
+                                                        feature_unit_size, 
+                                                        lstm_size, 
+                                                        batch_size, 
+                                                        learning_rate, 
+                                                        loss)
         self.feature_unit_num = feature_unit_num
         self.feature_unit_size = feature_unit_size
         self.lstm_size = lstm_size

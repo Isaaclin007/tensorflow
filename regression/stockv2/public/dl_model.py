@@ -12,6 +12,7 @@ import random
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.python.keras import backend as K
+from tensorflow.python.keras.callbacks import LearningRateScheduler
 import loss
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -82,13 +83,14 @@ class DLModel():
                  save_step=1,
                  test_funcs_list = None,
                  test_params_list = None):
-        self.setting_name = '%s_%u_%u_%u_%u_%f_%s' % (app_setting_name, 
-                                                      feature_unit_num, 
-                                                      feature_unit_size, 
-                                                      lstm_size, 
-                                                      batch_size, 
-                                                      learning_rate, 
-                                                      loss)
+        # self.setting_name = '%s_%u_%u_%u_%u_%f_%s' % (app_setting_name, 
+        #                                               feature_unit_num, 
+        #                                               feature_unit_size, 
+        #                                               lstm_size, 
+        #                                               batch_size, 
+        #                                               learning_rate, 
+        #                                               loss)
+        self.setting_name = '0'
         self.feature_unit_num = feature_unit_num
         self.feature_unit_size = feature_unit_size
         self.lstm_size = lstm_size
@@ -127,7 +129,7 @@ class DLModel():
                                     return_sequences=False))
         model.add(keras.layers.Dense(1))
 
-        # my_optimizer = keras.optimizers.RMSprop(lr=self.learning_rate, rho=0.9, epsilon=1e-06, decay=0.0001)
+        # my_optimizer = keras.optimizers.RMSprop(lr=self.learning_rate, rho=0.9, epsilon=1e-06, decay=0.00005)
         my_optimizer = keras.optimizers.RMSprop(lr=self.learning_rate, rho=0.9, epsilon=1e-06)
         active_loss = loss.LossFunc(self.loss)
 
@@ -277,6 +279,19 @@ class DLModel():
                     self.dl_model.SaveHistory(self.losses, self.val_losses, self.TFR)
                     self.dl_model.ShowHistory()
 
+        def LrScheduler(epoch):
+            # 每隔100个epoch，学习率减小为原来的1/10
+            # if epoch % 1 == 0 and epoch != 0:
+            #     lr = K.get_value(self.model.optimizer.lr)
+            #     K.set_value(self.model.optimizer.lr, lr * 0.98)
+            if epoch % 100 == 0 and epoch != 0:
+                # print
+                lr = K.get_value(self.model.optimizer.lr)
+                print("\nlr: {}".format(lr))
+            return K.get_value(self.model.optimizer.lr)
+ 
+        reduce_lr = LearningRateScheduler(LrScheduler)
+
         # The patience parameter is the amount of epochs to check for improvement.
         early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50)
         history = self.model.fit(train_features,
@@ -285,7 +300,7 @@ class DLModel():
                                  batch_size=self.batch_size, 
                                  validation_data=(val_features, val_labels), 
                                  verbose=0,
-                                 callbacks=[TrainCallback(self)])
+                                 callbacks=[TrainCallback(self), reduce_lr])
 
         self.ShowHistory()
 
@@ -353,10 +368,9 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         data_split_mode = sys.argv[1]
 
-    data_setting_name = 'D5_7_6_0.6_times_vol_ratio'
-    feature_unit_num = 7
+    feature_unit_num = 5
     feature_unit_size = 5
-    file_name = './data/dataset_%s.npy' % data_setting_name
+    file_name = './data/dataset.npy'
 
     if data_split_mode == 'split_random':
         # 随机抽取指定比例的数据作为验证集，其他作为训练集
@@ -376,13 +390,13 @@ if __name__ == "__main__":
         print("train feature: {}".format(tf.shape))
         print("val feature: {}".format(vf.shape))
 
-    o_dl_model = DLModel('%s_%u_%s' % (data_setting_name, feature_unit_num, data_split_mode), 
+    o_dl_model = DLModel('',
                          feature_unit_num, 
                          feature_unit_size,
                          64, 
                          10240, 
-                         0.03, 
-                         'mean_absolute_tp_max_ratio_error_tanhmap',
+                         0.01, 
+                         'mean_absolute_tp_max_ratio_error_tanhmap_0_15',
                          50)
     start_time = time.time()
     o_dl_model.Train(tf, tl, vf, vl, 250)

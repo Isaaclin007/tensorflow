@@ -535,6 +535,10 @@ class TradeBase(object):
 
         np_common.Show2DData('DSW3D', [dsw_avg_show_data, index_show_data], [], True)
 
+    def ShowLabel(self):
+        train_features, train_labels, test_features, test_labels, test_acture = self.GetDataset(self.data_source.end_date)
+        np_common.ShowHist(train_labels, 2.0, 0.01)
+
     def InitDSWWsUpNumDataset(self):
         dataset_file_name = self.FileNameDSWWsUpNumDataset()
         if not os.path.exists(dataset_file_name):

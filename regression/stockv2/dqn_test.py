@@ -209,9 +209,8 @@ def TestLowLevel(pool_size, acture_data, predictions, pred_threshold, print_trad
                 # if acture_data[dloop][c_index][feature.ADI_CLOSE] < \
                 #    acture_data[dloop][c_index][feature.ADI_CLOSE_100_AVG]:
                 #     continue
-                # if dloop > 0:
-                if acture_data[dloop][c_index][feature.ADI_VOL] < 10000:
-                    continue
+                if (acture_data[dloop][c_index][feature.ADI_VOL] < 10000) or\
+                   (acture_data[dloop][c_index][feature.ADI_VOL] < acture_data[dloop][c_index][feature.ADI_VOL_100_AVG] * 0.2):
                 p = FreePool(pool)
                 if p == None:
                     break
