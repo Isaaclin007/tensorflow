@@ -30,11 +30,14 @@ def PriceStr(price):
     else:
         return '%.2f' % price
 
-def IncreaseStr(on_price, off_price):
+def IncreaseStr(on_price, off_price, short_trade=False):
     if on_price == 0 or off_price == 0:
         return '--'
     else:
-        return '%.4f' % (off_price / on_price - 1.0)
+        if short_trade:
+            return '%.4f' % (on_price / off_price - 1.0)
+        else:
+            return '%.4f' % (off_price / on_price - 1.0)
 
 def IntStr(input_data):
     if type(input_data) == str:
@@ -46,7 +49,10 @@ def FloatStr(input_data):
     if type(input_data) == str:
         return input_data
     else:
-        return '%.2f' % float(input_data)
+        if abs(input_data) < 1000:
+            return '%.2f' % float(input_data)
+        else:
+            return '%.2E' % float(input_data)
 
 def IncPct(x, x_base):
     return (x - x_base) / x_base * 100.0

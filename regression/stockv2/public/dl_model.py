@@ -281,9 +281,9 @@ class DLModel():
 
         def LrScheduler(epoch):
             # 每隔100个epoch，学习率减小为原来的1/10
-            # if epoch % 1 == 0 and epoch != 0:
-            #     lr = K.get_value(self.model.optimizer.lr)
-            #     K.set_value(self.model.optimizer.lr, lr * 0.98)
+            if epoch % 1 == 0 and epoch != 0:
+                lr = K.get_value(self.model.optimizer.lr)
+                K.set_value(self.model.optimizer.lr, lr * 0.999)
             if epoch % 100 == 0 and epoch != 0:
                 # print
                 lr = K.get_value(self.model.optimizer.lr)
@@ -300,6 +300,7 @@ class DLModel():
                                  batch_size=self.batch_size, 
                                  validation_data=(val_features, val_labels), 
                                  verbose=0,
+                                 shuffle=False,
                                  callbacks=[TrainCallback(self), reduce_lr])
 
         self.ShowHistory()
@@ -368,7 +369,7 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         data_split_mode = sys.argv[1]
 
-    feature_unit_num = 5
+    feature_unit_num = 7
     feature_unit_size = 5
     file_name = './data/dataset.npy'
 
@@ -395,11 +396,11 @@ if __name__ == "__main__":
                          feature_unit_size,
                          64, 
                          10240, 
-                         0.01, 
-                         'mean_absolute_tp_max_ratio_error_tanhmap_0_15',
+                         0.03, 
+                         'mean_absolute_tp_max_ratio_error_tanhmap',
                          50)
     start_time = time.time()
-    o_dl_model.Train(tf, tl, vf, vl, 250)
+    o_dl_model.Train(tf, tl, vf, vl, 500)
     print('\n\nrun time: {}'.format(time.time() - start_time))
     
     

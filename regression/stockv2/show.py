@@ -15,6 +15,7 @@ from common import base_common
 from common import np_common
 from common.const_def import *
 import tushare_data
+import preprocess
 
 # reload(sys)
 # sys.setdefaultencoding('utf-8')
@@ -44,23 +45,18 @@ def ShowAStock(ts_code, show_values=[PPI_open,
                                      PPI_vol_100_avg]):
     plt, mdate, zhfont = base_common.ImportMatPlot()
     # current_date_int = int(base_common.CurrentDate())
-    current_date_int = 20200306
+    current_date_int = 20200403
     o_data_source = tushare_data.DataSource(current_date_int, 
                                             '', 
                                             '', 
                                             1, 
                                             0, 
                                             current_date_int)
-    if ts_code == '000001.SH':
-        o_data_source.DownloadIndexData()
-        o_data_source.UpdateIndexPPData()
-        pp_data = o_data_source.LoadIndexPPData(ts_code)
-        stock_name = ''
-    else:
-        o_data_source.DownloadStockData(ts_code)
-        o_data_source.UpdateStockPPData(ts_code)
-        pp_data = o_data_source.LoadStockPPData(ts_code)
-        stock_name = o_data_source.StockName(ts_code)
+    o_data_source.DownloadStockData(ts_code)
+    o_data_source.UpdateStockPPData(ts_code)
+    pp_data = o_data_source.LoadStockPPData(ts_code)
+    preprocess.PPRegionCompute(pp_data, PPI_close, PPI_close_5_avg, 500, len(pp_data), np.mean)
+    stock_name = o_data_source.StockName(ts_code)
     if len(pp_data) == 0:
         return
     title = "%s - %s" % (ts_code, stock_name)
@@ -106,7 +102,7 @@ if __name__ == "__main__":
         code_list = [sys.argv[1]]
     for ts_code in code_list:
         # ShowAStock(ts_code, [PPI_close, PPI_close_30_avg, PPI_vol_5_avg, PPI_vol_30_avg])
-        ShowAStock(ts_code, [PPI_vol, PPI_vol_100_avg])
+        ShowAStock(ts_code, [PPI_close, PPI_close_5_avg, PPI_close_10_avg, PPI_close_30_avg, PPI_close_100_avg, PPI_vol_5_avg])
 
     
 

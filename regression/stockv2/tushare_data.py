@@ -205,7 +205,7 @@ class DataSource():
         self.code_index_map_int = base_common.ListToIndexMap(code_list_int)
         # date_index_map: int -> int
         self.date_index_map = base_common.ListToIndexMap(self.date_list, True)
-        self.index_ts_code = '000001.SH'
+        self.index_codes = ['000001.SH', '000300.SH', '000016.SH']
         self.code_name_map = base_common.ListToMap(self.code_list, self.name_list)
 
     def ShowStockCodes(self):
@@ -216,7 +216,10 @@ class DataSource():
         print('\n')
 
     def StockName(self, ts_code):
-        return self.code_name_map[ts_code]
+        if ts_code in self.code_list:
+            return self.code_name_map[ts_code]
+        else:
+            return '--'
 
     def FileNameStockDownloadData(self, ts_code):
         name_list = []
@@ -258,7 +261,16 @@ class DataSource():
         df_merge = pd.merge(df_1, df_2, left_on='ts_code', right_on='ts_code')
         return df_merge
 
+    def PrintProcess(self, ts_code):
+        if ts_code in self.code_list:
+            sys.stdout.write("%-4d : %s 100%%\n" % (self.code_index_map[ts_code], ts_code))
+        else:
+            sys.stdout.write("%-4s : %s 100%%\n" % ('--', ts_code))
+
     def DownloadStockData(self, ts_code):
+        if ts_code in self.index_codes:
+            self.DownloadIndexData(ts_code)
+            return
         start_date = '19000101'
         end_date = self.end_date
         name_list = self.FileNameStockDownloadData(ts_code)
@@ -304,13 +316,14 @@ class DataSource():
                     continue
             break
         if download_flag:
-            sys.stdout.write("%-4d : %s 100%%\n" % (self.code_index_map[ts_code], ts_code))
+            self.PrintProcess(ts_code)
 
     def DownloadData(self):
         for code_index in range(0, len(self.code_list)):
             ts_code = self.code_list[code_index]
             self.DownloadStockData(ts_code)
-        self.DownloadIndexData()
+        for ts_code in self.index_codes:
+            self.DownloadStockData(ts_code)
 
     def LoadDownloadStockData(self, ts_code):
         download_name_list = self.FileNameStockDownloadData(ts_code)
@@ -345,6 +358,9 @@ class DataSource():
 
 
     def UpdateStockPPData(self, ts_code):
+        if ts_code in self.index_codes:
+            self.UpdateIndexPPData(ts_code)
+            return
         stock_pp_file_name = self.FileNameStockPPData(ts_code)
         if not os.path.exists(stock_pp_file_name):
             merge_df = self.LoadDownloadStockData(ts_code)
@@ -355,7 +371,7 @@ class DataSource():
             else:
                 print("UpdateStockPPData error: %s" % ts_code)
                 return
-            sys.stdout.write("%-4d : %s 100%%\n" % (self.code_index_map[ts_code], ts_code))
+            self.PrintProcess(ts_code)
 
     def LoadStockPPData(self, ts_code, cut_from_start_date=False):
         if self.pp_data_daily_update:
@@ -375,7 +391,8 @@ class DataSource():
         #     ts_code = self.code_list[code_index]
         #     self.UpdateStockPPData(ts_code)
         #     print("%-4d : %s 100%%" % (code_index, ts_code))
-        self.UpdateIndexPPData()
+        for ts_code in self.index_codes:
+            self.UpdateStockPPData(ts_code)
 
     def ShowStockPPData(self, ts_code, start_date, data_num=10):
         pp_data = self.LoadStockPPData(ts_code)
@@ -488,15 +505,15 @@ class DataSource():
 
         return merge_df
 
-    def DownloadIndexData(self):
+    def DownloadIndexData(self, ts_code):
         start_date = '19000101'
         end_date = self.end_date
-        name_list = self.FileNameStockDownloadData(self.index_ts_code)
+        name_list = self.FileNameStockDownloadData(ts_code)
         if not os.path.exists(name_list[0]):
             while True:
                 file_name = name_list[0]
                 if not os.path.exists(file_name):
-                    df = pro.index_daily(ts_code=self.index_ts_code, 
+                    df = pro.index_daily(ts_code=ts_code, 
                                         start_date=start_date, 
                                         end_date=end_date)
                     base_common.MKFileDirs(file_name)
@@ -506,19 +523,18 @@ class DataSource():
                 break
                 sys.stdout.write("%-4s : %s 100%%\n" % ('--', ts_code))
 
-    def LoadDownloadIndexData(self):
+    def LoadDownloadIndexData(self, ts_code):
         end_date = self.end_date
-        name_list = self.FileNameStockDownloadData(self.index_ts_code)
+        name_list = self.FileNameStockDownloadData(ts_code)
         if not os.path.exists(name_list[0]):
             return []
         load_df = pd.read_csv(name_list[0])
         return load_df
 
-    def UpdateIndexPPData(self):
-        ts_code = self.index_ts_code
+    def UpdateIndexPPData(self, ts_code):
         stock_pp_file_name = self.FileNameStockPPData(ts_code)
         if not os.path.exists(stock_pp_file_name):
-            df = self.LoadDownloadIndexData()
+            df = self.LoadDownloadIndexData(ts_code)
             pp_data = preprocess.StockDataPreProcess(df, '')
             if len(pp_data) > 0:
                 base_common.MKFileDirs(stock_pp_file_name)
@@ -527,9 +543,6 @@ class DataSource():
                 print("UpdateStockPPData error: %s" % ts_code)
                 return
             sys.stdout.write("%-4s : %s 100%%\n" % ('--', ts_code))
-
-    def LoadIndexPPData(self, cut_from_start_date=False):
-        return self.LoadStockPPData(self.index_ts_code, cut_from_start_date)
 
     # # 含 create
     # def LoadDSPPOriginDataset(self):

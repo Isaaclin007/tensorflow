@@ -1,8 +1,24 @@
 import tensorflow as tf
 mnist=tf.keras.datasets.mnist
+import numpy as np
 
 (x_train,y_train), (x_test,y_test)=mnist.load_data()
-#print(x_train[0])
+print(x_train.shape)
+print(y_train.shape)
+print(x_test.shape)
+print(y_test.shape)
+images = np.zeros((x_train.shape[0] + x_test.shape[0], x_train.shape[1], x_train.shape[2]))
+images[:x_train.shape[0]] = x_train[:]
+images[x_train.shape[0]:] = x_test[:]
+print(images.shape)
+np.save('./images.npy', images)
+
+labels = np.zeros((y_train.shape[0] + y_test.shape[0], ))
+labels[:y_train.shape[0]] = y_train[:]
+labels[y_train.shape[0]:] = y_test[:]
+print(labels.shape)
+np.save('./labels.npy', labels)
+exit()
 
 x_train,x_test=x_train/255.0, x_test/255.0
 model=tf.keras.Sequential([

@@ -307,7 +307,7 @@ class TradeBase(object):
                 on_price = pp_data[on_day_index][PPI_open]
 
             # ON -> PRE_OFF
-            elif trade_status == TS_ON:
+            if trade_status == TS_ON:
                 if next_status == TS_OFF:
                     trade_status = TS_PRE_OFF
                     pre_off_day_index = day_index
@@ -352,6 +352,7 @@ class TradeBase(object):
 
         if print_trade_record:
             base_common.PrintTrade('sum', ts_code, '--', '--', '--', '--', sum_increase, sum_holding_days)
+            print('capital_ratio: %.2f' % capital_ratio)
         else:
             code_index = self.data_source.code_index_map_int[ts_code]
             base_common.PrintTrade(trade_count, ts_code, '--', '--', '--', '--', sum_increase, sum_holding_days)

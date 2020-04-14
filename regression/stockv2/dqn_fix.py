@@ -418,7 +418,7 @@ def main(argv):
     end_date = 20200306
     # end_date = 20190221
     split_date = 20100101
-    o_data_source = tushare_data.DataSource(20000101, '', code_filter, 1, 20000101, end_date, False, False, True)
+    o_data_source = tushare_data.DataSource(20000101, '', '', 1, 20000101, end_date, False, False, True)
     # o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
     o_feature = feature.Feature(7, feature.FUT_D5_NORM, 1, False, False)
     # o_feature = feature.Feature(7, feature.FUT_5REGION5_NORM, 5, False, False)

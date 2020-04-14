@@ -96,11 +96,15 @@ class AvgWave(trade_base.TradeBase):
         
     def TradeNextStatus(self, pp_data, day_index):
 
+        # if self.wave_data[day_index] == WS_UP:
+        #     if self.GetDSWWsUpNum(pp_data[day_index][PPI_trade_date]) > self.code_num * 0.25:
+        #         return TS_ON
+        #     else:
+        #         return TS_OFF
+        # else:
+        #     return TS_OFF
         if self.wave_data[day_index] == WS_UP:
-            if self.GetDSWWsUpNum(pp_data[day_index][PPI_trade_date]) > self.code_num * 0.25:
-                return TS_ON
-            else:
-                return TS_OFF
+            return TS_ON
         else:
             return TS_OFF
 
@@ -158,7 +162,7 @@ def main(argv):
     # o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
     # o_feature = feature.Feature(30, feature.FUT_5REGION5_NORM, 5, False, False)
     # o_feature = feature.Feature(30, feature.FUT_2AVG5_NORM, 5, False, False)
-    o_avg_wave = AvgWave(o_data_source, o_feature, PPI_close_100_avg, MODE_GRAD, 10, 0, 0.1)
+    o_avg_wave = AvgWave(o_data_source, o_feature, PPI_close_30_avg, MODE_GRAD, 0, 0, 0.1)
     split_date = 20180101
     o_dl_model = dl_model.DLModel('%s_%u' % (o_avg_wave.setting_name, split_date), 
                                   o_feature.feature_unit_num, 
