@@ -75,7 +75,7 @@ def on_key(event, key_value):
     key_value.insert(0, event.key)
 
 # data_list: np 2D data list, (x, y), data unit shape=(len, 2)
-def Show2DData(title, data_list, name_list, x_is_date = False):
+def Show2DData(title, data_list, name_list=[], x_is_date = False):
     plt, mdate, zhfont = base_common.ImportMatPlot()
     plt.ion()
     title = unicode(title, "utf-8")
