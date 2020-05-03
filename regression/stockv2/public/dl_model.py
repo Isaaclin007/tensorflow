@@ -394,13 +394,13 @@ if __name__ == "__main__":
     o_dl_model = DLModel('',
                          feature_unit_num, 
                          feature_unit_size,
-                         64, 
+                         4, 
                          10240, 
-                         0.03, 
+                         0.01, 
                          'mean_absolute_tp_max_ratio_error_tanhmap',
-                         50)
+                         10)
     start_time = time.time()
-    o_dl_model.Train(tf, tl, vf, vl, 500)
+    o_dl_model.Train(tf, tl, vf, vl, 10)
     print('\n\nrun time: {}'.format(time.time() - start_time))
     
     

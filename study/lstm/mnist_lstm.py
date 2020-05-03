@@ -6,7 +6,7 @@ import dataset
 import lstm_model
 
 if __name__ == "__main__":
-    training = lstm_model.Training(batch_size=100, 
+    training = lstm_model.TFLstm(batch_size=100, 
                                     num_steps=28, 
                                     vec_size=28,
                                     num_classes=10, 

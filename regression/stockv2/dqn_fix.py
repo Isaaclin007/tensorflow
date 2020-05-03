@@ -418,14 +418,14 @@ def main(argv):
     end_date = 20200306
     # end_date = 20190221
     split_date = 20100101
-    o_data_source = tushare_data.DataSource(20000101, '', '', 1, 20000101, end_date, False, False, True)
+    o_data_source = tushare_data.DataSource(20000101, '', '', 10, 20000101, end_date, False, False, True)
     # o_feature = feature.Feature(30, feature.FUT_D5_NORM, 1, False, False)
     o_feature = feature.Feature(7, feature.FUT_D5_NORM, 1, False, False)
     # o_feature = feature.Feature(7, feature.FUT_5REGION5_NORM, 5, False, False)
     # o_feature = feature.Feature(30, feature.FUT_5REGION5_NORM, 5, False, False)
     # o_feature = feature.Feature(30, feature.FUT_D3_NORM, 1, False, False)
     # o_dqn_fix = DQNFix(o_data_source, o_feature, 6, DECAY_MODE_EXP, 0.6, not FLAGS.overlap_feature)
-    o_dqn_fix = DQNFix(o_data_source, o_feature, 6, False, DECAY_MODE_EXP, 0.6, not FLAGS.overlap_feature)
+    o_dqn_fix = DQNFix(o_data_source, o_feature, 1, False, DECAY_MODE_EXP, 0.6, not FLAGS.overlap_feature)
     # o_dqn_fix = DQNFix(o_data_source, o_feature, 30, DECAY_MODE_EXP, 0.9, not FLAGS.overlap_feature)
     o_dl_model = dl_model.DLModel('%s_%u' % (o_dqn_fix.setting_name, split_date), 
                                 o_feature.feature_unit_num, 
