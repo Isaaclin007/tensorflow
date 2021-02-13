@@ -95,3 +95,8 @@ PPI_name[PPI_vol_100_avg] = "vol_100_avg"
 PPI_name[PPI_pre_close] = "pre_close"
 PPI_name[PPI_suspend] = "suspend"
 
+PPI_vol_list = [PPI_vol,
+                PPI_vol_5_avg,
+                PPI_vol_10_avg,
+                PPI_vol_30_avg,
+                PPI_vol_100_avg]

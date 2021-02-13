@@ -18,6 +18,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 dataset_type = 'seq'
 SET_INITIAL_STATE = False
 SUMMARY_TRAIN_LOSS = True
+PREDICT_CREATE_MODEL = True
 
 class LstmModel():
     def __init__(self,
@@ -111,7 +112,7 @@ class LstmModel():
         else:
             t_map = (tf.tanh((labels - 5.0) * 0.4) + 1.00001) * 5.0
             p_map = (tf.tanh((predict - 5.0) * 0.4) + 1.00001) * 5.0
-            loss = tf.reduce_mean(tf.abs(t_map - p_map) * tf.maximum(t_map, p_map))
+            # loss = tf.reduce_mean(tf.abs(t_map - p_map) * tf.maximum(t_map, p_map))
             
             select_num = tf.shape(predict)[0] / 100
             predict_1d = tf.reshape(predict, shape=[tf.shape(predict)[0]])
@@ -121,6 +122,13 @@ class LstmModel():
             correct_num = tf.reduce_sum(tf.cast(correct_pred, tf.float32))
             acc = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
             avg_increase = tf.reduce_mean(select_labels)
+
+            loss = tf.losses.mean_squared_error(labels, predict)
+            # correct_pred = tf.greater(predict * labels, 0)
+            # correct_num = tf.reduce_sum(tf.cast(correct_pred, tf.float32))
+            # acc = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+            # avg_increase = tf.reduce_mean(tf.where(tf.greater(predict, 0.0), labels, 0.0 - labels))
+
         
         summary_list = []
         if is_training:
@@ -129,7 +137,7 @@ class LstmModel():
             summary_list.append(tf.summary.scalar('test_loss', loss))
             summary_list.append(tf.summary.scalar('test_acc', acc))
             if not classify:
-                summary_list.append(tf.summary.scalar('test_acc_select_num', select_num))
+                # summary_list.append(tf.summary.scalar('test_acc_select_num', select_num))
                 summary_list.append(tf.summary.scalar('test_acc_correct_num', correct_num))
                 summary_list.append(tf.summary.scalar('test_avg_increase', avg_increase))
         merge_summary = tf.summary.merge(summary_list)
@@ -182,7 +190,7 @@ class LstmModel():
 
         # input placeholder -> rnn input
         with tf.device("/cpu:0"):
-            input_1_size = 8
+            input_1_size = 64
             input_1_w = tf.Variable(tf.truncated_normal([vec_size, input_1_size]), name='input_1_wight')
             input_1_b = tf.Variable(tf.zeros([input_1_size, ]), name='input_1_bias')
             input_2_w = tf.Variable(tf.truncated_normal([input_1_size, lstm_size]), name='input_2_wight')
@@ -211,190 +219,21 @@ class LstmModel():
         self.keep_prob = keep_prob
         self.initial_state = initial_state
         
-        # input placeholder
-        with tf.device("/cpu:0"):
-            p_inputs = tf.placeholder(tf.float32, shape=(None, num_steps, vec_size), name='inputs')
-            p_labels = tf.placeholder(tf.float32, shape=(None, num_classes), name='labels')
-
-        self.predict, self.test_summary = self.BuildModelLowLevel(False, 
-                                            global_step,
-                                            p_inputs, p_labels, 
-                                            input_1_w, input_1_b, 
-                                            input_2_w, input_2_b,
-                                            stacked_lstm, initial_state,
-                                            softmax_w, softmax_b)
-        self.p_inputs = p_inputs
-        self.p_labels = p_labels
-
-
-    def BuildModel_(self):
-        batch_size = self.batch_size
-        num_steps = self.num_steps
-        vec_size = self.vec_size
-        classify = self.classify
-        num_classes = self.num_classes
-        lstm_size = self.lstm_size
-        lstm_layers_num = self.lstm_layers_num
-        learning_rate = self.learning_rate
-        if not classify:
-            num_classes = 1
-
-        # input placeholder
-        with tf.name_scope('train'):
-            with tf.device("/cpu:0"):
-                inputs = tf.placeholder(tf.float32, shape=(batch_size, num_steps, vec_size), name='inputs')
-                labels = tf.placeholder(tf.float32, shape=(batch_size, num_classes), name='labels')
-        keep_prob = tf.placeholder(tf.float32, name='keep_prob')
-
-        # input placeholder -> rnn input
-        with tf.device("/cpu:0"):
-            input_1_size = 8
-            input_1_wight = tf.Variable(tf.truncated_normal([vec_size, input_1_size]), name='input_1_wight')
-            input_1_bias = tf.Variable(tf.zeros([input_1_size, ]), name='input_1_bias')
-            input_2_wight = tf.Variable(tf.truncated_normal([input_1_size, lstm_size]), name='input_2_wight')
-            input_2_bias = tf.Variable(tf.zeros([lstm_size, ]), name='input_2_bias')
-        with tf.name_scope('train'):
-            inputs_reshape = tf.reshape(inputs, shape=[-1, vec_size])
-            rnn_inputs_1 = tf.matmul(inputs_reshape, input_1_wight) + input_1_bias
-            rnn_inputs_2 = tf.matmul(rnn_inputs_1, input_2_wight) + input_2_bias
-            #rnn_inputs = tf.nn.sigmoid(rnn_inputs)
-            rnn_inputs = tf.reshape(rnn_inputs_2, shape=[-1, num_steps, lstm_size])
-
-        # lstm layer, input -> hidden_output
-        lstm_cell = tf.nn.rnn_cell.LSTMCell(lstm_size, state_is_tuple=True)
-        lstm_cell = tf.nn.rnn_cell.DropoutWrapper(lstm_cell, output_keep_prob=keep_prob)
-        stacked_lstm = tf.nn.rnn_cell.MultiRNNCell([lstm_cell for _ in range(lstm_layers_num)], state_is_tuple=True)
-        initial_state = stacked_lstm.zero_state(batch_size, tf.float32)
-        with tf.name_scope('train'):
-            if SET_INITIAL_STATE:
-                hidden_output, final_state = tf.nn.dynamic_rnn(stacked_lstm, rnn_inputs, initial_state=initial_state)
-            else:
-                hidden_output, final_state = tf.nn.dynamic_rnn(stacked_lstm, rnn_inputs, dtype=tf.float32)
-
-        # hidden_output -> softmax_out
-        with tf.device("/cpu:0"):
-            softmax_w = tf.Variable(tf.truncated_normal([lstm_size, num_classes]))
-            softmax_b = tf.Variable(tf.zeros(num_classes))
-        with tf.name_scope('train'):
-            hidden_output = tf.transpose(hidden_output, [1, 0, 2])
-            hidden_output = tf.gather(hidden_output, int(hidden_output.get_shape()[0]) - 1)
-            logits = tf.matmul(hidden_output,softmax_w) + softmax_b
-            if classify:
-                predict = tf.nn.softmax(logits, name='predictions')
-            else:
-                predict = logits
-
-        with tf.name_scope('train'):
-            # acc
-            if classify:
-                correct_pred = tf.equal(tf.argmax(predict, 1), tf.argmax(labels, 1))
-                acc = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-            else:
-                select_index = tf.where(tf.greater(predict, 0))
-                select_labels = tf.gather(labels, select_index)
-                select_predict = tf.gather(predict, select_index)
-                correct_pred = tf.greater(select_predict, 0)
-                acc = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-            
-            # loss
-            if classify:
-                loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=predict, labels=labels))
-            else:
-                t_map = (tf.tanh((labels - 5.0) * 0.4) + 1.00001) * 5.0
-                p_map = (tf.tanh((predict - 5.0) * 0.4) + 1.00001) * 5.0
-                loss = tf.reduce_mean(tf.abs(t_map - p_map) * tf.maximum(t_map, p_map))
-
-            global_step = tf.Variable(0, name='global_step',trainable=False)
-            epoch = tf.Variable(0, name='epoch',trainable=False)
-            epoch_add = tf.assign(epoch, tf.add(epoch, tf.constant(1)))
-            
-            # Optimizer
-            optimizer = tf.train.AdamOptimizer(learning_rate)
-            '''
-            optimizer = tf.train.AdadeltaOptimizer(learning_rate)
-            optimizer = tf.train.AdagradOptimizer(learning_rate)
-            optimizer = tf.train.FtrlOptimizer(learning_rate)
-            optimizer = tf.train.RMSPropOptimizer(learning_rate)
-            '''
-            #optimizer.apply_gradients(zip(grads,tvar))
-            #该函数是简单的合并了compute_gradients()与apply_gradients()函数，返回为一个优化更新后的var_list
-            #如果global_step非None，该操作还会为global_step做自增操作
-            train = optimizer.minimize(loss, global_step=global_step)
-        self.inputs = inputs
-        self.labels = labels
-        self.keep_prob = keep_prob
-        self.initial_state = initial_state
-        self.predict = predict
-        self.train = train
-        self.global_step = global_step
-        self.epoch = epoch
-        self.epoch_add = epoch_add
-        self.acc = acc
-        self.loss = loss
-        # self.step_acc_summary = tf.summary.scalar('step_acc', acc)
-        self.step_loss_summary = tf.summary.scalar('step_loss', loss)
-        # self.epoch_acc_summary = tf.summary.scalar('epoch_acc', acc)
-        # self.epoch_loss_summary = tf.summary.scalar('epoch_loss', loss)
-        self.step_summary = tf.summary.merge([self.step_loss_summary])
-        self.initial_state_value = None
-
-        with tf.name_scope('predict'):
+        if PREDICT_CREATE_MODEL:
             # input placeholder
             with tf.device("/cpu:0"):
                 p_inputs = tf.placeholder(tf.float32, shape=(None, num_steps, vec_size), name='inputs')
                 p_labels = tf.placeholder(tf.float32, shape=(None, num_classes), name='labels')
-            p_inputs_reshape = tf.reshape(p_inputs, shape=[-1, vec_size])
-            p_rnn_inputs_1 = tf.matmul(p_inputs_reshape, input_1_wight) + input_1_bias
-            p_rnn_inputs_2 = tf.matmul(p_rnn_inputs_1, input_2_wight) + input_2_bias
-            #rnn_inputs = tf.nn.sigmoid(rnn_inputs)
-            p_rnn_inputs = tf.reshape(p_rnn_inputs_2, shape=[-1, num_steps, lstm_size])
 
-            p_hidden_output, p_final_state = tf.nn.dynamic_rnn(stacked_lstm, p_rnn_inputs, dtype=tf.float32)
-
-            p_hidden_output = tf.transpose(p_hidden_output, [1, 0, 2])
-            p_hidden_output = tf.gather(p_hidden_output, int(p_hidden_output.get_shape()[0]) - 1)
-            p_logits = tf.matmul(p_hidden_output,softmax_w) + softmax_b
-            if classify:
-                p_predict = tf.nn.softmax(p_logits, name='predictions')
-            else:
-                p_predict = p_logits
-
-            # acc
-            if classify:
-                p_correct_pred = tf.equal(tf.argmax(p_predict, 1), tf.argmax(p_labels, 1))
-                p_acc = tf.reduce_mean(tf.cast(p_correct_pred, tf.float32))
-            else:
-                p_select_num = tf.shape(p_predict)[0] / 100
-                p_predict_1d = tf.reshape(p_predict, shape=[tf.shape(p_predict)[0]])
-                p_select_index = tf.nn.top_k(p_predict_1d, k=p_select_num).indices
-                # p_select_num = tf.reduce_sum(tf.cast(tf.greater(p_predict, 3), tf.float32))
-                # p_select_index = tf.where(tf.greater(p_predict, 3))
-                p_select_labels = tf.gather(p_labels, p_select_index)
-                p_correct_pred = tf.greater(p_select_labels, 0)
-                p_correct_num = tf.reduce_sum(tf.cast(p_correct_pred, tf.float32))
-                p_acc = tf.reduce_mean(tf.cast(p_correct_pred, tf.float32))
-            
-            # loss
-            if classify:
-                p_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=p_predict, labels=p_labels))
-            else:
-                t_map = (tf.tanh((p_labels - 5.0) * 0.4) + 1.00001) * 5.0
-                p_map = (tf.tanh((p_predict - 5.0) * 0.4) + 1.00001) * 5.0
-                p_loss = tf.reduce_mean(tf.abs(t_map - p_map) * tf.maximum(t_map, p_map))
-
-        self.p_inputs = p_inputs
-        self.p_labels = p_labels
-        self.p_predict = p_predict
-        self.p_acc = p_acc
-        self.p_loss = p_loss
-        self.p_epoch_acc_summary = tf.summary.scalar('epoch_acc', p_acc)
-        self.p_select_num_summary = tf.summary.scalar('select_num', p_select_num)
-        self.p_correct_num_summary = tf.summary.scalar('correct_num', p_correct_num)
-        self.p_epoch_loss_summary = tf.summary.scalar('epoch_loss', p_loss)
-        self.p_epoch_summary = tf.summary.merge([self.p_epoch_acc_summary, 
-                                                 self.p_epoch_loss_summary, 
-                                                 self.p_select_num_summary,
-                                                 self.p_correct_num_summary])
+            self.predict, self.test_summary = self.BuildModelLowLevel(False, 
+                                                global_step,
+                                                p_inputs, p_labels, 
+                                                input_1_w, input_1_b, 
+                                                input_2_w, input_2_b,
+                                                stacked_lstm, initial_state,
+                                                softmax_w, softmax_b)
+            self.p_inputs = p_inputs
+            self.p_labels = p_labels
 
     def SetInitialStateValue(self, sess, feed_dict):
         if self.initial_state_value == None:
@@ -512,7 +351,8 @@ class TFLstm:
                 self.counter += 1
 
             self.epoch_value = self.model.EpochAdd(self.sess)
-            self.EvaluteSummary(train_x, train_y, test_x, test_y)
+            if PREDICT_CREATE_MODEL:
+                self.EvaluteSummary(train_x, train_y, test_x, test_y)
             
             sys.stdout.write('\r%d' % (self.epoch_value))
             sys.stdout.flush()

@@ -146,9 +146,11 @@ def ImportMatPlot(use_agg=False):
         matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdate
+    from matplotlib.widgets import Cursor
     from matplotlib.font_manager import FontProperties
+    import matplotlib.lines as lines
     zhfont = FontProperties(fname=font_name, size=15)
-    return plt, mdate, zhfont
+    return plt, mdate, Cursor, lines, zhfont
 
 # def UserFunc(param, msg):
 #     print('{}, {}'.format(param, msg))

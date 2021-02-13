@@ -76,7 +76,7 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         data_split_mode = sys.argv[1]
 
-    feature_unit_num = 7
+    feature_unit_num = 10
     feature_unit_size = 5
     file_name = './data/dataset.npy'
 
@@ -85,7 +85,7 @@ if __name__ == "__main__":
         tf_, tl, vf, vl = GetDatasetSplitRandom(file_name, 0.5, False)
     elif data_split_mode == 'split_by_date':
         # 根据数据时间切分训练集和验证集，数据时间大于split_date的作为验证集，其他作为训练集
-        tf_, tl, vf, vl = GetDatasetSplitByDate(file_name, 20190101, False)
+        tf_, tl, vf, vl = GetDatasetSplitByDate(file_name, 20100101, False)
     else:
         exit()
 
@@ -97,12 +97,12 @@ if __name__ == "__main__":
 
     
 
-    training = lstm_model.TFLstm(batch_size=64, 
+    training = lstm_model.TFLstm(batch_size=10240, 
                                     num_steps=feature_unit_num, 
                                     vec_size=feature_unit_size,
                                     classify=False,
                                     num_classes=2, 
-                                    lstm_size=4, 
+                                    lstm_size=32, 
                                     lstm_layers_num=1,
                                     learning_rate=0.001,
                                     keep_prob=0.5,
@@ -111,7 +111,7 @@ if __name__ == "__main__":
                                     log_dir='./ckpt',
                                     continue_train=True)
 
-    training.Fit(tf_, tl, vf, vl, 100)
+    training.Fit(tf_, tl, vf, vl, 30)
 
 
     
