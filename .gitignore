@@ -5,7 +5,6 @@
 *.zip
 *.tar.gz
 *.user
-*.sh
 data/
 model/
 backup/
